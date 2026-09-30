@@ -96,10 +96,19 @@ export function holderLine(o: CaseOutcome): string {
   return `Now with ${o.sentTo.map((id) => recipient(id).name).join(" and ")}`;
 }
 
+/** For lists: a claim whose data can't be decided shows as manual triage instead of breaking the list. */
+export function safeDecision(c: CaseItem, settings: Settings): Decision | null {
+  try {
+    return currentDecision(c, settings);
+  } catch {
+    return null;
+  }
+}
+
 export function routeOf(c: CaseItem, settings: Settings): Route | null {
   if (!c.assessment) return null;
   if (!c.assessment.ok) return "manual_triage";
-  return currentDecision(c, settings)!.route;
+  return safeDecision(c, settings)?.route ?? "manual_triage";
 }
 
 export function vehicleLine(c: CaseItem, d: Decision | null): string {
