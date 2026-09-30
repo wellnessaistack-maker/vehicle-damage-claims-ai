@@ -17,7 +17,7 @@ A prototype first-review tool for an auto insurer's claims team. A reviewer drop
 | Rough AI-generated repair estimate | Assessment card: a range with its main drivers, never a single payable number |
 | Setup instructions | [Setup](#setup) |
 | Architecture and data flow | [Architecture](#architecture-and-data-flow), and the **Architecture** panel in the app |
-| Why these tools | [Why these tools](#why-these-tools) |
+| Why these tools | [Why these tools](#why-these-tools), including [how this was built](#how-this-was-built) |
 | Evaluation approach | [Evaluation](#evaluation), the **Evaluation** page and [`eval/README.md`](eval/README.md) |
 | What we'd do next | [Next steps](#what-wed-do-next-with-more-time) |
 
@@ -35,26 +35,19 @@ If the AI fails, the claim shows **Not assessed: manual triage**, which is today
 
 ## Setup
 
-Requires Node 22 or later.
+The prototype is live at https://vehicle-damage-claims-ai.vercel.app, so there's nothing to install to try it. Click **Load demo queue**, or drag in the `demo-images/` folder (each subfolder is one claim).
+
+To run it locally (Node 22 or later):
 
 ```bash
 npm install
 cp .env.example .env.local     # add ANTHROPIC_API_KEY
 npm run dev                    # http://localhost:3000
+npm test                       # routing rules and URL safety; no API key needed
+npm run eval                   # re-run the labelled set; needs a key and costs money
 ```
 
-Then click **Load demo queue**, or drag in the `demo-images/` folder (each subfolder is one claim).
-
-```bash
-npm test                       # routing rules and URL safety, no API key needed
-npm run eval                   # run the labelled set (needs a key), saves eval/results/latest.json
-npm run eval -- --model claude-sonnet-5-5
-npm run eval -- --repeat 3     # also measures whether routes stay the same on re-runs
-```
-
-### Deploying to Vercel
-
-Import the repo into Vercel and add `ANTHROPIC_API_KEY` as an environment variable. If the key is an organisation-level key not tied to a workspace, also set `ANTHROPIC_WORKSPACE_ID`. Optionally set `CLAUDE_MODEL` (`claude-opus-5-5` by default, or `claude-sonnet-5-5`) and `EVAL_TOKEN` to enable the server-side evaluation runner at `/api/eval-run/<EVAL_TOKEN>/<model>/all/1`. Keys are only read on the server.
+To deploy your own copy, import the repo into Vercel and add `ANTHROPIC_API_KEY` as an environment variable, plus `ANTHROPIC_WORKSPACE_ID` if the key isn't tied to a workspace. The optional settings are listed in `.env.example`.
 
 ## Architecture and data flow
 
@@ -143,23 +136,35 @@ The fixed output format is the contract and the labelled set is the referee, so 
 
 Around the model:
 
-- **Next.js on Vercel:** one repo for the screen and the API, and a shareable link with nothing to install.
-- **sharp:** resizing and the pixel checks.
-- **zod:** checks every request and the AI's output against the same schema that is sent to the API as the required format.
-- **No database, queue or image storage**, on purpose (see below).
+- **Vercel** hosts it. A push to GitHub gives a public link the panel can open with nothing to install, the API runs as serverless functions next to the page, and the API key sits in Vercel's encrypted settings, never in the browser. The price is Vercel's limits on request size and run time, covered in the next section. For a carrier, the same code would run in their own cloud instead.
+- **Next.js** keeps the screen and the API in one TypeScript codebase, so the routing rules the server runs are the same code the protocol screen shows and re-runs.
+- **sharp** does the image work: fixing rotation, resizing and the pixel checks for brightness, sharpness and reused photos.
+- **zod** checks everything coming in from the browser, and checks the AI's answer against the same schema the API is asked to follow.
+- **GitHub** holds the code; changes go in through pull requests.
 
-## Key assumptions and tradeoffs
+That's the whole list. There's no database, queue or image store, on purpose.
 
-- **Stateless.** The worklist lives in the browser tab and clears on refresh. Photos only exist in memory during a request. That keeps the prototype honest about data handling, at the cost of no history.
-- **One synchronous request per claim.** Simple and easy to follow, but a burst of claims would need a queue (see production).
-- **Mock claim details.** Policyholders, vehicle values and claim IDs are made up. Uploaded claims start with blank details, which you can edit in the app.
-- **Illustrative numbers.** The fast-path limit, the total-loss ratio and the cost adjustments are placeholders to be replaced with the carrier's own.
-- **Photo checks are tuned on very few images.** The sharpness check can't tell motion blur from a smooth close-up, so it only catches very soft photos; the AI's observation catches the rest. Glare is caught only by the AI.
-- **Reused-photo check** compares against one demo "past claim" photo and catches mirrored copies, not rotated ones.
-- **Accepted formats:** JPEG, PNG and WebP, up to 8 photos per claim. iPhone HEIC and video get a clear message instead.
-- **Vercel limits:** requests over 4.5 MB are rejected by the platform, so photos are shrunk in the browser. The function time limit is set to 60 seconds; the AI call gives up at 45 seconds and the claim goes to manual triage.
-- **Links are fetched safely:** https only, no internal, private or cloud-metadata addresses (checked when connecting and on every redirect), JPEG, PNG or WebP only, 10 MB and 8 seconds at most.
-- **The public link can spend API credits.** Anyone with it can run assessments, so the key should have a spend limit. The evaluation runner on Vercel needs a secret `EVAL_TOKEN` in the URL and is off if that isn't set.
+### How this was built
+
+The brief invites any tools, including AI coding assistants, so to be open about it: this was built with Claude Code as a pair programmer. It wrote most of the code and ran the tests and evaluation runs. The product and design calls were mine: routing as the first decision, what the AI does and doesn't see, locked versus configurable rules, the reviewer's screen and workflow, and what to leave out. I reviewed what it produced, and every number in this README comes from a real run.
+
+## Key assumptions and trade-offs
+
+**It remembers nothing.** There's no database and no image storage. The worklist lives in your browser tab and disappears on refresh, and photos only exist in memory while a claim is being assessed. That's deliberate: it's the simplest honest answer to "where do our customers' photos go?" The cost is that there's no history and no audit trail beyond the decision record you can download.
+
+**Each claim is one request that waits for its answer.** That's easy to follow and easy to measure (about ten seconds a claim), but it doesn't absorb bursts. After a hailstorm a carrier can get thousands of claims in an hour, so production would put a queue in front of the AI call.
+
+**The claim details and dollar limits are made up.** Policyholders, vehicle values and claim IDs are mock data. The $2,500 fast-path limit, the 60% total-loss line and the cost adjustments are placeholders. The point is to show where those numbers plug in, not to suggest what they should be. Claims you upload start with blank details; fill them in and the rules re-run instantly.
+
+**The photo checks are rough.** They were tuned on a handful of images. The sharpness check can't tell a blurry photo from a sharp close-up of a smooth door, so it only catches very soft photos and relies on the AI to spot blur. Glare is caught only by the AI. The reused-photo check compares against a single demo "past claim"; it catches a mirrored copy but not a rotated one.
+
+**Some inputs are turned away rather than half-handled.** It accepts JPEG, PNG and WebP, up to eight photos a claim. iPhone HEIC files and videos get a clear message saying what to send instead. Supporting both is on the next-steps list.
+
+**Vercel's limits shaped a few choices.** Vercel rejects requests over 4.5 MB, and phone photos are often bigger than that, so the browser shrinks each photo before sending it, which also strips location data. Each request can run for 60 seconds; the AI call gives up after 45, and when it does the claim goes to manual triage instead of hanging.
+
+**Pasted links are treated as untrusted.** A link could point at something inside our own network rather than at a photo. So the server only follows https links, refuses private and cloud-metadata addresses (checked again on every redirect), accepts only real image files, and stops at 10 MB or 8 seconds.
+
+**The public link costs money to use.** Anyone with it can run assessments on the API key, so the key has a monthly spend limit. The bulk evaluation runner needs a secret token and is off without one.
 
 ## Evaluation
 
@@ -241,18 +246,6 @@ The labelled set is 26 cases, 11 of which must escalate: the demo claims, edits 
 5. A rotation-proof reused-photo check, and an edited-image check from a specialist vendor.
 6. Tighten the prompt using the cases where the AI and the labels disagree, and re-run the model comparison.
 7. Route stability: run each case several times and add rules that are robust to small changes in the AI's answer.
-
-## Demo walkthrough (20 minutes)
-
-1. **Load demo queue.** Five claims sort themselves into lanes. The worklist is the thing to clear by end of day.
-2. **A (Civic, clear side view).** The brief's outputs first, then the range against the limits, then Photo estimate path. Approve; it moves to the next claim.
-3. **B (close-up of the same door).** Doesn't guess the car. The customer message lists the retake and why. Send it, then use **Demo: attach the customer's retake**; it moves to the photo estimate path.
-4. **C (race car).** Adjuster / total loss, estimate withheld, reasons listed. Ask in the case thread: "What makes this structural?"
-5. **D (an ordinary sedan with a crushed front).** The same route for a normal road car: structural damage, not drivable, and a repair that may cost more than the car is worth.
-6. **E (a flipped copy of a past claim's photo).** Matched to a past claim and referred to SIU.
-7. **Decision record and routing protocol.** Model, prompt and protocol versions, every rule fired or not, raw AI output. Switch to Protocol owner, change the fast-path limit, and test against the labelled cases.
-8. **Architecture panel.** Prototype vs. production, platform limits, and simulate an AI failure to show manual triage. Paste `https://169.254.169.254/` as a link to show it's blocked.
-9. **Evaluation page.** The three measures from the deck, the model comparison, **Run the labelled set now**, and what needs the carrier's data.
 
 ## Repository layout
 
