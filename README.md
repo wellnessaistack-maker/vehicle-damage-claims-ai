@@ -256,9 +256,17 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 
 ## Evaluation
 
-**How we'd know it's working.** The costly mistake is a complex claim slipping onto the fast path, so the first measure is **escalation recall**: of the claims an expert would send to an adjuster, how many we escalated. Next is **routing agreement** with expert labels, alongside **needless escalations**, because too much caution eats the time savings. Then the three outputs: make, model and colour right or correctly left blank, and a damage summary that names the right area without missing or inventing damage. We also track stability on re-runs, time, cost and failures. There are no pass or fail targets; those get agreed with the carrier's claims and risk owners.
+### Summary
 
-**The repair estimate.** The real test is comparing our range with the final paid cost on past claims: how often it contains the paid cost, and how wide it is (a wide enough range always looks accurate). That needs the carrier's paid-claims data, and the app says so on every estimate. The mistake that matters most is a range on the wrong side of a limit; near a limit, the claim is flagged or goes to an adjuster.
+**How would we know it's working?** Mistakes here don't cost the same, so we don't lead with accuracy. The expensive mistake is a complex claim slipping onto the fast path, so the first measure is **complex claims caught**: of the claims an expert would send to an adjuster, how many we escalated. Next is **routing agreement** with expert labels, watched alongside **needless escalations**, because too much caution erases the time savings. Then the three outputs: make, model and colour right or correctly left blank, and a damage summary that names the right area without missing or inventing damage. Behind those sit stability on re-runs, time, cost and failures. Targets are agreed with the carrier's claims and risk owners, not set by us.
+
+**Where does it fail, and what matters most?** The costliest failure is a complex claim sent down the fast path; on our 26 test claims it caught 11 of 11, which with so few cases still means the true rate could be as low as 74%. Every mistake it made went the cautious way: asking for another photo or a person, never the fast path. Other failures: naming the wrong car confidently (it leaves make and model blank unless a badge or distinctive shape supports them), an estimate on the wrong side of a limit, sideways or poor photos, and reused or edited photos (reuse is caught, edits aren't yet). A single photo rarely shows hidden damage, which is why the rules lean cautious.
+
+**What we'd need from the carrier.** A few hundred past claims with photos, the route each took, the final paid cost and any supplements. Two estimating experts labelling them independently; how often they agree is the ceiling to beat. Today's baseline for late escalations, supplements and reviewer minutes. And their own eligibility rules, limits, labour rates and vehicle values. Expert labelling at this scale is work Scale can supply.
+
+**Is the repair estimate good enough, and what happens when it's wrong?** The test is scoring past claims and comparing our range with the final paid cost: how often the range contains it, and how wide the range is, since a wide enough range always looks accurate. That needs paid-claims data, and the app says so on every estimate. The mistake that matters is a range on the wrong side of the fast-path limit or the total-loss line. Near the limit, the claim is flagged for a price check; over it, it goes to an adjuster. If the estimate is too low, the shop files a supplement as it does today. It is never the amount paid.
+
+### The detail
 
 **Latest results** (26 cases, 11 must escalate, draft labels, September 2026). "Prompt" means the written instructions the AI works from; v1 was the first version and v2 is today's (explained below).
 
