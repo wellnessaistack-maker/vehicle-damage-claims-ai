@@ -8,6 +8,7 @@ export const PROMPT_VERSION = "extract-v2";
 // - judge evidence on the best photo in the set, so a customer's wider retake counts
 // - photos may be sideways or upside down
 // - structural damage means visibly deformed structure, not a crumpled bumper cover
+// - a suspicion is not evidence: report only risk signs that can be seen
 
 export const SYSTEM_PROMPT = `You help an auto insurance claims team with the first review of vehicle damage photos. Look at the photos and report what you can see by filling in the requested structure.
 
