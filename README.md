@@ -369,7 +369,7 @@ For scale, published figures come from vendors and would need checking against t
 ## Repository layout
 
 ```
-app/                  Next.js pages and API routes (assess, ask, health, eval-cases, eval-run, client-error)
+app/                  Next.js pages and API routes (assess, ask, health, eval-cases, eval-run, spot-check, client-error)
 components/           Worklist, assessment panel, photo viewer, drawers, intake
 demo-images/          Demo claims, one folder per claim (A, B, C, D, E)
 eval/                 Labelled cases, claim details, test images, saved results
