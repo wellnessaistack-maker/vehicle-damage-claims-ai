@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["sharp"],
   // The evaluation runner reads the labelled cases and photos from disk.
   outputFileTracingIncludes: {
-    "/api/eval-run/[[...args]]": ["./eval/**/*", "./demo-images/**/*"],
+    "/api/eval-run/**": ["./eval/**/*", "./demo-images/**/*"],
   },
 };
 
