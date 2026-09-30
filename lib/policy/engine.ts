@@ -221,7 +221,8 @@ function estimateOutput(
 }
 
 export function customerMessage(claim: ClaimContext, retakes: RetakeRequest[]): string {
-  const firstName = claim.policyholder.split(" ")[0] || "there";
+  const onFile = claim.policyholder && !/not on file|unknown/i.test(claim.policyholder);
+  const firstName = onFile ? claim.policyholder.split(" ")[0] : "there";
   const list = retakes.map((r, i) => `${i + 1}. ${r.view}, ${r.why}.`).join("\n");
   return [
     `Hi ${firstName},`,

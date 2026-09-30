@@ -4,11 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copy-public.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-public.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"lib/**/*.test.ts\""
+    "test": "node --test \"lib/**/*.test.ts\"",
+    "eval": "node scripts/run-eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",

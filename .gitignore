@@ -8,3 +8,5 @@ next-env.d.ts
 .vercel
 .DS_Store
 eval/results/*.local.json
+public/demo/
+public/eval/

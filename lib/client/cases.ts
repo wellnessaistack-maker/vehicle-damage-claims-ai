@@ -1,0 +1,109 @@
+// Worklist state lives in the browser tab only. Refreshing the page clears it.
+
+import type { ClaimContext } from "../claims/types.ts";
+import type { Assessment } from "../pipeline.ts";
+import { decide, type Decision } from "../policy/engine.ts";
+import { ROUTE_LABELS, usd, type Route, type Settings } from "../policy/protocol.ts";
+import type { CasePhoto } from "./intake.ts";
+
+export type CaseStatus = "queued" | "processing" | "ready" | "done";
+
+export interface ThreadEntry {
+  id: string;
+  kind: "note" | "comment" | "question" | "answer" | "action";
+  author: string;
+  text: string;
+  at: string;
+}
+
+export type OutcomeAction = "approved" | "message_sent" | "assigned_adjuster" | "assigned_manual" | "route_changed";
+
+export interface CaseOutcome {
+  action: OutcomeAction;
+  route: Route;
+  summary: string;
+  reason?: string;
+  adjustedRange?: { lowUsd: number; highUsd: number };
+  at: string;
+}
+
+export interface CaseItem {
+  id: string;
+  claim: ClaimContext;
+  photos: CasePhoto[];
+  status: CaseStatus;
+  assessment?: Assessment;
+  requestError?: string;
+  thread: ThreadEntry[];
+  outcome?: CaseOutcome;
+  /** Set on demo cases, e.g. "B", so the demo can attach the customer's retake. */
+  demoKey?: string;
+  folder?: string | null;
+  addedAt: string;
+}
+
+export const REVIEWER = { name: "Jordan Reyes", role: "Auto damage appraiser", initials: "JR" };
+
+let counter = 0;
+export const uid = (p = "id") => `${p}-${Date.now().toString(36)}-${(counter++).toString(36)}`;
+export const now = () => new Date().toISOString();
+
+export function newClaimId(): string {
+  return `NEW-${Math.floor(10000 + Math.random() * 89999)}`;
+}
+
+/** The decision under the current settings and claim details. Rules only, no AI call. */
+export function currentDecision(c: CaseItem, settings: Settings): Decision | null {
+  if (!c.assessment?.ok) return null;
+  return decide(c.assessment.extraction, c.claim, c.assessment.photos, settings);
+}
+
+export function routeOf(c: CaseItem, settings: Settings): Route | null {
+  if (!c.assessment) return null;
+  if (!c.assessment.ok) return "manual_triage";
+  return currentDecision(c, settings)!.route;
+}
+
+export function vehicleLine(c: CaseItem, d: Decision | null): string {
+  const v = d?.requiredOutputs.vehicle;
+  if (v && (v.make.value || v.model.value)) {
+    return [v.colour.value, v.make.value, v.model.value].filter(Boolean).join(" ");
+  }
+  const pv = c.claim.policyVehicle;
+  const onPolicy = [pv.year, pv.make, pv.model].filter(Boolean).join(" ");
+  return onPolicy ? `Policy: ${onPolicy}` : "Vehicle not identified";
+}
+
+export function firstReviewNote(d: Decision): string {
+  const top = d.reasons.filter((r) => r.effect !== "review")[0];
+  const e = d.requiredOutputs.estimate;
+  const parts = [`${d.requiredOutputs.damageSummary}.`.replace(/\.\.$/, ".")];
+  if (e.status !== "withheld" && e.lowUsd !== null) parts.push(`Rough repair estimate ${usd(e.lowUsd)} to ${usd(e.highUsd!)}.`);
+  parts.push(
+    top
+      ? `Recommended route: ${d.routeLabel}, because ${lowerFirst(top.reason ?? top.title)}`
+      : `Recommended route: ${d.routeLabel}. No rules stopped it from taking the fast path.`,
+  );
+  if (d.route !== "adjuster" && d.humanReview.required) parts.push(`Flagged for review: ${d.humanReview.reasons.map(lowerFirst).join(" ")}`);
+  return parts.join(" ");
+}
+
+export function failureNote(c: CaseItem): string {
+  if (!c.assessment || c.assessment.ok) return "";
+  return `The AI assessment didn't complete (${c.assessment.failure.message}) This claim goes to manual triage, which is today's normal process. Nothing was guessed.`;
+}
+
+export function routeLabel(r: Route) {
+  return ROUTE_LABELS[r];
+}
+
+function lowerFirst(s: string) {
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
+export function timeAgo(iso: string): string {
+  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}

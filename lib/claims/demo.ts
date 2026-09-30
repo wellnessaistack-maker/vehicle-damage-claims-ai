@@ -39,13 +39,31 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     vehicleDrivable: false,
     priorEvidenceRequests: 0,
   },
+  E: {
+    claimId: "CLM-2026-10484",
+    policyholder: "Tom Becker",
+    policyVehicle: { year: 2019, make: "Toyota", model: "Camry", colour: "Grey", powertrain: "combustion" },
+    vehicleValueUsd: 17000,
+    lossDate: "2026-09-28",
+    lossDescription: "Hit a bollard pulling out of a car park. Front right corner damaged.",
+    reportedImpactArea: "front",
+    injuryReported: false,
+    vehicleDrivable: true,
+    priorEvidenceRequests: 0,
+  },
 };
+
+/** Demo folders are named after their case, e.g. "A-straightforward". */
+export function demoClaimForFolder(folder: string): ClaimContext | null {
+  const key = folder.split("/").pop()?.match(/^([A-Z])-/)?.[1];
+  return key && DEMO_CLAIMS[key] ? { ...DEMO_CLAIMS[key] } : null;
+}
 
 /** Default details for uploaded cases with no claim attached. */
 export function blankClaim(claimId: string): ClaimContext {
   return {
     claimId,
-    policyholder: "Unknown policyholder",
+    policyholder: "Not on file",
     policyVehicle: { year: null, make: null, model: null, colour: null, powertrain: "unknown" },
     vehicleValueUsd: null,
     lossDate: new Date().toISOString().slice(0, 10),
