@@ -244,10 +244,12 @@ function checklist(x: Extraction, photos: PhotoMetrics[], s: Settings, firedIds:
   const t = PHOTO_QUALITY_THRESHOLDS[s.photoQuality];
   const issues = x.evidence.photo_issues;
   const names = (ps: PhotoMetrics[]) => ps.map((p) => p.name).join(", ");
-  const dark = photos.filter((p) => p.brightness < t.minBrightness);
-  const soft = photos.filter((p) => p.sharpness < t.minSharpness);
-  const small = photos.filter((p) => Math.min(p.width, p.height) < t.minShortEdgePx);
-  const grey = photos.filter((p) => p.greyscale);
+  // Same rule as the protocol: with several photos, one good photo is enough.
+  const allFail = (bad: (p: PhotoMetrics) => boolean) => (photos.length > 0 && photos.every(bad) ? photos : []);
+  const dark = allFail((p) => p.brightness < t.minBrightness);
+  const soft = allFail((p) => p.sharpness < t.minSharpness);
+  const small = allFail((p) => Math.min(p.width, p.height) < t.minShortEdgePx);
+  const grey = allFail((p) => p.greyscale);
 
   return [
     { label: "Vehicle in the photos", ok: x.vehicle.vehicle_present },

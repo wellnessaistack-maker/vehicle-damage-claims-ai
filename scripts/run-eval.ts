@@ -5,7 +5,8 @@
 //   npm run eval -- --repeat 3                   # check route stability
 //
 // Needs ANTHROPIC_API_KEY in the environment. Results are merged into
-// eval/results/latest.json (one run per model), which the Evaluation page reads.
+// eval/results/latest.json (one run per model and prompt version), which the
+// Evaluation page reads.
 
 import { readFileSync, writeFileSync } from "node:fs";
 
@@ -46,6 +47,6 @@ Range contains paid cost: not measurable without final paid costs
 
 const path = "eval/results/latest.json";
 const existing = JSON.parse(readFileSync(path, "utf8")) as { runs: EvalRun[] };
-const runs = [run, ...existing.runs.filter((r) => r.model !== model)];
+const runs = [run, ...existing.runs.filter((r) => !(r.model === run.model && r.promptVersion === run.promptVersion))];
 writeFileSync(path, JSON.stringify({ runs }, null, 2) + "\n");
 console.log(`Saved to ${path}`);

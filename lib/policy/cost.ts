@@ -8,7 +8,7 @@
 // The range is never a payable amount. Its main job is showing which side of
 // the fast-path limit and the total-loss line a claim falls on.
 
-import type { DamageItem, Extraction } from "../extraction/schema.ts";
+import type { Area, DamageItem, Extraction } from "../extraction/schema.ts";
 import type { Settings } from "./protocol.ts";
 
 export interface CostDriver {
@@ -26,6 +26,8 @@ export interface CostRange {
 }
 
 const ROUND_TO = 50;
+
+const HIDDEN_DAMAGE_AREAS: Area[] = ["front_bumper", "grille", "hood", "headlight", "front_fender", "rear_bumper", "boot_or_tailgate", "tail_light", "rear_quarter_panel", "wheel_or_tyre", "underbody"];
 
 export function buildCostRange(x: Extraction, s: Settings): CostRange | null {
   if (!x.vehicle.vehicle_present || x.damage.items.length === 0) return null;
@@ -47,7 +49,13 @@ export function buildCostRange(x: Extraction, s: Settings): CostRange | null {
     });
   }
 
-  if (x.damage.items.some((i) => i.severity !== "minor") && s.hiddenDamageAllowancePct > 0) {
+  // Damage behind the panels is likely where brackets, sensors and crash
+  // structure sit (the front and rear ends), or when anything is severe. A dent
+  // in a door skin doesn't get the allowance.
+  const hiddenLikely = x.damage.items.some(
+    (i) => i.severity === "severe" || (i.severity === "moderate" && HIDDEN_DAMAGE_AREAS.includes(i.area)),
+  );
+  if (hiddenLikely && s.hiddenDamageAllowancePct > 0) {
     drivers.push({
       label: "Allowance for damage behind the panels",
       lowUsd: 0,

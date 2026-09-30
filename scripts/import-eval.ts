@@ -1,4 +1,4 @@
-// Saves evaluation results into eval/results/latest.json (one run per model).
+// Saves evaluation results into eval/results/latest.json (one run per model and prompt version).
 //
 //   node scripts/import-eval.ts results.json
 //
@@ -32,7 +32,9 @@ const runs = incoming.map((run) => ({
 
 const path = "eval/results/latest.json";
 const existing = JSON.parse(readFileSync(path, "utf8")) as { runs: EvalRun[] };
-const models = new Set(runs.map((r) => r.model));
-const merged = [...runs, ...existing.runs.filter((r) => !models.has(r.model))];
+// One saved run per model and prompt version, newest first.
+const keyOf = (r: EvalRun) => `${r.model}|${r.promptVersion}`;
+const keys = new Set(runs.map(keyOf));
+const merged = [...runs, ...existing.runs.filter((r) => !keys.has(keyOf(r)))];
 writeFileSync(path, JSON.stringify({ runs: merged }, null, 2) + "\n");
 console.log(`Saved ${runs.map((r) => `${r.model} (${r.cases.length} cases)`).join(", ")} to ${path}`);

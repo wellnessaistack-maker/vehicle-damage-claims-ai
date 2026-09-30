@@ -1,1 +1,3378 @@
-{ "runs": [] }
+{
+  "runs": [
+    {
+      "runAt": "2026-09-30T05:03:02.861Z",
+      "model": "claude-opus-5-5",
+      "promptVersion": "extract-v1",
+      "protocolVersion": "0.1",
+      "cases": [
+        {
+          "photos": [
+            "demo-images/A-straightforward/demo_A_civic.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-A_civic",
+            "policyholder": "Maria Lopez",
+            "policyVehicle": {
+              "year": 2018,
+              "make": "Honda",
+              "model": "Civic",
+              "colour": "Silver",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 14000,
+            "lossDate": "2026-09-28",
+            "lossDescription": "Parked on the street. Came back to find the driver's side rear door dented and scraped.",
+            "reportedImpactArea": "left",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "photo_estimate",
+            "acceptableRoutes": [
+              "photo_estimate"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "Honda",
+            "expectedModel": "Civic",
+            "expectedColour": "Silver",
+            "expectedCostBand": "1000_2500",
+            "whatItTests": "Core outputs on a clear photo",
+            "source": "Supplied by author",
+            "labelStatus": "draft"
+          },
+          "caseId": "A_civic",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Honda",
+              "model": "Civic",
+              "year_range": "2016-2021",
+              "colour": "Silver",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Honda H logo on boot lid and wheel centre caps, 'CIVIC' lettering on boot lid; sedan body with boomerang tail lights matches 10th-generation Civic.",
+              "powertrain_hint": "likely_combustion"
+            },
+            "damage": {
+              "summary": "Left rear door dent with scraping, extending toward the rear wheel arch and rocker area",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "rear_door",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Horizontal crease dent with brown scrape marks across lower half of left rear door",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "rear_quarter_panel",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "minor",
+                  "likely_repair": "refinish_only",
+                  "visible_evidence": "Scrape marks continuing past door edge onto area ahead of rear wheel arch",
+                  "cost_low_usd": 250,
+                  "cost_high_usd": 600
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "headlight",
+                "front_fender",
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "side_sill",
+                "roof",
+                "pillar",
+                "rear_quarter_panel",
+                "boot_or_tailgate",
+                "rear_bumper",
+                "tail_light",
+                "wheel_or_tyre",
+                "side_glass",
+                "rear_glass"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_A_civic.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 109.3,
+              "sharpness": 2727.94,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 10212,
+          "costUsd": 0.036,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/B-insufficient-evidence/demo_B_closeup.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-B_civic_closeup",
+            "policyholder": "Daniel Kim",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Honda",
+              "model": "Civic",
+              "colour": "Silver",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 15500,
+            "lossDate": "2026-09-27",
+            "lossDescription": "Someone sideswiped my car in a parking lot. Sent a photo of the damage.",
+            "reportedImpactArea": "left",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "more_evidence",
+            "acceptableRoutes": [
+              "more_evidence"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "CANT_TELL",
+            "expectedModel": "CANT_TELL",
+            "expectedColour": "Silver",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Doesn't guess the car from a close-up",
+            "source": "Crop of A",
+            "labelStatus": "draft"
+          },
+          "caseId": "B_civic_closeup",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Silver",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Only the rear door, part of the front door, rear quarter panel and a wheel are visible; no badge, logo or lettering, and these panels are not distinctive enough to identify the vehicle.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Left rear door dent with scraping, extending onto the rear quarter panel near the wheel arch",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "rear_door",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Large shallow dent across the lower-middle of the door with extensive scrape marks and paint transfer",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "rear_quarter_panel",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "minor",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Scrape marks continuing from the door onto the quarter panel ahead of the wheel arch",
+                  "cost_low_usd": 300,
+                  "cost_high_usd": 800
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "close_up",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_door",
+                "rear_door",
+                "rear_quarter_panel",
+                "wheel_or_tyre"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_B_closeup.jpg",
+              "width": 1200,
+              "height": 800,
+              "brightness": 127.5,
+              "sharpness": 222.72,
+              "clippedHighlights": 0,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 9339,
+          "costUsd": 0.0314,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/B-insufficient-evidence/demo_B_closeup.jpg",
+            "demo-images/A-straightforward/demo_A_civic.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-B_civic_retake",
+            "policyholder": "Daniel Kim",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Honda",
+              "model": "Civic",
+              "colour": "Silver",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 15500,
+            "lossDate": "2026-09-27",
+            "lossDescription": "Someone sideswiped my car in a parking lot. Sent a photo of the damage.",
+            "reportedImpactArea": "left",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 1
+          },
+          "labels": {
+            "expectedRoute": "photo_estimate",
+            "acceptableRoutes": [
+              "photo_estimate"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "Honda",
+            "expectedModel": "Civic",
+            "expectedColour": "Silver",
+            "expectedCostBand": "1000_2500",
+            "whatItTests": "Customer's retake resolves the evidence request",
+            "source": "Crop of A plus A",
+            "labelStatus": "draft"
+          },
+          "caseId": "B_civic_retake",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Honda",
+              "model": "Civic",
+              "year_range": "2016-2021",
+              "colour": "Silver",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Honda H emblem and 'CIVIC' lettering on the trunk lid, Honda logos on the wheel centre caps, and the 10th-generation Civic sedan body shape and tail lights in photo 2. Photo 1 shows the same silver paint, door handles and wheel design.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Left rear door dent with scraping, extending to the rear quarter panel ahead of the wheel arch",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "rear_door",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Broad creased dent across the middle of the rear door with heavy horizontal scrapes and transfer marks",
+                  "cost_low_usd": 800,
+                  "cost_high_usd": 1800
+                },
+                {
+                  "area": "rear_quarter_panel",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "minor",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Scrape marks continue past the door gap onto the quarter panel above and in front of the rear wheel arch",
+                  "cost_low_usd": 400,
+                  "cost_high_usd": 900
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "close_up",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_door",
+                "rear_door",
+                "rear_quarter_panel",
+                "wheel_or_tyre",
+                "side_mirror",
+                "side_glass",
+                "rear_bumper",
+                "tail_light",
+                "boot_or_tailgate",
+                "front_fender",
+                "front_bumper",
+                "side_sill",
+                "rear_glass",
+                "headlight"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_B_closeup.jpg",
+              "width": 1200,
+              "height": 800,
+              "brightness": 127.5,
+              "sharpness": 222.72,
+              "clippedHighlights": 0,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            },
+            {
+              "name": "demo_A_civic.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 109.3,
+              "sharpness": 2727.94,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 11338,
+          "costUsd": 0.0419,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/C-escalation/demo_C_f1.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-C_f1",
+            "policyholder": "Priya Shah",
+            "policyVehicle": {
+              "year": null,
+              "make": null,
+              "model": null,
+              "colour": null,
+              "powertrain": "unknown"
+            },
+            "vehicleValueUsd": null,
+            "lossDate": "2026-09-26",
+            "lossDescription": "Multi-car collision at the start of a race. Car went airborne over another car.",
+            "reportedImpactArea": "unknown",
+            "injuryReported": false,
+            "vehicleDrivable": false,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [],
+            "expectedMake": "McLaren",
+            "expectedModel": "CANT_TELL",
+            "expectedColour": "Orange",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Non-road vehicle with structural damage",
+            "source": "Supplied by author (press photo)",
+            "labelStatus": "draft"
+          },
+          "caseId": "C_f1",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": true,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "race_or_non_road",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Orange",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Formula 1 race cars in a multi-car crash. The airborne orange car carries sponsor lettering (kimoa, NTT Communications, Richard Mille, Pirelli P Zero tyres) but no clear manufacturer badge. It is unclear which car the claim concerns; a white car numbered 16 and several other cars are also prominent.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Airborne orange race car with its engine cover and bodywork torn away and debris scattering, landing on top of a white race car during a multi-car crash",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "other",
+                  "side": "centre",
+                  "damage_type": "tear_or_puncture",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Engine cover and bodywork on the orange car ripped open, with carbon panels shredded",
+                  "cost_low_usd": 50000,
+                  "cost_high_usd": 300000
+                },
+                {
+                  "area": "underbody",
+                  "side": "unknown",
+                  "damage_type": "broken_or_shattered",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Floor and bargeboard pieces hanging loose, with debris flying from the orange car",
+                  "cost_low_usd": 50000,
+                  "cost_high_usd": 250000
+                },
+                {
+                  "area": "wheel_or_tyre",
+                  "side": "unknown",
+                  "damage_type": "other",
+                  "severity": "severe",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Orange car airborne, with wheel and suspension components loaded and exposed",
+                  "cost_low_usd": 20000,
+                  "cost_high_usd": 100000
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "wide",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "wheel_or_tyre",
+                "underbody",
+                "other"
+              ],
+              "photo_issues": [
+                "damage_obstructed"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "structural_deformation",
+                "evidence": "Orange car's bodywork is torn apart and the car is airborne on top of another car"
+              },
+              {
+                "sign": "wheel_or_suspension_displaced",
+                "evidence": "Suspension members are visibly hanging or displaced beneath the airborne car"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_C_f1.jpg",
+              "width": 2048,
+              "height": 1365,
+              "brightness": 138.3,
+              "sharpness": 2195.17,
+              "clippedHighlights": 0.011,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 11933,
+          "costUsd": 0.0399,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/00a_sedan_straightforward.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-00a_camry",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "photo_estimate",
+            "acceptableRoutes": [
+              "photo_estimate",
+              "adjuster"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "Toyota",
+            "expectedModel": "Camry",
+            "expectedColour": "Grey",
+            "expectedCostBand": "unsure",
+            "whatItTests": "Front-corner damage near the fast-path limit",
+            "source": "Supplied by author",
+            "labelStatus": "draft (borderline)"
+          },
+          "caseId": "00a_camry",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Toyota",
+              "model": "Camry",
+              "year_range": "2018-2024",
+              "colour": "Grey",
+              "identification_basis": "distinctive_body_shape",
+              "identification_evidence": "Front fascia with large horizontal-slat lower grille, headlight shape with amber insert, and sedan profile match the current-generation Camry (XV70). No badge is clearly readable, and the grille emblem area is cut off.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Left front bumper corner scraped and dented, with left front fender crumpled and hood buckled at the left edge",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Heavy scraping, deformation and a small tear at the left bumper corner; bumper separated near the fender",
+                  "cost_low_usd": 800,
+                  "cost_high_usd": 1600
+                },
+                {
+                  "area": "front_fender",
+                  "side": "left",
+                  "damage_type": "crushed",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Crumpled metal above the wheel arch behind the headlight",
+                  "cost_low_usd": 700,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "hood",
+                  "side": "left",
+                  "damage_type": "misaligned_gap",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Hood edge buckled and lifted at the left rear corner near the fender",
+                  "cost_low_usd": 500,
+                  "cost_high_usd": 1400
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "windscreen",
+                "front_door",
+                "side_mirror",
+                "wheel_or_tyre",
+                "side_sill"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "00a_sedan_straightforward.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 97.1,
+              "sharpness": 3745.48,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 17642,
+          "costUsd": 0.0491,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/00b_sedan_closeup_insufficient.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-00b_camry_closeup",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "more_evidence",
+            "acceptableRoutes": [
+              "more_evidence"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "CANT_TELL",
+            "expectedModel": "CANT_TELL",
+            "expectedColour": "Grey",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Close-up of a different car",
+            "source": "Crop of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "00b_camry_closeup",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Dark grey",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Close-up of a front bumper corner only; no badge, logo or distinctive body shape visible.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Front bumper corner crumpled and heavily scraped with a small puncture, near the wheel arch",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "unknown",
+                  "damage_type": "crushed",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Deformed, creased bumper cover with widespread scrapes and a small hole near the wheel arch",
+                  "cost_low_usd": 800,
+                  "cost_high_usd": 1800
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "close_up",
+              "damage_extends_beyond_frame": true,
+              "visible_panels": [
+                "front_bumper",
+                "wheel_or_tyre"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": [
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Damage on the front bumper corner where parking sensors or radar commonly sit"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "00b_sedan_closeup_insufficient.jpg",
+              "width": 1200,
+              "height": 800,
+              "brightness": 89,
+              "sharpness": 889.45,
+              "clippedHighlights": 0,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 8358,
+          "costUsd": 0.0293,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/01_sedan_low_light.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-01_low_light",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "more_evidence",
+            "acceptableRoutes": [
+              "more_evidence"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "Toyota",
+            "expectedModel": "Camry",
+            "expectedColour": "CANT_TELL",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Too dark to judge the damage",
+            "source": "Edit of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "01_low_light",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": null,
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "No badge or lettering is visible and the grille emblem area is out of frame. The headlight and grille styling look like a mid-size sedan, possibly a Toyota Camry, but the dark photo does not support a confident identification.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Left front bumper corner scraped and deformed, with a dented, scraped left front fender above the wheel arch",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Heavy scraping and deformation across the left bumper corner near the fog light area",
+                  "cost_low_usd": 800,
+                  "cost_high_usd": 1800
+                },
+                {
+                  "area": "front_fender",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Crumpled, scraped fender surface behind the headlight, above the wheel arch",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1500
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "windscreen",
+                "front_door",
+                "side_mirror",
+                "wheel_or_tyre"
+              ],
+              "photo_issues": [
+                "too_dark"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Damage on the front bumper corner, where parking sensors or radar typically sit"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "01_sedan_low_light.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 26.3,
+              "sharpness": 388.89,
+              "clippedHighlights": 0,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 10238,
+          "costUsd": 0.036,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/02_sedan_motion_blur.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-02_motion_blur",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "more_evidence",
+            "acceptableRoutes": [
+              "more_evidence"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "Toyota",
+            "expectedModel": "Camry",
+            "expectedColour": "Grey",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Blurry photo",
+            "source": "Edit of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "02_motion_blur",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Grey",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Sedan front end resembles a mid-size Japanese sedan, but heavy motion blur obscures any badge or lettering and the shape alone is not conclusive.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Front bumper corner scraped and pushed in near the wheel arch, with the hood edge and fender gap disturbed; the photo is badly blurred",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "right",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Scraping and possible deformation on bumper corner ahead of the front wheel",
+                  "cost_low_usd": 400,
+                  "cost_high_usd": 1200
+                },
+                {
+                  "area": "front_fender",
+                  "side": "right",
+                  "damage_type": "misaligned_gap",
+                  "severity": "moderate",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Fender-to-bumper and headlight seam appears displaced near the arch",
+                  "cost_low_usd": 200,
+                  "cost_high_usd": 900
+                },
+                {
+                  "area": "hood",
+                  "side": "right",
+                  "damage_type": "misaligned_gap",
+                  "severity": "minor",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Dark line/crease near hood edge by the fender, possibly a lifted gap",
+                  "cost_low_usd": 100,
+                  "cost_high_usd": 800
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "windscreen",
+                "front_door",
+                "side_mirror",
+                "wheel_or_tyre"
+              ],
+              "photo_issues": [
+                "blur"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Damage on the front bumper corner where parking sensors commonly sit"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "02_sedan_motion_blur.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 96.6,
+              "sharpness": 459.84,
+              "clippedHighlights": 0,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 10890,
+          "costUsd": 0.0378,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/03_sedan_heavily_compressed.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-03_compressed",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "photo_estimate",
+            "acceptableRoutes": [
+              "photo_estimate",
+              "more_evidence",
+              "adjuster"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "Toyota",
+            "expectedModel": "Camry",
+            "expectedColour": "Grey",
+            "expectedCostBand": "unsure",
+            "whatItTests": "Forwarded low-quality copy",
+            "source": "Edit of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "03_compressed",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Grey",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "No badge or lettering is legible, and heavy compression obscures detail. The sedan's headlight and grille shape resemble a recent mid-size sedan, but this is not conclusive enough to name a make or model.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Right front bumper corner scraped and pushed in, with the front fender creased and a gap opened at the hood and headlight",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Bumper corner deformed with heavy scraping and the cover pulled away",
+                  "cost_low_usd": 800,
+                  "cost_high_usd": 1800
+                },
+                {
+                  "area": "front_fender",
+                  "side": "right",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Fender creased and displaced near the headlight and wheel arch",
+                  "cost_low_usd": 700,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "hood",
+                  "side": "right",
+                  "damage_type": "misaligned_gap",
+                  "severity": "minor",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Visible dark gap between the hood edge and the fender",
+                  "cost_low_usd": 100,
+                  "cost_high_usd": 600
+                },
+                {
+                  "area": "headlight",
+                  "side": "right",
+                  "damage_type": "misaligned_gap",
+                  "severity": "minor",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Gaps around the headlight housing next to the damaged fender",
+                  "cost_low_usd": 100,
+                  "cost_high_usd": 900
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "windscreen",
+                "front_door",
+                "side_mirror",
+                "wheel_or_tyre"
+              ],
+              "photo_issues": [
+                "low_resolution"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "The damaged front bumper corner is an area where parking sensors or radar commonly sit"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "03_sedan_heavily_compressed.jpg",
+              "width": 1080,
+              "height": 720,
+              "brightness": 97.2,
+              "sharpness": 104.49,
+              "clippedHighlights": 0,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 8828,
+          "costUsd": 0.0355,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/04_sedan_glare_over_damage.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-04_glare",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "more_evidence",
+            "acceptableRoutes": [
+              "more_evidence"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "Toyota",
+            "expectedModel": "Camry",
+            "expectedColour": "Grey",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Glare hides the damage",
+            "source": "Edit of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "04_glare",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Dark grey",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "The body shape, headlight and grille resemble a recent Toyota Camry, but no badge or lettering is visible (the grille emblem is out of frame and the wheel centre cap is unreadable), so the make and model are not confirmed.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Right front bumper corner scraped and deformed, with the right front fender crumpled above the wheel arch and a raised hood edge; part of the damage is washed out by glare",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Heavy scraping, creasing and deformation on the right bumper corner",
+                  "cost_low_usd": 700,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "front_fender",
+                  "side": "right",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Crumpled, creased metal behind the headlight above the wheel arch",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1300
+                },
+                {
+                  "area": "hood",
+                  "side": "right",
+                  "damage_type": "misaligned_gap",
+                  "severity": "minor",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Hood edge appears lifted with an uneven gap near the right fender",
+                  "cost_low_usd": 100,
+                  "cost_high_usd": 800
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "windscreen",
+                "front_door",
+                "side_mirror",
+                "wheel_or_tyre",
+                "side_sill"
+              ],
+              "photo_issues": [
+                "glare_over_damage"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Damage on the front bumper corner, where parking sensors usually sit"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "04_sedan_glare_over_damage.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 117.8,
+              "sharpness": 3746.58,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 9028,
+          "costUsd": 0.0384,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/05_sedan_rotated_sideways.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-05_rotated",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "photo_estimate",
+            "acceptableRoutes": [
+              "photo_estimate",
+              "adjuster"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "Toyota",
+            "expectedModel": "Camry",
+            "expectedColour": "Grey",
+            "expectedCostBand": "unsure",
+            "whatItTests": "Sideways upload should match 00a",
+            "source": "Edit of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "05_rotated",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Grey",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Photo is rotated sideways; no readable badge or lettering visible (wheel centre cap logo not legible). Body shape resembles a modern mid-size sedan but not distinctive enough to name confidently.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Front bumper corner crushed and heavily scraped with a puncture, extending to a creased front fender and gap near the headlight",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "unknown",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Bumper corner pushed in, deep scrapes, small puncture hole, separated from fender",
+                  "cost_low_usd": 900,
+                  "cost_high_usd": 1800
+                },
+                {
+                  "area": "front_fender",
+                  "side": "unknown",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Crumpled, creased fender edge above bumper near wheel arch",
+                  "cost_low_usd": 700,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "headlight",
+                  "side": "unknown",
+                  "damage_type": "misaligned_gap",
+                  "severity": "minor",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Gap between headlight and damaged bumper/fender; lens appears intact",
+                  "cost_low_usd": 0,
+                  "cost_high_usd": 900
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "close_up",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "front_door",
+                "side_mirror",
+                "windscreen",
+                "wheel_or_tyre"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": [
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Crushed front bumper corner where parking sensors or radar commonly sit"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "05_sedan_rotated_sideways.jpg",
+              "width": 1024,
+              "height": 1536,
+              "brightness": 97.1,
+              "sharpness": 3584.94,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 10166,
+          "costUsd": 0.0379,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/06_sedan_mirrored_duplicate.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-06_mirrored_duplicate",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [
+              "I1"
+            ],
+            "expectedMake": "Toyota",
+            "expectedModel": "Camry",
+            "expectedColour": "Grey",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Flipped copy of a past claim's photo",
+            "source": "Edit of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "06_mirrored_duplicate",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Dark grey",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Mid-size sedan with a body shape resembling a recent Toyota Camry, but no badge, logo or lettering is visible (the grille emblem area is out of frame and the wheel centre cap is blank), so make and model are not confirmed.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Right front corner impact: bumper cover heavily scraped, cracked and pushed in, fender crumpled at the headlight edge, bumper-to-fender gap separated and hood edge buckled",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Bumper corner pushed in with extensive scrapes, creases and a tear near the wheel arch",
+                  "cost_low_usd": 900,
+                  "cost_high_usd": 1800
+                },
+                {
+                  "area": "front_fender",
+                  "side": "right",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Crumpled, creased metal at front of fender behind headlight with paint scraping",
+                  "cost_low_usd": 700,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "front_bumper",
+                  "side": "right",
+                  "damage_type": "misaligned_gap",
+                  "severity": "moderate",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Bumper separated from fender leaving an open gap below the headlight",
+                  "cost_low_usd": 100,
+                  "cost_high_usd": 400
+                },
+                {
+                  "area": "hood",
+                  "side": "right",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Hood corner buckled with a raised crease near the fender line",
+                  "cost_low_usd": 500,
+                  "cost_high_usd": 1400
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "front_door",
+                "side_mirror",
+                "windscreen",
+                "wheel_or_tyre",
+                "side_glass"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": [
+              {
+                "sign": "structural_deformation",
+                "evidence": "Hood buckled and fender crumpled at the corner, suggesting possible underlying headlight support or apron damage"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "06_sedan_mirrored_duplicate.jpg",
+              "width": 1460,
+              "height": 970,
+              "brightness": 96.1,
+              "sharpness": 3987.38,
+              "clippedHighlights": 0.002,
+              "greyscale": false,
+              "nearDuplicateOf": "CLM-2025-08817"
+            }
+          ],
+          "latencyMs": 16184,
+          "costUsd": 0.05,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/07_headlight_closeup.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-07_headlight_closeup",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "more_evidence",
+            "acceptableRoutes": [
+              "more_evidence"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "CANT_TELL",
+            "expectedModel": "CANT_TELL",
+            "expectedColour": "Grey",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Close-up in a sensor and lighting area",
+            "source": "Crop of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "07_headlight_closeup",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Grey",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Close-up of one headlight and the bumper/fender corner only; no badge or lettering visible. The headlight shape resembles some sedans but a single headlight is not enough for a confident identification.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Front bumper corner crushed and heavily scraped below the headlight, with a puncture and damage extending into the front fender near the wheel",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "unknown",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Bumper cover deformed and creased, extensive scrape marks, small puncture near wheel, paint cracking",
+                  "cost_low_usd": 900,
+                  "cost_high_usd": 1800
+                },
+                {
+                  "area": "front_fender",
+                  "side": "unknown",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Crumpled, scraped panel beside headlight at upper right with gap to headlight housing",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "headlight",
+                  "side": "unknown",
+                  "damage_type": "other",
+                  "severity": "minor",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Lens appears intact but sits next to crushed surrounding panels; mounts may be affected",
+                  "cost_low_usd": 0,
+                  "cost_high_usd": 900
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "close_up",
+              "damage_extends_beyond_frame": true,
+              "visible_panels": [
+                "front_bumper",
+                "headlight",
+                "front_fender",
+                "hood",
+                "wheel_or_tyre"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": [
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Front bumper corner crushed where parking sensors or radar commonly sit"
+              },
+              {
+                "sign": "structural_deformation",
+                "evidence": "Deep crumpling of bumper and fender near headlight suggests possible damage to underlying supports"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "07_headlight_closeup.jpg",
+              "width": 1140,
+              "height": 760,
+              "brightness": 107,
+              "sharpness": 1157.14,
+              "clippedHighlights": 0.002,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 8831,
+          "costUsd": 0.0352,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/08_wheel_closeup.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-08_wheel_closeup",
+            "policyholder": "Alex Morgan",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Toyota",
+              "model": "Camry",
+              "colour": "Grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 17000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "more_evidence",
+            "acceptableRoutes": [
+              "more_evidence"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "CANT_TELL",
+            "expectedModel": "CANT_TELL",
+            "expectedColour": "Grey",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Wheel only; the damaged area isn't shown",
+            "source": "Crop of 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "08_wheel_closeup",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Dark grey",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Only a wheel, part of the bumper corner and the lower door area are visible; the centre cap emblem cannot be read reliably, and no badge or distinctive body shape is shown.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Left front bumper corner heavily scratched and scuffed next to the front wheel, extending beyond the frame",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Dense scratches and scuffing across the bumper corner ahead of the wheel arch",
+                  "cost_low_usd": 350,
+                  "cost_high_usd": 900
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "close_up",
+              "damage_extends_beyond_frame": true,
+              "visible_panels": [
+                "front_bumper",
+                "wheel_or_tyre",
+                "front_door",
+                "side_sill"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "08_wheel_closeup.jpg",
+              "width": 900,
+              "height": 900,
+              "brightness": 75.5,
+              "sharpness": 517.14,
+              "clippedHighlights": 0,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 8602,
+          "costUsd": 0.0352,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/09_no_vehicle_in_frame.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-09_no_vehicle",
+            "policyholder": "Sam Taylor",
+            "policyVehicle": {
+              "year": null,
+              "make": null,
+              "model": null,
+              "colour": null,
+              "powertrain": "unknown"
+            },
+            "vehicleValueUsd": null,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Not provided",
+            "reportedImpactArea": "unknown",
+            "injuryReported": false,
+            "vehicleDrivable": null,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "more_evidence",
+            "acceptableRoutes": [
+              "more_evidence"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
+            "expectedMake": "n/a",
+            "expectedModel": "n/a",
+            "expectedColour": "n/a",
+            "expectedCostBand": "n/a",
+            "whatItTests": "No vehicle in the photo",
+            "source": "Supplied by author",
+            "labelStatus": "draft"
+          },
+          "caseId": "09_no_vehicle",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": false,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "none",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": null,
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "No vehicle is visible in the photo; it shows hedges, trees and a building facade.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "No vehicle visible in the photo, so no damage can be assessed",
+              "no_visible_damage": false,
+              "items": []
+            },
+            "evidence": {
+              "view_type": "no_vehicle",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "09_no_vehicle_in_frame.jpg",
+              "width": 1056,
+              "height": 600,
+              "brightness": 116.2,
+              "sharpness": 85.83,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 4356,
+          "costUsd": 0.0237,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/10_race_car_debris_crop.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-10_race_debris_crop",
+            "policyholder": "Priya Shah",
+            "policyVehicle": {
+              "year": null,
+              "make": null,
+              "model": null,
+              "colour": null,
+              "powertrain": "unknown"
+            },
+            "vehicleValueUsd": null,
+            "lossDate": "2026-09-26",
+            "lossDescription": "Multi-car collision at the start of a race. Car went airborne over another car.",
+            "reportedImpactArea": "unknown",
+            "injuryReported": false,
+            "vehicleDrivable": false,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [],
+            "expectedMake": "CANT_TELL",
+            "expectedModel": "CANT_TELL",
+            "expectedColour": "Orange",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Partial race-car crop",
+            "source": "Crop of C",
+            "labelStatus": "draft"
+          },
+          "caseId": "10_race_debris_crop",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": true,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "race_or_non_road",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Orange and black",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Open-wheel single-seater race car with Pirelli P Zero tyres and sponsor lettering (NTT Communications, NRF, kimoa). No manufacturer badge is clearly visible, so make and model are not stated. A second car's white and blue bodywork is entangled with it, making it unclear which vehicle is the subject.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Open-wheel race car airborne in a crash, with shattered bodywork, flying debris and a detached wheel assembly; a second car's white bodywork is torn apart beneath it",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "other",
+                  "side": "unknown",
+                  "damage_type": "broken_or_shattered",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Orange bodywork fragmenting, with debris and smoke in the air",
+                  "cost_low_usd": 50000,
+                  "cost_high_usd": 500000
+                },
+                {
+                  "area": "wheel_or_tyre",
+                  "side": "unknown",
+                  "damage_type": "missing_part",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Wheel and suspension appear displaced mid-impact",
+                  "cost_low_usd": 10000,
+                  "cost_high_usd": 100000
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "wide",
+              "damage_extends_beyond_frame": true,
+              "visible_panels": [
+                "wheel_or_tyre",
+                "underbody",
+                "other"
+              ],
+              "photo_issues": [
+                "damage_obstructed"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "structural_deformation",
+                "evidence": "Bodywork and chassis components are shattering, with debris flying"
+              },
+              {
+                "sign": "wheel_or_suspension_displaced",
+                "evidence": "Wheel assembly appears separated or displaced during the airborne crash"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "10_race_car_debris_crop.jpg",
+              "width": 1229,
+              "height": 587,
+              "brightness": 127.7,
+              "sharpness": 1533.93,
+              "clippedHighlights": 0.01,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 7895,
+          "costUsd": 0.0328,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/11_race_car_grayscale_lowres.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-11_race_greyscale",
+            "policyholder": "Priya Shah",
+            "policyVehicle": {
+              "year": null,
+              "make": null,
+              "model": null,
+              "colour": null,
+              "powertrain": "unknown"
+            },
+            "vehicleValueUsd": null,
+            "lossDate": "2026-09-26",
+            "lossDescription": "Multi-car collision at the start of a race. Car went airborne over another car.",
+            "reportedImpactArea": "unknown",
+            "injuryReported": false,
+            "vehicleDrivable": false,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [],
+            "expectedMake": "CANT_TELL",
+            "expectedModel": "CANT_TELL",
+            "expectedColour": "CANT_TELL",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Black-and-white photo: colour can't be known",
+            "source": "Edit of C",
+            "labelStatus": "draft"
+          },
+          "caseId": "11_race_greyscale",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": true,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "race_or_non_road",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": null,
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Open-wheel single-seater race cars (Formula-style) identifiable by class only. Sponsor lettering (e.g. Kimoo, Pirelli P Zero tyres, 'Richard Mille') is visible, but no manufacturer badge is clear enough to name a make or model with confidence. Several cars are involved, so it is unclear which one the claim concerns.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Airborne race car crashing over another race car, with a detached wheel and flying debris; bodywork and suspension damage on multiple cars",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "underbody",
+                  "side": "unknown",
+                  "damage_type": "broken_or_shattered",
+                  "severity": "severe",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Airborne car's floor and bodywork breaking apart, debris cloud",
+                  "cost_low_usd": 50000,
+                  "cost_high_usd": 500000
+                },
+                {
+                  "area": "wheel_or_tyre",
+                  "side": "unknown",
+                  "damage_type": "missing_part",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Wheel detached and loose on track at right",
+                  "cost_low_usd": 5000,
+                  "cost_high_usd": 50000
+                },
+                {
+                  "area": "other",
+                  "side": "unknown",
+                  "damage_type": "broken_or_shattered",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Suspension and bodywork fragments hanging and flying off airborne car",
+                  "cost_low_usd": 20000,
+                  "cost_high_usd": 200000
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "wide",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "wheel_or_tyre",
+                "underbody",
+                "other"
+              ],
+              "photo_issues": [
+                "black_and_white",
+                "low_resolution"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "wheel_or_suspension_displaced",
+                "evidence": "A wheel has detached and suspension parts are hanging off the airborne car"
+              },
+              {
+                "sign": "structural_deformation",
+                "evidence": "The airborne car's bodywork and floor are breaking up mid-crash"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "11_race_car_grayscale_lowres.jpg",
+              "width": 800,
+              "height": 533,
+              "brightness": 137.8,
+              "sharpness": 1708.48,
+              "clippedHighlights": 0.01,
+              "greyscale": true,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 9128,
+          "costUsd": 0.0335,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/A-straightforward/demo_A_civic.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-V1_injury",
+            "policyholder": "Maria Lopez",
+            "policyVehicle": {
+              "year": 2018,
+              "make": "Honda",
+              "model": "Civic",
+              "colour": "Silver",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 14000,
+            "lossDate": "2026-09-28",
+            "lossDescription": "Parked on the street. Came back to find the driver's side rear door dented and scraped.",
+            "reportedImpactArea": "left",
+            "injuryReported": true,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [],
+            "expectedMake": "Honda",
+            "expectedModel": "Civic",
+            "expectedColour": "Silver",
+            "expectedCostBand": "1000_2500",
+            "whatItTests": "Injury on the claim overrides a simple photo",
+            "source": "Same photo as A",
+            "labelStatus": "draft"
+          },
+          "caseId": "V1_injury",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Honda",
+              "model": "Civic",
+              "year_range": "2016-2021",
+              "colour": "Silver",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Honda H logo and 'CIVIC' lettering on the boot lid, Honda logos on the wheel centre caps; sedan body and boomerang tail lights match the 10th-generation Civic.",
+              "powertrain_hint": "likely_combustion"
+            },
+            "damage": {
+              "summary": "Left rear door dent with scraping and transfer marks, extending to the lower rear edge near the wheel arch",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "rear_door",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Crease dent with dark scrape and transfer marks across the lower half of the left rear door, running toward the rear edge",
+                  "cost_low_usd": 800,
+                  "cost_high_usd": 1800
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "front_fender",
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "side_sill",
+                "roof",
+                "pillar",
+                "rear_quarter_panel",
+                "boot_or_tailgate",
+                "rear_bumper",
+                "tail_light",
+                "wheel_or_tyre",
+                "side_glass",
+                "rear_glass",
+                "headlight"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_A_civic.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 109.3,
+              "sharpness": 2727.94,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 6995,
+          "costUsd": 0.0341,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/A-straightforward/demo_A_civic.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-V2_wrong_side",
+            "policyholder": "Maria Lopez",
+            "policyVehicle": {
+              "year": 2018,
+              "make": "Honda",
+              "model": "Civic",
+              "colour": "Silver",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 14000,
+            "lossDate": "2026-09-28",
+            "lossDescription": "Parked on the street. Came back to find the driver's side rear door dented and scraped.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "photo_estimate",
+            "acceptableRoutes": [
+              "photo_estimate"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [
+              "R3"
+            ],
+            "expectedMake": "Honda",
+            "expectedModel": "Civic",
+            "expectedColour": "Silver",
+            "expectedCostBand": "1000_2500",
+            "whatItTests": "Damage doesn't match the customer's description",
+            "source": "Same photo as A",
+            "labelStatus": "draft"
+          },
+          "caseId": "V2_wrong_side",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Honda",
+              "model": "Civic",
+              "year_range": "2016-2021",
+              "colour": "Silver",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Honda H logo on boot lid and wheel centre caps, 'CIVIC' lettering on boot lid; sedan body with boomerang tail lights matching the 10th-generation Civic",
+              "powertrain_hint": "likely_combustion"
+            },
+            "damage": {
+              "summary": "Left rear door dent with scraping, extending toward the rear wheel arch",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "rear_door",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Crease dent across the lower half of the left rear door with horizontal scrapes and paint transfer",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "rear_quarter_panel",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "minor",
+                  "likely_repair": "refinish_only",
+                  "visible_evidence": "Scrape marks continuing from the rear edge of the door onto the quarter panel ahead of the rear wheel arch",
+                  "cost_low_usd": 300,
+                  "cost_high_usd": 700
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "front_fender",
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "side_sill",
+                "roof",
+                "pillar",
+                "rear_quarter_panel",
+                "boot_or_tailgate",
+                "rear_bumper",
+                "tail_light",
+                "wheel_or_tyre",
+                "side_glass",
+                "rear_glass",
+                "headlight"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_A_civic.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 109.3,
+              "sharpness": 2727.94,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 7858,
+          "costUsd": 0.0362,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/A-straightforward/demo_A_civic.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-V3_low_value",
+            "policyholder": "Maria Lopez",
+            "policyVehicle": {
+              "year": 2018,
+              "make": "Honda",
+              "model": "Civic",
+              "colour": "Silver",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 2500,
+            "lossDate": "2026-09-28",
+            "lossDescription": "Parked on the street. Came back to find the driver's side rear door dented and scraped.",
+            "reportedImpactArea": "left",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [
+              "C2"
+            ],
+            "expectedMake": "Honda",
+            "expectedModel": "Civic",
+            "expectedColour": "Silver",
+            "expectedCostBand": "1000_2500",
+            "whatItTests": "Same damage on a car worth much less",
+            "source": "Same photo as A",
+            "labelStatus": "draft"
+          },
+          "caseId": "V3_low_value",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Honda",
+              "model": "Civic",
+              "year_range": "2016-2021",
+              "colour": "Silver",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Honda H logo on the boot lid and wheel centre caps, 'CIVIC' lettering on the boot lid; the 10th-generation sedan body and tail lights match 2016-2021.",
+              "powertrain_hint": "likely_combustion"
+            },
+            "damage": {
+              "summary": "Left rear door dent with scraping, extending towards the rear wheel arch and quarter panel",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "rear_door",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Horizontal crease dent with brown scrape marks across the lower rear door",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "rear_quarter_panel",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "minor",
+                  "likely_repair": "refinish_only",
+                  "visible_evidence": "Scrape marks continuing past the door edge onto the quarter panel ahead of the wheel arch",
+                  "cost_low_usd": 250,
+                  "cost_high_usd": 600
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "headlight",
+                "front_fender",
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "side_sill",
+                "roof",
+                "pillar",
+                "rear_quarter_panel",
+                "boot_or_tailgate",
+                "rear_bumper",
+                "tail_light",
+                "wheel_or_tyre",
+                "side_glass",
+                "rear_glass"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_A_civic.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 109.3,
+              "sharpness": 2727.94,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 8614,
+          "costUsd": 0.0361,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/A-straightforward/demo_A_civic.jpg",
+            "eval/images/00a_sedan_straightforward.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-V4_mixed_cars",
+            "policyholder": "Maria Lopez",
+            "policyVehicle": {
+              "year": 2018,
+              "make": "Honda",
+              "model": "Civic",
+              "colour": "Silver",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 14000,
+            "lossDate": "2026-09-28",
+            "lossDescription": "Parked on the street. Came back to find the driver's side rear door dented and scraped.",
+            "reportedImpactArea": "left",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [
+              "I2"
+            ],
+            "expectedMake": "n/a",
+            "expectedModel": "n/a",
+            "expectedColour": "n/a",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Folder with photos of two different cars",
+            "source": "A plus 00a",
+            "labelStatus": "draft"
+          },
+          "caseId": "V4_mixed_cars",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": false,
+              "vehicle_class": "passenger_car",
+              "make": "Honda",
+              "model": "Civic",
+              "year_range": "2016-2021",
+              "colour": "Silver",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Photo 1 shows Honda 'H' badge and 'CIVIC' lettering on the boot lid of a 10th-generation sedan body. Photo 2 shows a different vehicle: a dark grey sedan with a different front-end design, no readable badge, and no Honda Civic styling. The two photos clearly show different vehicles, so the photo 2 car is not identified.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Photo 1: left rear door dent with scraping, extending toward the rear wheel arch; Photo 2 (different grey car): front bumper, left front fender and hood crushed and scraped",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "rear_door",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Photo 1: horizontal crease and dark scrape marks across the left rear door",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "rear_quarter_panel",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "minor",
+                  "likely_repair": "refinish_only",
+                  "visible_evidence": "Photo 1: scrape marks continue onto the quarter panel ahead of the rear wheel arch",
+                  "cost_low_usd": 300,
+                  "cost_high_usd": 800
+                },
+                {
+                  "area": "front_bumper",
+                  "side": "left",
+                  "damage_type": "crushed",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Photo 2 (different vehicle): bumper cover deformed, heavily scratched and torn near the wheel",
+                  "cost_low_usd": 900,
+                  "cost_high_usd": 2000
+                },
+                {
+                  "area": "front_fender",
+                  "side": "left",
+                  "damage_type": "crushed",
+                  "severity": "moderate",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Photo 2: fender crumpled above the headlight and wheel arch",
+                  "cost_low_usd": 800,
+                  "cost_high_usd": 1800
+                },
+                {
+                  "area": "hood",
+                  "side": "left",
+                  "damage_type": "misaligned_gap",
+                  "severity": "moderate",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Photo 2: hood lifted with an open gap at the left front corner near the fender",
+                  "cost_low_usd": 300,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "headlight",
+                  "side": "left",
+                  "damage_type": "misaligned_gap",
+                  "severity": "minor",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Photo 2: gaps around the headlight where the bumper and fender are pushed away",
+                  "cost_low_usd": 100,
+                  "cost_high_usd": 900
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "windscreen",
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "side_sill",
+                "roof",
+                "pillar",
+                "rear_quarter_panel",
+                "boot_or_tailgate",
+                "rear_bumper",
+                "tail_light",
+                "wheel_or_tyre",
+                "side_glass",
+                "rear_glass"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": [
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Photo 2: front bumper damage near the lower grille and front corner, where parking sensors or radar may sit"
+              },
+              {
+                "sign": "structural_deformation",
+                "evidence": "Photo 2: crumpled fender and displaced hood suggest possible deformation behind the panels"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_A_civic.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 109.3,
+              "sharpness": 2727.94,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            },
+            {
+              "name": "00a_sedan_straightforward.jpg",
+              "width": 1536,
+              "height": 1024,
+              "brightness": 97.1,
+              "sharpness": 3745.48,
+              "clippedHighlights": 0.001,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 13599,
+          "costUsd": 0.0571,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/B-insufficient-evidence/demo_B_closeup.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-V5_asked_twice",
+            "policyholder": "Daniel Kim",
+            "policyVehicle": {
+              "year": 2019,
+              "make": "Honda",
+              "model": "Civic",
+              "colour": "Silver",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 15500,
+            "lossDate": "2026-09-27",
+            "lossDescription": "Someone sideswiped my car in a parking lot. Sent a photo of the damage.",
+            "reportedImpactArea": "left",
+            "injuryReported": false,
+            "vehicleDrivable": true,
+            "priorEvidenceRequests": 2
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": false,
+            "expectedFlags": [
+              "E7"
+            ],
+            "expectedMake": "CANT_TELL",
+            "expectedModel": "CANT_TELL",
+            "expectedColour": "Silver",
+            "expectedCostBand": "n/a",
+            "whatItTests": "Still not enough after two requests",
+            "source": "Same photo as B",
+            "labelStatus": "draft"
+          },
+          "caseId": "V5_asked_twice",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": null,
+              "model": null,
+              "year_range": null,
+              "colour": "Silver",
+              "identification_basis": "not_identifiable",
+              "identification_evidence": "Only doors, part of the rear quarter panel and a wheel are visible; no badge, logo or lettering and not enough of the body shape to identify the vehicle.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Left rear door dent with scraping, extending onto the rear quarter panel above the wheel arch",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "rear_door",
+                  "side": "left",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Large shallow dent with horizontal scrapes and paint transfer across most of the door",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "rear_quarter_panel",
+                  "side": "left",
+                  "damage_type": "scratch_or_scuff",
+                  "severity": "minor",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Scrape marks continuing past the door gap onto the quarter panel above the wheel arch",
+                  "cost_low_usd": 300,
+                  "cost_high_usd": 800
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "close_up",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_door",
+                "rear_door",
+                "rear_quarter_panel",
+                "wheel_or_tyre"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": []
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_B_closeup.jpg",
+              "width": 1200,
+              "height": 800,
+              "brightness": 127.5,
+              "sharpness": 222.72,
+              "clippedHighlights": 0,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 7006,
+          "costUsd": 0.0311,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "demo-images/D-road-car-escalation/demo_D_nissan.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-D_nissan_front_crush",
+            "policyholder": "Grace Okafor",
+            "policyVehicle": {
+              "year": 2008,
+              "make": "Nissan",
+              "model": "Altima",
+              "colour": "White",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 5500,
+            "lossDate": "2026-09-27",
+            "lossDescription": "Another car ran a red light and hit the front of my car. Towed from the scene.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": false,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [],
+            "expectedMake": "Nissan",
+            "expectedModel": "Altima",
+            "expectedColour": "White",
+            "expectedCostBand": "total_loss",
+            "whatItTests": "Severe front crush on an ordinary road car",
+            "source": "Supplied by author (Wikimedia Commons; licence to confirm)",
+            "labelStatus": "draft"
+          },
+          "caseId": "D_nissan_front_crush",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Nissan",
+              "model": "Altima",
+              "year_range": "2007-2009",
+              "colour": "White",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Nissan badge on grille. The model is inferred from the sedan body, grille and headlight shape typical of the fourth-generation Altima, but no model badge is visible.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Severe right front impact: bumper torn away, right headlight and fender crushed, hood buckled, right A-pillar and front door deformed, right front wheel pushed back",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "front_bumper",
+                  "side": "front",
+                  "damage_type": "tear_or_puncture",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Bumper cover torn, right side missing, lower section hanging to the ground",
+                  "cost_low_usd": 800,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "headlight",
+                  "side": "right",
+                  "damage_type": "missing_part",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Right headlight area destroyed, internals exposed",
+                  "cost_low_usd": 300,
+                  "cost_high_usd": 700
+                },
+                {
+                  "area": "front_fender",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Right fender crumpled and torn back toward the door",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1200
+                },
+                {
+                  "area": "hood",
+                  "side": "centre",
+                  "damage_type": "dent",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Hood buckled and lifted at the right front corner",
+                  "cost_low_usd": 700,
+                  "cost_high_usd": 1400
+                },
+                {
+                  "area": "pillar",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Right A-pillar bent and taped, with a gap at the windscreen edge",
+                  "cost_low_usd": 1500,
+                  "cost_high_usd": 4000
+                },
+                {
+                  "area": "front_door",
+                  "side": "right",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Front edge of the right front door creased and pushed in",
+                  "cost_low_usd": 500,
+                  "cost_high_usd": 1500
+                },
+                {
+                  "area": "wheel_or_tyre",
+                  "side": "right",
+                  "damage_type": "misaligned_gap",
+                  "severity": "severe",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Right front wheel angled and pushed rearward",
+                  "cost_low_usd": 1000,
+                  "cost_high_usd": 3000
+                },
+                {
+                  "area": "side_mirror",
+                  "side": "left",
+                  "damage_type": "other",
+                  "severity": "minor",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Left mirror taped, appears loose",
+                  "cost_low_usd": 100,
+                  "cost_high_usd": 400
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "windscreen",
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "pillar",
+                "wheel_or_tyre",
+                "side_sill",
+                "roof"
+              ],
+              "photo_issues": []
+            },
+            "risk_signs": [
+              {
+                "sign": "structural_deformation",
+                "evidence": "Right A-pillar and front apron crushed, with exposed structure behind the fender"
+              },
+              {
+                "sign": "wheel_or_suspension_displaced",
+                "evidence": "Right front wheel angled and pushed back into the wheel well"
+              },
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Front bumper torn off at the right side"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "demo_D_nissan.jpg",
+              "width": 2000,
+              "height": 1333,
+              "brightness": 131.7,
+              "sharpness": 2342.47,
+              "clippedHighlights": 0.005,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 12510,
+          "costUsd": 0.0495,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/12_flood_mercedes.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-12_flood",
+            "policyholder": "Hannah Price",
+            "policyVehicle": {
+              "year": 1988,
+              "make": "Mercedes-Benz",
+              "model": "230TE",
+              "colour": "Beige",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 3000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "The river burst its banks overnight and the car was standing in water on the driveway.",
+            "reportedImpactArea": "unknown",
+            "injuryReported": false,
+            "vehicleDrivable": null,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [
+              "S5"
+            ],
+            "expectedMake": "Mercedes-Benz",
+            "expectedModel": "230TE|E-Class|230|W124",
+            "expectedColour": "Beige|Gold|Champagne|Tan|Bronze",
+            "expectedCostBand": "total_loss",
+            "whatItTests": "Flood damage a photo can't price",
+            "source": "Supplied by author (Wikimedia Commons; licence to confirm)",
+            "labelStatus": "draft"
+          },
+          "caseId": "12_flood",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Mercedes-Benz",
+              "model": "230 TE (W124 estate)",
+              "year_range": "1986-1988",
+              "colour": "Gold/beige",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Mercedes three-pointed star on tailgate, '230 TE' badge, and W124 estate body shape; UK 'E' registration suggests 1987-88.",
+              "powertrain_hint": "likely_combustion"
+            },
+            "damage": {
+              "summary": "Vehicle standing in floodwater up to the sills and lower door/bumper line, with algae staining on the tailgate",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "underbody",
+                  "side": "centre",
+                  "damage_type": "water_line",
+                  "severity": "severe",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Floodwater covers wheels, sills and lower bumper",
+                  "cost_low_usd": 3000,
+                  "cost_high_usd": 10000
+                },
+                {
+                  "area": "interior",
+                  "side": "centre",
+                  "damage_type": "water_line",
+                  "severity": "severe",
+                  "likely_repair": "inspect",
+                  "visible_evidence": "Water level near door bottoms; interior flooding likely but floor not visible",
+                  "cost_low_usd": 1500,
+                  "cost_high_usd": 5000
+                },
+                {
+                  "area": "boot_or_tailgate",
+                  "side": "rear",
+                  "damage_type": "other",
+                  "severity": "minor",
+                  "likely_repair": "refinish_only",
+                  "visible_evidence": "Green algae/moss staining on tailgate and roof edge",
+                  "cost_low_usd": 100,
+                  "cost_high_usd": 400
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "side_sill",
+                "roof",
+                "rear_quarter_panel",
+                "boot_or_tailgate",
+                "rear_bumper",
+                "tail_light",
+                "wheel_or_tyre",
+                "side_glass",
+                "rear_glass",
+                "pillar"
+              ],
+              "photo_issues": [
+                "damage_obstructed"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "flood_damage",
+                "evidence": "Car sitting in murky floodwater above wheel hubs and sills"
+              },
+              {
+                "sign": "possible_prior_damage",
+                "evidence": "Moss/algae growth on tailgate and roof suggests long-standing neglect predating the flood"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "12_flood_mercedes.jpg",
+              "width": 2000,
+              "height": 1492,
+              "brightness": 118.5,
+              "sharpness": 3887.37,
+              "clippedHighlights": 0.007,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 9627,
+          "costUsd": 0.0408,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/13_van_crushed_by_wall.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-13_van_crushed",
+            "policyholder": "Min-jun Park",
+            "policyVehicle": {
+              "year": 2016,
+              "make": "Hyundai",
+              "model": "Grand Starex",
+              "colour": "Yellow",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 14000,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Part of the building wall collapsed onto the parked van during the earthquake.",
+            "reportedImpactArea": "unknown",
+            "injuryReported": false,
+            "vehicleDrivable": false,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [],
+            "expectedMake": "Hyundai",
+            "expectedModel": "Starex|H-1|H1|iLoad",
+            "expectedColour": "Yellow",
+            "expectedCostBand": "total_loss",
+            "whatItTests": "Roof crushed by a collapsed wall; also a commercial-type van",
+            "source": "Supplied by author (Wikimedia Commons; licence to confirm)",
+            "labelStatus": "draft"
+          },
+          "caseId": "13_van_crushed",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "van",
+              "make": "Hyundai",
+              "model": "Starex (H-1)",
+              "year_range": "2007-2017",
+              "colour": "Yellow",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "Hyundai logo on grille and wheel centre caps; body shape, headlights and grille match the Grand Starex/H-1 minivan. Korean plate and school-bus stop sign.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Right side and roof crushed by collapsed brick wall, with roof caved in, windscreen shattered, sliding door and rear quarter crushed, and side glass broken",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "roof",
+                  "side": "centre",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Roof caved in along full length, debris and concrete on top",
+                  "cost_low_usd": 5000,
+                  "cost_high_usd": 12000
+                },
+                {
+                  "area": "windscreen",
+                  "side": "front",
+                  "damage_type": "broken_or_shattered",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Windscreen shattered and pushed down",
+                  "cost_low_usd": 400,
+                  "cost_high_usd": 900
+                },
+                {
+                  "area": "pillar",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "A/B pillars bent and collapsed, a pillar protruding upward",
+                  "cost_low_usd": 3000,
+                  "cost_high_usd": 8000
+                },
+                {
+                  "area": "rear_door",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Sliding door crushed inward with bricks embedded",
+                  "cost_low_usd": 2000,
+                  "cost_high_usd": 4500
+                },
+                {
+                  "area": "rear_quarter_panel",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Rear quarter pushed in, window opening deformed",
+                  "cost_low_usd": 2500,
+                  "cost_high_usd": 6000
+                },
+                {
+                  "area": "front_door",
+                  "side": "right",
+                  "damage_type": "dent",
+                  "severity": "moderate",
+                  "likely_repair": "repair_and_refinish",
+                  "visible_evidence": "Door frame bent at top, creasing at rear edge",
+                  "cost_low_usd": 1200,
+                  "cost_high_usd": 3000
+                },
+                {
+                  "area": "side_glass",
+                  "side": "right",
+                  "damage_type": "broken_or_shattered",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Side windows missing, glass fragments on ground",
+                  "cost_low_usd": 400,
+                  "cost_high_usd": 1200
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": false,
+              "visible_panels": [
+                "front_bumper",
+                "grille",
+                "hood",
+                "headlight",
+                "front_fender",
+                "windscreen",
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "roof",
+                "pillar",
+                "rear_quarter_panel",
+                "wheel_or_tyre",
+                "side_glass"
+              ],
+              "photo_issues": [
+                "damage_obstructed"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "structural_deformation",
+                "evidence": "Roof and pillars collapsed, body shell crushed by wall debris"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "13_van_crushed_by_wall.jpg",
+              "width": 2000,
+              "height": 1333,
+              "brightness": 103,
+              "sharpness": 3466.37,
+              "clippedHighlights": 0.006,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 12167,
+          "costUsd": 0.0464,
+          "modelServed": "claude-opus-5-5"
+        },
+        {
+          "photos": [
+            "eval/images/14_vw_into_tree.jpg"
+          ],
+          "claim": {
+            "claimId": "EVAL-14_vw_tree",
+            "policyholder": "Javier Ruiz",
+            "policyVehicle": {
+              "year": 2002,
+              "make": "Volkswagen",
+              "model": "Golf",
+              "colour": "Dark grey",
+              "powertrain": "combustion"
+            },
+            "vehicleValueUsd": 2500,
+            "lossDate": "2026-09-20",
+            "lossDescription": "Lost control on a wet road and hit a tree.",
+            "reportedImpactArea": "front",
+            "injuryReported": false,
+            "vehicleDrivable": false,
+            "priorEvidenceRequests": 0
+          },
+          "labels": {
+            "expectedRoute": "adjuster",
+            "acceptableRoutes": [
+              "adjuster"
+            ],
+            "mustEscalate": true,
+            "expectedFlags": [],
+            "expectedMake": "Volkswagen",
+            "expectedModel": "Golf|Bora|Jetta",
+            "expectedColour": "Grey|Blue|Black",
+            "expectedCostBand": "total_loss",
+            "whatItTests": "Front corner into a tree; possible airbag and structural damage",
+            "source": "Supplied by author (Wikimedia Commons; licence to confirm)",
+            "labelStatus": "draft"
+          },
+          "caseId": "14_vw_tree",
+          "ok": true,
+          "extraction": {
+            "vehicle": {
+              "vehicle_present": true,
+              "multiple_vehicles_in_frame": false,
+              "same_vehicle_in_all_photos": true,
+              "vehicle_class": "passenger_car",
+              "make": "Volkswagen",
+              "model": null,
+              "year_range": null,
+              "colour": "Dark grey",
+              "identification_basis": "badge_or_logo_visible",
+              "identification_evidence": "VW logo on the alloy wheel centre cap. The door and mirror shape resemble a Mk4 Golf or Bora, but no model badge is visible, so model is left null.",
+              "powertrain_hint": "unknown"
+            },
+            "damage": {
+              "summary": "Severe frontal impact into a tree, with the hood crumpled, the right front fender torn and the front bumper detached, extending into the engine bay",
+              "no_visible_damage": false,
+              "items": [
+                {
+                  "area": "hood",
+                  "side": "front",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Hood buckled upward and folded against the tree",
+                  "cost_low_usd": 600,
+                  "cost_high_usd": 1200
+                },
+                {
+                  "area": "front_fender",
+                  "side": "right",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Fender torn and crumpled, wheel arch liner hanging out",
+                  "cost_low_usd": 500,
+                  "cost_high_usd": 1000
+                },
+                {
+                  "area": "front_bumper",
+                  "side": "front",
+                  "damage_type": "missing_part",
+                  "severity": "severe",
+                  "likely_repair": "replace_and_refinish",
+                  "visible_evidence": "Bumper cover broken off and lying on the ground by the tree",
+                  "cost_low_usd": 500,
+                  "cost_high_usd": 1100
+                },
+                {
+                  "area": "other",
+                  "side": "front",
+                  "damage_type": "crushed",
+                  "severity": "severe",
+                  "likely_repair": "replace",
+                  "visible_evidence": "Engine bay components and fluid reservoirs exposed and pushed in",
+                  "cost_low_usd": 2000,
+                  "cost_high_usd": 6000
+                }
+              ]
+            },
+            "evidence": {
+              "view_type": "three_quarter",
+              "damage_extends_beyond_frame": true,
+              "visible_panels": [
+                "hood",
+                "front_fender",
+                "front_door",
+                "rear_door",
+                "side_mirror",
+                "windscreen",
+                "side_glass",
+                "wheel_or_tyre",
+                "front_bumper",
+                "side_sill"
+              ],
+              "photo_issues": [
+                "damage_obstructed"
+              ]
+            },
+            "risk_signs": [
+              {
+                "sign": "structural_deformation",
+                "evidence": "Front end crushed deeply around the tree, with the engine bay intruded"
+              },
+              {
+                "sign": "airbag_deployed",
+                "evidence": "Deflated white airbag fabric visible inside the cabin near the dashboard"
+              },
+              {
+                "sign": "sensor_zone_damage",
+                "evidence": "Front bumper and grille area destroyed"
+              },
+              {
+                "sign": "wheel_or_suspension_displaced",
+                "evidence": "Right front wheel sits close to the tree under the crushed fender, so displacement is possible"
+              }
+            ]
+          },
+          "photoMetrics": [
+            {
+              "name": "14_vw_into_tree.jpg",
+              "width": 1500,
+              "height": 1125,
+              "brightness": 115.4,
+              "sharpness": 4033.33,
+              "clippedHighlights": 0.039,
+              "greyscale": false,
+              "nearDuplicateOf": null
+            }
+          ],
+          "latencyMs": 10290,
+          "costUsd": 0.0432,
+          "modelServed": "claude-opus-5-5"
+        }
+      ]
+    }
+  ]
+}

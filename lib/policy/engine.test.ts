@@ -150,11 +150,17 @@ test("A: clear photo of the Civic goes to the photo estimate path with every req
   assert.equal(d.customerMessage, null);
 });
 
-test("A: the range shows its drivers, and marks which parts are rule adjustments", () => {
+test("A: the range shows its drivers, and a door dent gets no hidden-damage allowance", () => {
   const e = run(civicA()).requiredOutputs.estimate;
-  assert.ok(e.drivers.some((d) => d.source === "ai_estimate"));
-  assert.ok(e.drivers.some((d) => d.source === "rule_adjustment" && /behind the panels/.test(d.label)));
+  assert.ok(e.drivers.every((d) => d.source === "ai_estimate"));
   assert.match(e.accuracyNote, /final paid costs/);
+});
+
+test("moderate damage to a bumper adds a labelled hidden-damage allowance", () => {
+  const x = civicA();
+  x.damage.items[0] = { ...x.damage.items[0], area: "rear_bumper", side: "rear" };
+  const e = run(x).requiredOutputs.estimate;
+  assert.ok(e.drivers.some((d) => d.source === "rule_adjustment" && /behind the panels/.test(d.label)));
 });
 
 test("B: close-up doesn't guess the car, withholds the estimate and asks for a wider photo", () => {
@@ -261,6 +267,11 @@ test("a dark photo is caught by the pixel check even if the AI doesn't mention i
   const d = run(civicA(), claim(), [{ ...goodPhoto(), brightness: 26 }]);
   assert.equal(d.route, "more_evidence");
   assert.match(d.customerMessage!, /daylight/);
+});
+
+test("with several photos, one dark photo doesn't trigger a retake if another is fine", () => {
+  const d = run(civicA(), claim(), [{ ...goodPhoto("night.jpg"), brightness: 26 }, goodPhoto("day.jpg")]);
+  assert.equal(d.route, "photo_estimate");
 });
 
 test("glare reported by the AI asks for another angle", () => {
