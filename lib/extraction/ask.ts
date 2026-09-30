@@ -25,7 +25,7 @@ export async function ask(input: {
   reasons: string[];
   history: { question: string; answer: string }[];
 }): Promise<{ answer: string; model: string }> {
-  const client = makeClient({ timeout: TIMEOUT_MS });
+  const client = makeClient({ timeout: 30_000 });
   const model = modelFromEnv();
   const context: Anthropic.ContentBlockParam[] = [];
   input.photos.forEach((p, i) => {
