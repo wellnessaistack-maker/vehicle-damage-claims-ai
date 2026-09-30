@@ -414,6 +414,22 @@ test("a reviewer's adjusted range goes back through the rules", () => {
   assert.match(c1.citations!.map((t) => t.text).join(" "), /reviewer's adjusted range/);
 });
 
+test("a wide range that runs far past the limit goes to an adjuster, not just a price check", () => {
+  const x = civicA();
+  const c = claim();
+  const wide = decide(x, c, [goodPhoto()], DEFAULT_SETTINGS, { reviewerRange: { lowUsd: 1750, highUsd: 5350 } });
+  assert.equal(wide.route, "adjuster");
+  assert.ok(firedIds(wide).includes("C4"));
+  assert.ok(!firedIds(wide).includes("C3"), "no double counting");
+  // Just past the limit stays on the fast path with a price-check flag.
+  const narrow = decide(x, c, [goodPhoto()], DEFAULT_SETTINGS, { reviewerRange: { lowUsd: 1750, highUsd: 3500 } });
+  assert.equal(narrow.route, "photo_estimate");
+  assert.ok(firedIds(narrow).includes("C3"));
+  // The protocol owner can loosen it.
+  const loose = decide(x, c, [goodPhoto()], { ...DEFAULT_SETTINGS, wideRangeOverLimitPct: 200 }, { reviewerRange: { lowUsd: 1750, highUsd: 5350 } });
+  assert.equal(loose.route, "photo_estimate");
+});
+
 test("every rule says which facts it checks", () => {
   for (const r of RULES) assert.ok(r.uses.length > 0, r.id);
 });

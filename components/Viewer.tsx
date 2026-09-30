@@ -69,7 +69,7 @@ export function Viewer(props: {
           )}
           <span style={{ flex: 1 }} />
           <button className="btn btn-sm btn-ghost" onClick={() => setEditing((e) => !e)}>
-            {editing ? "Close" : "Edit claim details"}
+            {editing ? "Close" : "Edit details"}
           </button>
         </div>
         {c.contact && (c.contact.phone || c.contact.email) && (

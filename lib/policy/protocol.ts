@@ -38,6 +38,7 @@ export type PhotoQualityLevel = "lenient" | "standard" | "strict";
 export interface Settings {
   fastPathLimitUsd: number;
   totalLossRatio: number;
+  wideRangeOverLimitPct: number;
   sensorZoneHandling: "review_flag" | "adjuster";
   photoQuality: PhotoQualityLevel;
   maxEvidenceRequests: number;
@@ -50,6 +51,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   fastPathLimitUsd: 2500,
   totalLossRatio: 0.6,
+  wideRangeOverLimitPct: 50,
   sensorZoneHandling: "review_flag",
   photoQuality: "standard",
   maxEvidenceRequests: 2,
@@ -100,6 +102,16 @@ export const SETTING_DEFS: SettingDef[] = [
     max: 1,
     step: 0.05,
     unit: "ratio",
+  },
+  {
+    key: "wideRangeOverLimitPct",
+    kind: "number",
+    label: "Wide range past the limit",
+    help: "If a range starts under the fast-path limit but its high end runs this far above it, send the claim to an adjuster instead of only flagging a price check.",
+    min: 10,
+    max: 200,
+    step: 10,
+    unit: "pct",
   },
   {
     key: "sensorZoneHandling",
@@ -665,6 +677,24 @@ export const RULES: Rule[] = [
     },
   },
   {
+    id: "C4",
+    uses: ["estimate"],
+    group: "cost",
+    tier: "configurable",
+    effect: "adjuster",
+    title: "Estimate runs far past the fast-path limit",
+    when: "The range starts under the fast-path limit, but its high end is well above it (by the set percentage), so the claim is too uncertain for the fast path.",
+    settings: ["fastPathLimitUsd", "wideRangeOverLimitPct"],
+    check: (ctx) => {
+      const cost = usableCost(ctx);
+      const { settings } = ctx;
+      const ceiling = settings.fastPathLimitUsd * (1 + settings.wideRangeOverLimitPct / 100);
+      return cost && cost.lowUsd <= settings.fastPathLimitUsd && cost.highUsd > ceiling
+        ? { reason: `The range runs up to ${usd(cost.highUsd)}, more than ${settings.wideRangeOverLimitPct}% above the ${usd(settings.fastPathLimitUsd)} fast-path limit, so it's too uncertain for the fast path.` }
+        : null;
+    },
+  },
+  {
     id: "C3",
     uses: ["estimate"],
     group: "cost",
@@ -676,6 +706,8 @@ export const RULES: Rule[] = [
     check: (ctx) => {
       const cost = usableCost(ctx);
       const { settings } = ctx;
+      // A very wide range is already sent to an adjuster by C4.
+      if (ctx.firedSoFar.includes("C4")) return null;
       return cost && cost.lowUsd <= settings.fastPathLimitUsd && cost.highUsd > settings.fastPathLimitUsd
         ? { reason: `The ${usd(settings.fastPathLimitUsd)} fast-path limit falls inside the estimate range, so the price needs a check.` }
         : null;

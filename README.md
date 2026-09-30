@@ -204,7 +204,7 @@ In production, lookups like the VIN, policy, labour rates or a vendor's price wo
 ### The routing protocol
 
 - **Locked guardrails:** injury reported, car can't be driven, airbags deployed, structural damage, fire or flood, electric or hybrid with damage near the battery, not a road car, motorcycle or commercial vehicle, a photo matching a past claim, photos of different cars, a photo of a screen, no vehicle, car can't be identified, damage not fully in frame, poor photo quality, no visible damage, more than one car in frame.
-- **Configurable settings,** within safe bounds: fast-path limit ($2,500), total-loss line (60% of vehicle value), whether sensor-area damage flags or escalates, how strict the photo checks are, how many photo requests before escalating, and the illustrative cost adjustments.
+- **Configurable settings,** within safe bounds: fast-path limit ($2,500), total-loss line (60% of vehicle value), how far past the limit a range can run before it goes to an adjuster (50%), whether sensor-area damage flags or escalates, how strict the photo checks are, how many photo requests before escalating, and the illustrative cost adjustments.
 
 Switch the role to **Protocol owner (mock)** to change settings. The worklist re-routes instantly because only the rules re-run, not the AI. **Test against labelled cases** replays saved AI answers under the draft settings and shows which cases change route and what happens to escalation recall.
 
@@ -214,7 +214,7 @@ Switch the role to **Protocol owner (mock)** to change settings. The worklist re
 
 The AI prices each damage item from its general knowledge of US repair costs; that's the "rough AI-generated estimate" you asked for. Code adds the items up and applies a few visible adjustments: an allowance for damage hidden behind panels, a sensor recalibration line, and a wider range when the photos show only part of the damage. Every adjustment amount is an **illustrative placeholder**.
 
-The range's real job is showing which side of a limit a claim falls on: low end above the fast-path limit goes to an adjuster, a range straddling it stays on the fast path with a price-check flag, and a high end past the total-loss line goes to adjuster / total loss. It is never a payable amount; the reviewer approves it as a starting estimate or adjusts it, and the adjustment is recorded.
+The range's real job is showing which side of a limit a claim falls on: low end above the fast-path limit goes to an adjuster; a range that crosses it slightly stays on the fast path with a price-check flag; a range that runs far past it (by default, a high end more than 50% above the limit) goes to an adjuster, because it's too uncertain; and a high end past the total-loss line goes to adjuster / total loss. It is never a payable amount; the reviewer approves it as a starting estimate or adjusts it, and the adjustment is recorded.
 
 ## Why these tools
 
@@ -252,7 +252,7 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 - **Almost all the time is the AI call.** Photo checks take a fraction of a second and the rules a few milliseconds; each claim's decision record shows the split. The levers are the model (Sonnet is about 30% faster), a shorter output format, and fewer photos per claim.
 - **Ten seconds is short next to today's wait.** The alternative is a claim sitting in a queue for a person. The worklist assesses three claims at a time in the background, so a reviewer rarely waits.
 - **Settings are chosen for a perception task.** Low effort, because the job is describing photos, not long reasoning. Photos are resized to 1,568 px on the long edge before the call, which keeps requests small. The call times out at 45 seconds, retries once, then goes to manual triage. If the requested model is overloaded, the API falls back to another, and the record says which model answered.
-- **It's consistent, not perfectly repeatable.** The same photo gave the same route in 25 of 26 cases over four runs. The one that flipped sat right at the $2,500 limit, which is why straddling ranges are flagged.
+- **It's consistent, not perfectly repeatable.** The same photo gave the same route in 25 of 26 cases over four runs. The one that flipped had a wide range crossing the $2,500 limit. The wide-range rule added since sends claims like it to an adjuster, which should remove that flip; it hasn't been re-measured yet.
 - **Cost at scale is small next to people.** At about 4 cents a claim, 100,000 claims a year is roughly $4,000 of model spend at list prices. Billed spend during this work ran above these estimates, so treat them as a floor. The real costs are integration and expert labelling.
 - **Throughput in production** comes from the queue and the provider's rate limits. Bulk jobs with no deadline, such as scoring a year of past claims, can use batch processing at a lower price.
 
@@ -266,7 +266,7 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 
 **What we'd need from the carrier.** A few hundred past claims with photos, the route each took, the final paid cost and any supplements. Two estimating experts labelling them independently; how often they agree is the ceiling to beat. Today's baseline for late escalations, supplements and reviewer minutes. And their own eligibility rules, limits, labour rates and vehicle values. Expert labelling at this scale is work Scale can supply.
 
-**Is the repair estimate good enough, and what happens when it's wrong?** The test is scoring past claims and comparing our range with the final paid cost: how often the range contains it, and how wide the range is, since a wide enough range always looks accurate. That needs paid-claims data, and the app says so on every estimate. The mistake that matters is a range on the wrong side of the fast-path limit or the total-loss line. Near the limit, the claim is flagged for a price check; over it, it goes to an adjuster. If the estimate is too low, the shop files a supplement as it does today. It is never the amount paid.
+**Is the repair estimate good enough, and what happens when it's wrong?** The test is scoring past claims and comparing our range with the final paid cost: how often the range contains it, and how wide the range is, since a wide enough range always looks accurate. That needs paid-claims data, and the app says so on every estimate. The mistake that matters is a range on the wrong side of the fast-path limit or the total-loss line. If the range crosses the limit slightly, the claim is flagged for a price check; if it's over the limit, or runs far past it, it goes to an adjuster. If the estimate is too low, the shop files a supplement as it does today. It is never the amount paid.
 
 ### The detail
 
@@ -275,7 +275,7 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 | | Opus 5.5, prompt v1 | Opus 5.5, prompt v2 | Sonnet 5.5, prompt v2 |
 |---|---|---|---|
 | Complex-case escalation recall | 11 of 11 | 11 of 11 | 11 of 11 |
-| Routing agreement, exact (acceptable) | 22 (23) of 26 | 23 (25) of 26 | 24 (25) of 26 |
+| Routing agreement, exact (acceptable) | 21 (23) of 26 | 23 (25) of 26 | 23 (25) of 26 |
 | Escalated when not needed | 1 of 15 | 0 of 15 | 0 of 15 |
 | Didn't guess when it couldn't tell | 17 of 17 | 17 of 17 | 16 of 17 |
 | Same route on every run (4 runs) | not measured | 25 of 26 | not measured |
@@ -290,7 +290,7 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 | A suspicion isn't evidence; report only risk signs you can see | Same case: v1 flagged "possible damage to underlying supports" | Fixed with the rule above |
 | Photos may be sideways; read them as if upright | A clean photo uploaded sideways wasn't read properly | Partly: v2 now sees the whole car, but still can't name it on its side, so it asks for another photo. The real fix is to straighten photos in code first |
 
-Net effect: needless escalations went from 1 to 0, and acceptable routes from 23 to 25 of 26. Exact matches only rose from 22 to 23, because one case priced right at the $2,500 limit (the Camry) landed on the other side of it on the v2 run; that instability is covered below. One more fix from that run was in code, not the prompt: the hidden-damage allowance no longer applies to side damage such as a door dent, which had pushed the demo's clean claim over the limit. It applies to both columns, so it doesn't show up as a difference between them.
+Net effect: needless escalations went from 1 to 0, exact matches from 21 to 23, and acceptable routes from 23 to 25 of 26. The Camry front corner isn't an exact match in either column: its range runs far past the $2,500 limit, so the wide-range rule sends it to an adjuster, while the draft label prefers the photo path (and accepts an adjuster). One more fix from that run was in code, not the prompt: the hidden-damage allowance no longer applies to side damage such as a door dent, which had pushed the demo's clean claim over the limit. It applies to both columns, so it doesn't show up as a difference between them.
 
 - **Read the numbers with care.** 11 of 11 is still consistent with a true recall as low as about 74%. v2 was written after seeing v1's mistakes on these same cases, so its gain is flattering; with real data we'd keep a locked test set nobody tunes against. And the set is escalation-heavy, unlike a real claims mix.
 - **Opus or Sonnet.** They route equally well here, and Sonnet is faster and half the price. Opus stays the default because it was more careful about not guessing, but 26 cases can't separate them. The choice should come from the carrier's own labelled claims.
@@ -304,7 +304,7 @@ The **Evaluation** page shows these results and can re-run a quick set of six ca
 | Complex claim sent down the fast path | Low, high impact | Locked safety rules, most cautious route wins, escalation recall measured |
 | Wrong vehicle named confidently | Medium | Make and model blanked unless a badge or distinctive shape supports them; policy mismatch flagged |
 | Damage missed or invented | Medium | "No damage visible" asks for photos; the reviewer approves every estimate |
-| Estimate on the wrong side of a limit | Likely at the margins | Straddling ranges flagged; reviewer adjustments recorded and re-routed |
+| Estimate on the wrong side of a limit | Likely at the margins | Ranges that cross the limit are flagged, very wide ones go to an adjuster; reviewer adjustments recorded and re-routed |
 | AI error, timeout or bad output | Occasional | One retry, then manual triage with the reason |
 | Reused or edited photo | Rising | Mirrored-copy check against past claims, referred to SIU; edits not yet detected |
 | Instructions written into a photo | Rare | The AI never picks the route and the safety rules are fixed, so the worst case is a wrong fact the reviewer can see |
