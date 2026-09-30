@@ -25,7 +25,6 @@ import { DEFAULT_SETTINGS, type Settings } from "@/lib/policy/protocol.ts";
 
 import { AssessmentPanel } from "./AssessmentPanel.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
-import { ArchitectureDrawer } from "./ArchitectureDrawer.tsx";
 import { DecisionRecordDrawer } from "./DecisionRecordDrawer.tsx";
 import { IntakeModal, type NewCase } from "./IntakeModal.tsx";
 import { ProtocolDrawer } from "./ProtocolDrawer.tsx";
@@ -58,7 +57,7 @@ export function Workspace() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [role, setRole] = useState<Role>("reviewer");
   const [simulate, setSimulate] = useState<SimulateMode>("none");
-  const [drawer, setDrawer] = useState<null | "protocol" | "architecture" | "record">(null);
+  const [drawer, setDrawer] = useState<null | "protocol" | "record">(null);
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [health, setHealth] = useState<Health | null>(null);
   const [loadingDemo, setLoadingDemo] = useState(false);
@@ -281,12 +280,43 @@ export function Workspace() {
             Protocol draft in use (not published)
           </button>
         )}
+        {simulate !== "none" && <span className="chip chip-warn">Next claim: simulated {simulate === "timeout" ? "timeout" : "bad AI output"}</span>}
         <div className="topbar-spacer" />
         <nav className="topbar-nav">
           <button onClick={() => setDrawer("protocol")}>Routing protocol</button>
-          <button onClick={() => setDrawer("architecture")}>Architecture</button>
+          <a href="https://github.com/wellnessaistack-maker/vehicle-damage-claims-ai#architecture-and-data-flow" target="_blank" rel="noreferrer">
+            Architecture ↗
+          </a>
           <a href="/evaluation">Evaluation</a>
         </nav>
+        <details className="demo-menu">
+          <summary>Demo</summary>
+          <div className="demo-menu-body">
+            <div className="section-label">Simulate an AI failure on the next claim</div>
+            <div className="seg">
+              {(
+                [
+                  ["none", "Off"],
+                  ["timeout", "Timeout"],
+                  ["invalid_output", "Bad output"],
+                ] as [SimulateMode, string][]
+              ).map(([m, label]) => (
+                <button key={m} className={simulate === m ? "on" : ""} onClick={() => setSimulate(m)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="hint">Then add a claim, or use Retry on one. It lands in manual triage with the reason instead of guessing.</div>
+            <dl className="kv" style={{ marginTop: 10 }}>
+              <dt>Model</dt>
+              <dd className="mono">{health?.model ?? "unknown"}</dd>
+              <dt>Prompt</dt>
+              <dd className="mono">{health?.promptVersion ?? "unknown"}</dd>
+              <dt>Protocol</dt>
+              <dd className="mono">v{health?.protocolVersion ?? "?"}</dd>
+            </dl>
+          </div>
+        </details>
         <select className="role-select" value={role} onChange={(e) => setRole(e.target.value as Role)} title="Mock role, no real login">
           <option value="reviewer">Role: Reviewer</option>
           <option value="owner">Role: Protocol owner (mock)</option>
@@ -347,9 +377,6 @@ export function Workspace() {
           selected={selected}
           onClose={() => setDrawer(null)}
         />
-      )}
-      {drawer === "architecture" && (
-        <ArchitectureDrawer health={health} simulate={simulate} onSimulate={setSimulate} onClose={() => setDrawer(null)} />
       )}
       {drawer === "record" && selected && <DecisionRecordDrawer item={selected} settings={settings} onClose={() => setDrawer(null)} />}
     </div>
