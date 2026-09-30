@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { currentDecision, DIRECTORY, holderLine, recipient, REVIEWER, ROUTE_OWNER, type CaseItem, type CaseOutcome, type ThreadEntry } from "@/lib/client/cases.ts";
+import { CALL_OUTCOMES, channels, customerUpdate, defaultChannel, firstName, followUpDate, preview as messagePreview, reminder, sentVia, shortDate, type Channel } from "@/lib/client/customer.ts";
 import { loadDemoPhoto, shrink, kindOf, type CasePhoto } from "@/lib/client/intake.ts";
 import { decide, type Decision, type EstimateOutput } from "@/lib/policy/engine.ts";
 import { ROUTE_LABELS, usd, type Route, type Settings } from "@/lib/policy/protocol.ts";
@@ -23,10 +24,17 @@ export function AssessmentPanel(props: {
   const { item, settings } = props;
   const [mode, setMode] = useState<Mode>(null);
   const d = item ? currentDecision(item, settings) : null;
-  const [message, setMessage] = useState<string>(d?.customerMessage ?? "");
+  const draftFor = (dec: Decision | null) => (dec && item ? (dec.customerMessage ?? customerUpdate(dec, item.claim) ?? "") : "");
+  const [message, setMessage] = useState<string>(draftFor(d));
   useEffect(() => {
-    setMessage(d?.customerMessage ?? "");
-  }, [d?.customerMessage]);
+    setMessage(draftFor(d));
+    // Redraft only when the route or the photo request changes, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d?.customerMessage, d?.route]);
+  const [chosenChannel, setChannel] = useState<Channel | null>(item ? defaultChannel(item.claim) : null);
+  // Follow the claim's current contact details, e.g. a phone number added after the claim arrived.
+  const channel = item && chosenChannel && channels(item.claim).includes(chosenChannel) ? chosenChannel : item ? defaultChannel(item.claim) : null;
+  const [sendUpdate, setSendUpdate] = useState(true);
 
   if (!item) {
     return (
@@ -95,16 +103,18 @@ export function AssessmentPanel(props: {
             <RequiredOutputs d={d!} />
             <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />
             <PolicyChecks d={d!} />
-            {d!.customerMessage && item.status !== "done" && (
-              <div className="card">
-                <div className="card-head">
-                  <h3>Message to the customer</h3>
-                  <span className="sub">Edit before sending</span>
-                </div>
-                <div className="card-body">
-                  <textarea className="message" value={message} onChange={(e) => setMessage(e.target.value)} />
-                </div>
-              </div>
+            {item.status !== "done" && route !== "manual_triage" && (
+              <ContactCard
+                item={item}
+                route={route}
+                message={message}
+                setMessage={setMessage}
+                channel={channel}
+                setChannel={setChannel}
+                sendUpdate={sendUpdate}
+                setSendUpdate={setSendUpdate}
+                onThread={props.onThread}
+              />
             )}
             <Checklist d={d!} />
           </>
@@ -121,6 +131,8 @@ export function AssessmentPanel(props: {
         mode={mode}
         setMode={setMode}
         message={message}
+        channel={channel}
+        sendUpdate={sendUpdate}
         onComplete={props.onComplete}
         onThread={props.onThread}
         onReassess={props.onReassess}
@@ -500,12 +512,15 @@ function ActionBar(props: {
   mode: Mode;
   setMode: (m: Mode) => void;
   message: string;
+  channel: Channel | null;
+  sendUpdate: boolean;
   onComplete: (id: string, outcome: Omit<CaseOutcome, "at">) => void;
   onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
   onReassess: (id: string) => void;
   onCustomerPhotos: (id: string, photos: CasePhoto[]) => void;
 }) {
-  const { item, route, d, mode, setMode } = props;
+  const { item, route, d, mode, setMode, channel } = props;
+  const [callOpen, setCallOpen] = useState(false);
   const [newRoute, setNewRoute] = useState<Route>(route === "adjuster" ? "photo_estimate" : "adjuster");
   const [reason, setReason] = useState("");
   const e = d?.requiredOutputs.estimate;
@@ -520,6 +535,14 @@ function ActionBar(props: {
     props.onComplete(item.id, outcome);
     setMode(null);
   };
+  // Records a message to the customer in the case thread. In production this goes out
+  // through the carrier's texting or email system.
+  const tellCustomer = (text: string) => {
+    if (!channel || !text.trim()) return "";
+    props.onThread(item.id, { kind: "action", author: REVIEWER.name, text: `${sentVia(item.claim, channel)}: "${messagePreview(text)}"` });
+    return ` ${channel === "text" ? "Texted" : "Emailed"} the customer an update.`;
+  };
+  const withUpdate = (text: string | null) => (props.sendUpdate && text ? tellCustomer(text) : "");
   const open = (m: Mode) => {
     setReason("");
     setMode(mode === m ? null : m);
@@ -575,6 +598,15 @@ function ActionBar(props: {
           {item.outcome.reason && <> Reason: {item.outcome.reason}</>}
           {holder && <div className="done-holder">{holder}</div>}
         </div>
+        {waiting && (
+          <FollowUp
+            item={item}
+            channel={channel}
+            onReminder={() => tellCustomer(reminder(item.claim))}
+            onCall={() => setCallOpen((o) => !o)}
+          />
+        )}
+        {callOpen && <CallForm claim={item.claim} onLog={(text) => { props.onThread(item.id, { kind: "action", author: REVIEWER.name, text }); setCallOpen(false); }} onCancel={() => setCallOpen(false)} />}
         {waiting && (
           <div className="actionbar-row">
             <input
@@ -750,12 +782,13 @@ function ActionBar(props: {
               onClick={() => {
                 if (!preview) return;
                 const range = `${usd(loN)} to ${usd(hiN)} (AI said ${usd(e.lowUsd!)} to ${usd(e.highUsd!)})`;
+                const update = withUpdate(preview.route === route ? props.message : customerUpdate(preview, item.claim));
                 done(
                   preview.route === "adjuster"
                     ? {
                         action: "assigned_adjuster",
                         route: "adjuster",
-                        summary: `Adjusted the range to ${range}. That puts it on the ${preview.routeLabel} route, so it went to the ${names(previewTargets)}.`,
+                        summary: `Adjusted the range to ${range}. That puts it on the ${preview.routeLabel} route, so it went to the ${names(previewTargets)}.${update}`,
                         reason: reason.trim() || undefined,
                         adjustedRange: { lowUsd: loN, highUsd: hiN },
                         sentTo: previewTargets,
@@ -763,7 +796,7 @@ function ActionBar(props: {
                     : {
                         action: "approved",
                         route: preview.route,
-                        summary: `Approved the photo estimate path with an adjusted range of ${range}. Sent to the estimating team as the starting estimate.`,
+                        summary: `Approved the photo estimate path with an adjusted range of ${range}. Sent to the estimating team as the starting estimate.${update}`,
                         reason: reason.trim() || undefined,
                         adjustedRange: { lowUsd: loN, highUsd: hiN },
                         sentTo: previewTargets,
@@ -785,7 +818,7 @@ function ActionBar(props: {
               done({
                 action: "approved",
                 route,
-                summary: `Approved the photo estimate path and the ${usd(e.lowUsd!)} to ${usd(e.highUsd!)} range as the starting estimate. Sent to the estimating team.`,
+                summary: `Approved the photo estimate path and the ${usd(e.lowUsd!)} to ${usd(e.highUsd!)} range as the starting estimate. Sent to the estimating team.${withUpdate(props.message)}`,
                 sentTo: ["estimating"],
               })
             }
@@ -801,17 +834,22 @@ function ActionBar(props: {
         <div className="actionbar-row">
           <button
             className="btn btn-warn"
-            onClick={() =>
+            onClick={() => {
+              const n = d?.retakes.length ?? 1;
+              const what = `${n} photo${n === 1 ? "" : "s"}`;
+              const due = shortDate(followUpDate(new Date().toISOString()));
+              const how = channel ? sentVia(item.claim, channel) : "Sent the customer a message";
+              tellCustomer(props.message);
               done({
                 action: "message_sent",
                 route,
-                summary: `Sent the customer a request for ${d?.retakes.length ?? 1} photo${(d?.retakes.length ?? 1) === 1 ? "" : "s"}. Waiting on their reply.`,
+                summary: `${how} asking for ${what}. Follow up by ${due} if there's no reply.`,
                 sentTo: [],
-              })
-            }
+              });
+            }}
             disabled={!props.message.trim()}
           >
-            Send customer message
+            {channel === "text" ? "Text the customer" : channel === "email" ? "Email the customer" : "Send customer message"}
           </button>
         </div>
       )}
@@ -823,7 +861,7 @@ function ActionBar(props: {
               done({
                 action: "assigned_adjuster",
                 route,
-                summary: `Sent to the ${names(adjusterTargets)}${d?.siuReferral ? " for review before any payment" : ""}.`,
+                summary: `Sent to the ${names(adjusterTargets)}${d?.siuReferral ? " for review before any payment" : ""}.${withUpdate(props.message)}`,
                 sentTo: adjusterTargets,
               })
             }
@@ -843,6 +881,130 @@ function ActionBar(props: {
         </div>
       )}
       <div className="actionbar-row">{extras}</div>
+    </div>
+  );
+}
+
+function ContactCard(props: {
+  item: CaseItem;
+  route: Route;
+  message: string;
+  setMessage: (m: string) => void;
+  channel: Channel | null;
+  setChannel: (c: Channel) => void;
+  sendUpdate: boolean;
+  setSendUpdate: (b: boolean) => void;
+  onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
+}) {
+  const { item, route, channel } = props;
+  const claim = item.claim;
+  const available = channels(claim);
+  const [callOpen, setCallOpen] = useState(false);
+  const isRequest = route === "more_evidence";
+  const when = route === "photo_estimate" ? "when I approve" : "when I send the claim on";
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h3>Contact the customer</h3>
+        <span className="sub">
+          {firstName(claim) ? claim.policyholder : "No policyholder on file"}
+          {claim.contact ? ` · prefers ${claim.contact.preferred === "text" ? "text" : "email"}` : ""}
+        </span>
+        <span style={{ flex: 1 }} />
+        <button className="btn btn-sm" disabled={!claim.contact?.phone} onClick={() => setCallOpen((o) => !o)} title={claim.contact?.phone ? `Call ${claim.contact.phone}` : "No phone number on file"}>
+          Log a call
+        </button>
+      </div>
+      <div className="card-body contact">
+        {available.length === 0 ? (
+          <div className="hint">No phone or email on file. Add them under Edit claim details, or contact the customer outside the tool.</div>
+        ) : (
+          <div className="contact-row">
+            <span className="hint">Send by</span>
+            <div className="seg">
+              {available.map((c) => (
+                <button key={c} className={channel === c ? "on" : ""} onClick={() => props.setChannel(c)}>
+                  {c === "text" ? `Text ${claim.contact?.phone}` : `Email ${claim.contact?.email}`}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {!isRequest && (
+          <label className="contact-check">
+            <input type="checkbox" checked={props.sendUpdate} onChange={(e) => props.setSendUpdate(e.target.checked)} /> Send this update {when}
+            {route === "adjuster" && <span className="hint"> (it never mentions a total loss or a fraud review)</span>}
+          </label>
+        )}
+        {(isRequest || props.sendUpdate) && <textarea className="message" value={props.message} onChange={(e) => props.setMessage(e.target.value)} />}
+        {isRequest && <div className="hint">Goes out when you click the button below, with a secure upload link. The claim then waits in Waiting, with a follow-up date.</div>}
+        {callOpen && (
+          <CallForm
+            claim={claim}
+            onLog={(text) => {
+              props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
+              setCallOpen(false);
+            }}
+            onCancel={() => setCallOpen(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FollowUp({ item, channel, onReminder, onCall }: { item: CaseItem; channel: Channel | null; onReminder: () => void; onCall: () => void }) {
+  const due = followUpDate(item.outcome!.at);
+  const overdue = Date.now() > due.getTime();
+  const reminders = item.thread.filter((t) => t.text.includes("A quick reminder") || / reminder/.test(t.text)).length;
+  return (
+    <div className={`followup ${overdue ? "overdue" : ""}`}>
+      <div>
+        <b>Task: follow up with {firstName(item.claim) ?? "the customer"}</b> by {shortDate(due)} if the photos haven&apos;t arrived.
+        {reminders > 0 && <span className="hint"> Reminder sent.</span>}
+      </div>
+      <div className="followup-actions">
+        <button className="btn btn-sm" disabled={!channel} onClick={onReminder}>
+          Send a reminder{channel ? ` by ${channel}` : ""}
+        </button>
+        <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={onCall}>
+          Log a call
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CallForm({ claim, onLog, onCancel }: { claim: CaseItem["claim"]; onLog: (text: string) => void; onCancel: () => void }) {
+  const [outcome, setOutcome] = useState<(typeof CALL_OUTCOMES)[number]>(CALL_OUTCOMES[0]);
+  const [note, setNote] = useState("");
+  return (
+    <div className="inline-form" style={{ marginTop: 8 }}>
+      <div className="row">
+        <label>
+          Called {firstName(claim) ?? "the customer"} at {claim.contact?.phone}
+          <select value={outcome} onChange={(e) => setOutcome(e.target.value as (typeof CALL_OUTCOMES)[number])}>
+            {CALL_OUTCOMES.map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label>
+        Note (optional)
+        <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. will send photos after work today" />
+      </label>
+      <div className="composer-row">
+        <button className="btn btn-sm btn-ghost" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={() => onLog(`Called ${firstName(claim) ?? "the customer"} at ${claim.contact?.phone}: ${outcome.toLowerCase()}.${note.trim() ? ` ${note.trim()}` : ""}`)}
+        >
+          Save call
+        </button>
+      </div>
     </div>
   );
 }
