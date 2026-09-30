@@ -1,32 +1,58 @@
 "use client";
 
+// The evaluation page: the answer first, then the model comparison, the failures, and every case.
+
 import { useMemo, useState } from "react";
 
+import { CaseTable, Confusion, LiveRunner, ModelComparison, publicPath, REPO } from "@/components/eval/parts.tsx";
 import results from "@/eval/results/latest.json";
-import { loadDemoPhoto } from "@/lib/client/intake.ts";
-import { DEFAULT_MODEL, MODELS, modelInfo } from "@/lib/extraction/models.ts";
-import { plausibleLow, scoreCase, summarise, type EvalCaseResult, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
-import type { Assessment } from "@/lib/pipeline.ts";
-import { DEFAULT_SETTINGS, PROTOCOL_VERSION, ROUTE_LABELS, usd, type Route } from "@/lib/policy/protocol.ts";
+import { DEFAULT_MODEL, modelInfo } from "@/lib/extraction/models.ts";
+import { plausibleLow, scoreCase, summarise, type EvalRun } from "@/lib/eval/metrics.ts";
+import { DEFAULT_SETTINGS, ROUTE_LABELS, type Route } from "@/lib/policy/protocol.ts";
 
-// Newest prompt first, and the default model first within a prompt version.
-const RUNS = [...(results as { runs: EvalRun[] }).runs].sort(
-  (a, b) => b.promptVersion.localeCompare(a.promptVersion) || Number(b.model === DEFAULT_MODEL) - Number(a.model === DEFAULT_MODEL),
-);
-const ROUTES: Route[] = ["photo_estimate", "more_evidence", "adjuster", "manual_triage"];
-const REPO = "https://github.com/wellnessaistack-maker/vehicle-damage-claims-ai";
+const RUNS = (results as { runs: EvalRun[] }).runs;
+const MAIN = RUNS.find((r) => r.model === DEFAULT_MODEL && r.promptVersion === "extract-v2") ?? RUNS[0];
+
+// Plain-language notes on each case the default model didn't get exactly right.
+const NOTES: Record<string, { what: string; why: string; next: string }> = {
+  "05_rotated": {
+    what: "A clean photo, uploaded sideways.",
+    why: "The model didn't read the car properly on its side, so the rules asked the customer for another photo.",
+    next: "Straighten photos in code before the AI sees them. Costs the customer one extra photo today; never a missed escalation.",
+  },
+  "00a_camry": {
+    what: "Front-corner damage priced right at the $2,500 limit.",
+    why: "Over four runs it went to an adjuster once and the photo path three times.",
+    next: "This is why ranges that straddle the limit are flagged for a price check. With your data we'd tune the limit rules on real paid costs.",
+  },
+  "03_compressed": {
+    what: "A heavily compressed, forwarded copy of a photo.",
+    why: "Asked the customer for a better photo. The label accepts this; an expert might have estimated from it.",
+    next: "Acceptable as is. Your reviewers' overrides would tell us whether it's too cautious.",
+  },
+};
+
+const FIXED_IN_V2 = [
+  { what: "A customer's wider retake was judged on the original close-up", fix: "Prompt now judges evidence on the best photo in the set" },
+  { what: "A crumpled bumper cover was called structural damage", fix: "Prompt now defines structural as deformed frame, pillars or floor" },
+  { what: "A door dent got a hidden-damage allowance that pushed it over the limit", fix: "The allowance now applies only to moderate front or rear damage, or anything severe" },
+];
 
 export default function EvaluationPage() {
-  const [runIdx, setRunIdx] = useState(0);
   const [live, setLive] = useState<EvalRun | null>(null);
-  const scoredRuns = useMemo(
+  const run = live ?? MAIN;
+  const scored = useMemo(() => run.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS)), [run]);
+  const s = useMemo(() => summarise(scored), [scored]);
+  const saved = useMemo(
     () =>
-      [...(live ? [live] : []), ...RUNS]
-        .map((run) => ({ run, live: run === live, scored: run.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS)) }))
-        .map((x) => ({ ...x, summary: summarise(x.scored) })),
-    [live],
+      [...RUNS]
+        .sort((a, b) => b.promptVersion.localeCompare(a.promptVersion) || Number(b.model === DEFAULT_MODEL) - Number(a.model === DEFAULT_MODEL))
+        .map((r) => ({ run: r, summary: summarise(r.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS))) })),
+    [],
   );
-  const current = scoredRuns[Math.min(runIdx, scoredRuns.length - 1)];
+  const misses = scored.filter((x) => !x.exact || (x.result.repeatRoutes && new Set(x.result.repeatRoutes).size > 1));
+  const low = plausibleLow(s.escalation.caught, s.escalation.of);
+  const cautious = misses.every((m) => !m.missedEscalation);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
@@ -43,480 +69,154 @@ export default function EvaluationPage() {
 
       <main className="eval-page">
         <div>
-          <h1 style={{ fontSize: 22 }}>How we&apos;d know this is working</h1>
-          <p style={{ color: "var(--text-2)", maxWidth: 820 }}>
-            A small labelled set, run through the real pipeline. It checks that nothing broke; it isn&apos;t proof the system works on your claims. The deck&apos;s three quality measures are reported as plain counts. There are no pass or fail targets
-            here on purpose: those get agreed with your claims and risk owners in phase 1, on your own data.
+          <h1 style={{ fontSize: 24, marginBottom: 4 }}>Can you trust the route it recommends?</h1>
+          <p style={{ color: "var(--text-2)", maxWidth: 860, margin: 0 }}>
+            {run.cases.length} labelled claims through the real pipeline with {modelInfo(run.model).label} ({run.promptVersion}). A check that nothing is broken, not proof it works on your claims. Labels are drafts pending expert review, and there are
+            no pass marks here on purpose: those get agreed with your claims and risk owners.
           </p>
         </div>
 
-        <LiveRunner
-          onProgress={(run) => {
-            setLive(run);
-            setRunIdx(0);
-          }}
-        />
-
-        {!current ? (
-          <div className="card">
-            <div className="card-body">No saved run yet. Use &quot;Run the labelled set now&quot; above, or run <code>npm run eval</code> locally and commit the results.</div>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <div className="seg">
-                {scoredRuns.map((r, i) => (
-                  <button key={`${r.run.model}-${r.run.runAt}`} className={r === current ? "on" : ""} onClick={() => setRunIdx(i)}>
-                    {r.live ? "Live run" : "Saved"}: {modelInfo(r.run.model).label}
-                    {!r.live && r.run.promptVersion ? `, ${r.run.promptVersion}` : ""}
-                  </button>
-                ))}
-              </div>
-              <span className="hint">
-                {current.run.cases.length} cases · {new Date(current.run.runAt).toLocaleString()} · prompt {current.run.promptVersion} · protocol v{current.run.protocolVersion} · labels are draft, pending expert review
-              </span>
+        {/* 1. The answer */}
+        <div className="ev-score">
+          <div className="ev-tile ev-lead">
+            <div className="ev-l">Complex claims caught</div>
+            <div className="ev-v">
+              {s.escalation.caught} of {s.escalation.of}
             </div>
+            <div className="ev-d">None of the claims an expert would send to an adjuster went down the fast path.</div>
+            {low !== null && <div className="ev-fine">With this few cases, the true rate could be as low as {Math.round(low * 100)}%.</div>}
+          </div>
+          <div className="ev-tile">
+            <div className="ev-l">Matched the expert</div>
+            <div className="ev-v">
+              {s.agreement.exact} of {s.agreement.of}
+            </div>
+            <div className="ev-d">
+              {s.agreement.acceptable} of {s.agreement.of} counting routes the label also accepts.
+            </div>
+          </div>
+          <div className="ev-tile">
+            <div className="ev-l">Over-escalated</div>
+            <div className="ev-v">
+              {s.overEscalated.count} of {s.overEscalated.of}
+            </div>
+            <div className="ev-d">Too much caution would eat the time savings.</div>
+          </div>
+          <div className="ev-tile">
+            <div className="ev-l">Speed and cost</div>
+            <div className="ev-v">{s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s` : "n/a"}</div>
+            <div className="ev-d">About {Math.round(s.cost.mean * 100)} cents a claim, estimated. {s.failures} AI failures.</div>
+          </div>
+          <div className="ev-tile ev-gap">
+            <div className="ev-l">Estimate vs paid cost</div>
+            <div className="ev-v">Needs your data</div>
+            <div className="ev-d">How often your final paid cost lands inside our range. Can&apos;t be measured without paid claims.</div>
+          </div>
+        </div>
 
-            <Headline s={current.summary} />
-            {scoredRuns.filter((r) => !r.live).length > 1 && <ModelComparison runs={scoredRuns.filter((r) => !r.live)} />}
-            <Confusion s={current.summary} />
-            <CaseTable scored={current.scored} />
-          </>
-        )}
-
-        <Writeup />
-      </main>
-    </div>
-  );
-}
-
-interface LiveCase {
-  caseId: string;
-  photos: string[];
-  priorClaimPhotos: string[];
-  claim: EvalCaseResult["claim"];
-  labels: EvalCaseResult["labels"];
-}
-
-/** Runs every labelled case through the same /api/assess route the worklist uses. */
-// A handful of cases that cover each route, so a live demo run stays cheap.
-const QUICK_SET = ["A_civic", "B_civic_closeup", "C_f1", "D_nissan_front_crush", "06_mirrored_duplicate", "V1_injury"];
-
-function LiveRunner({ onProgress }: { onProgress: (run: EvalRun) => void }) {
-  const [model, setModel] = useState(MODELS[0].id);
-  const [full, setFull] = useState(false);
-  const [state, setState] = useState<"idle" | "running" | "done">("idle");
-  const [done, setDone] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [err, setErr] = useState<string | null>(null);
-  const [last, setLast] = useState<EvalRun | null>(null);
-
-  const start = async () => {
-    setErr(null);
-    setState("running");
-    setDone(0);
-    let cases: LiveCase[];
-    try {
-      cases = await (await fetch("/api/eval-cases")).json();
-      if (!full) cases = cases.filter((c) => QUICK_SET.includes(c.caseId));
-    } catch {
-      setErr("Couldn't load the labelled cases.");
-      setState("idle");
-      return;
-    }
-    setTotal(cases.length);
-    const run: EvalRun = { runAt: new Date().toISOString(), model, promptVersion: "", protocolVersion: PROTOCOL_VERSION, cases: [] };
-    const results: EvalCaseResult[] = [];
-    let next = 0;
-    const worker = async () => {
-      while (next < cases.length) {
-        const c = cases[next++];
-        const r = await runOne(c, model);
-        results.push(r.result);
-        if (r.promptVersion) run.promptVersion = r.promptVersion;
-        setDone(results.length);
-        const order = new Map(cases.map((x, i) => [x.caseId, i]));
-        const sorted = [...results].sort((a, b) => order.get(a.caseId)! - order.get(b.caseId)!);
-        const snapshot = { ...run, cases: sorted };
-        setLast(snapshot);
-        onProgress(snapshot);
-      }
-    };
-    await Promise.all(Array.from({ length: 4 }, worker));
-    setState("done");
-  };
-
-  const download = () => {
-    if (!last) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify({ runs: [last] }, null, 2)], { type: "application/json" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `eval-${last.model}-${last.runAt.slice(0, 16)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Run the labelled set now</h3>
-        <span className="sub">Same route, prompt and rules as the worklist. Each case is one real AI call and costs money.</span>
-      </div>
-      <div className="card-body" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <select className="text-input" style={{ width: 200 }} value={model} onChange={(e) => setModel(e.target.value)} disabled={state === "running"}>
-          {MODELS.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-        <label className="hint" style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <input type="checkbox" checked={full} onChange={(e) => setFull(e.target.checked)} disabled={state === "running"} />
-          All 26 cases (otherwise a quick set of {QUICK_SET.length} covering each route)
-        </label>
-        <button className="btn btn-primary" onClick={() => void start()} disabled={state === "running"}>
-          {state === "running" ? "Running..." : state === "done" ? "Run again" : "Run now"}
-        </button>
-        {state !== "idle" && (
-          <span className="hint">
-            {state === "running" && <span className="spinner" style={{ marginRight: 6, verticalAlign: -2 }} />}
-            {done} of {total} cases done
+        <div className="ev-strip">
+          <span>
+            <b>Didn&apos;t guess when unsure</b> {s.abstention.correct} of {s.abstention.of}
           </span>
-        )}
-        {state === "done" && (
-          <button className="btn btn-sm" onClick={download}>
-            Download results
-          </button>
-        )}
-        {err && <span className="err">{err}</span>}
-      </div>
-    </div>
-  );
-}
-
-async function runOne(c: LiveCase, model: string): Promise<{ result: EvalCaseResult; promptVersion?: string }> {
-  const started = Date.now();
-  const base = { caseId: c.caseId, photos: c.photos, claim: c.claim, labels: c.labels };
-  try {
-    const photos = await Promise.all(c.photos.map((p) => loadDemoPhoto(publicPath(p))));
-    const res = await fetch("/api/assess", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        claim: c.claim,
-        photos: photos.map((p) => ({ name: p.name, base64: p.base64 })),
-        model,
-        pastClaims: c.priorClaimPhotos.length ? "demo" : "none",
-      }),
-    });
-    const a = (await res.json()) as Assessment & { error?: string };
-    if (!res.ok || a.error) throw new Error(a.error ?? `HTTP ${res.status}`);
-    return {
-      promptVersion: a.ok ? a.meta.promptVersion : a.promptVersion,
-      result: {
-        ...base,
-        ok: a.ok,
-        failure: a.ok ? undefined : a.failure.message,
-        extraction: a.ok ? a.extraction : undefined,
-        photoMetrics: a.photos,
-        latencyMs: a.timings.totalMs,
-        costUsd: a.ok ? a.meta.costUsd : 0,
-        modelServed: a.ok ? a.meta.modelServed : undefined,
-      },
-    };
-  } catch (e) {
-    return { result: { ...base, ok: false, failure: e instanceof Error ? e.message : "Request failed", photoMetrics: [], latencyMs: Date.now() - started, costUsd: 0 } };
-  }
-}
-
-const publicPath = (p: string) => "/" + p.replace(/^demo-images\//, "demo/");
-
-function Headline({ s }: { s: Summary }) {
-  return (
-    <>
-      <div className="section-label" style={{ marginBottom: -6 }}>
-        The deck&apos;s quality guardrails
-      </div>
-      <div className="stats">
-        <div className="stat">
-          <div className="l">Complex-case escalation recall</div>
-          <div className="v">
-            {s.escalation.caught} of {s.escalation.of}
-          </div>
-          <Plausible k={s.escalation.caught} n={s.escalation.of} />
-          <div className="d">
-            Of the cases an expert would send to an adjuster, how many we escalated too.
-            {s.escalation.missedIds.length > 0 && <> Missed: {s.escalation.missedIds.join(", ")}.</>}
-            {s.escalation.viaFailure > 0 && (
-              <b style={{ color: "var(--adjuster)" }}> {s.escalation.viaFailure} of these reached a person only because the AI failed.</b>
-            )}
-          </div>
+          <span>
+            <b>Make · model · colour</b> {s.vehicle.make.right}/{s.vehicle.make.of} · {s.vehicle.model.right}/{s.vehicle.model.of} · {s.vehicle.colour.right}/{s.vehicle.colour.of}
+          </span>
+          <span>
+            <b>Review flags raised</b> {s.flags.caught} of {s.flags.of}
+          </span>
+          <span>
+            <b>Same route every run</b> {s.stability ? `${s.stability.stable} of ${s.stability.of}` : "not measured"}
+          </span>
+          <span>
+            <b>Slowest 1 in 20</b> {s.latency ? `${(s.latency.p95 / 1000).toFixed(1)} s` : "n/a"}
+          </span>
         </div>
-        <div className="stat">
-          <div className="l">Routing agreement with expert labels</div>
-          <div className="v">
-            {s.agreement.exact} of {s.agreement.of}
-          </div>
-          <Plausible k={s.agreement.exact} n={s.agreement.of} />
-          <div className="d">
-            Exact match. {s.agreement.acceptable} of {s.agreement.of} counting routes the label marks as also acceptable. Expert-to-expert agreement is the realistic ceiling; we don&apos;t have it yet.
-          </div>
+
+        {/* Models and routes, side by side */}
+        <div className="ev-two">
+          <ModelComparison runs={saved} title="Models and prompts side by side" sub="Same 26 cases, same rules" />
+          <Confusion s={s} />
         </div>
-        <div className="stat" style={{ borderColor: "var(--evidence-line)", background: "var(--evidence-soft)" }}>
-          <div className="l">Repair-range coverage</div>
-          <div className="v">Not measured</div>
-          <div className="d" style={{ color: "var(--evidence)" }}>
-            The main test for the estimate is whether your final paid cost falls inside our range (and how wide the range is). That needs your paid-claims data, which we&apos;d use in phase 2.
+
+        {/* 2. Where it went wrong */}
+        <section className="card">
+          <div className="card-head">
+            <h3>Where it went wrong</h3>
+            <span className="sub">{cautious ? "Every mistake went the cautious way: more photos or a person, never the fast path" : "Includes a missed escalation"}</span>
           </div>
-        </div>
-      </div>
-      <div className="section-label" style={{ marginBottom: -6 }}>
-        Also watched
-      </div>
-      <div className="stats">
-        <Stat label="Escalated when not needed" value={`${s.overEscalated.count} of ${s.overEscalated.of}`} note={s.overEscalated.ids.length ? `Cases: ${s.overEscalated.ids.join(", ")}` : "Too much caution eats the time savings."} />
-        <Stat label="Didn't guess when it couldn't tell" value={`${s.abstention.correct} of ${s.abstention.of}`} note="Make, model or colour left blank where the label says it can't be known from the photo." />
-        <Stat label="Make / model / colour" value={`${s.vehicle.make.right}/${s.vehicle.make.of} · ${s.vehicle.model.right}/${s.vehicle.model.of} · ${s.vehicle.colour.right}/${s.vehicle.colour.of}`} note="Correct, or correctly 'can't tell'." />
-        <Stat label="Expected review flags raised" value={`${s.flags.caught} of ${s.flags.of}`} note="Rules like 'damage doesn't match the description' firing where they should." />
-        <Stat
-          label="Same route on every run"
-          value={s.stability ? `${s.stability.stable} of ${s.stability.of}` : "Not measured"}
-          note={s.stability ? "Each case run four times. Instability shows up where the range sits right at a limit." : "The AI can give slightly different answers each time. Run with --repeat 3 to measure."}
-        />
-        <Stat
-          label="Time and estimated cost per case"
-          value={s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s · $${s.cost.mean.toFixed(3)}` : "n/a"}
-          note={s.latency ? `Median time; slowest 5% ${(s.latency.p95 / 1000).toFixed(1)} s. ${s.failures} AI failure${s.failures === 1 ? "" : "s"}. Cost is estimated from token counts and list prices; actual billed spend has run higher, so the Anthropic console is the source of truth.` : ""}
-        />
-      </div>
-    </>
-  );
-}
-
-function Plausible({ k, n }: { k: number; n: number }) {
-  const low = plausibleLow(k, n);
-  if (low === null) return null;
-  return (
-    <div className="hint" style={{ marginBottom: 4 }}>
-      With only {n} cases, the true rate could be as low as about {Math.round(low * 100)}%.
-    </div>
-  );
-}
-
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <div className="stat">
-      <div className="l">{label}</div>
-      <div className="v" style={{ fontSize: 18 }}>
-        {value}
-      </div>
-      <div className="d">{note}</div>
-    </div>
-  );
-}
-
-function ModelComparison({ runs }: { runs: { run: EvalRun; summary: Summary }[] }) {
-  const label = (r: EvalRun) => `${modelInfo(r.model).label}, ${r.promptVersion}`;
-  const rows: [string, (s: Summary) => string][] = [
-    ["Escalation recall", (s) => `${s.escalation.caught} of ${s.escalation.of}`],
-    ["Routing agreement (exact)", (s) => `${s.agreement.exact} of ${s.agreement.of}`],
-    ["Routing agreement (acceptable)", (s) => `${s.agreement.acceptable} of ${s.agreement.of}`],
-    ["Escalated when not needed", (s) => `${s.overEscalated.count} of ${s.overEscalated.of}`],
-    ["Didn't guess when unsure", (s) => `${s.abstention.correct} of ${s.abstention.of}`],
-    ["Make / model / colour", (s) => `${s.vehicle.make.right}/${s.vehicle.make.of}, ${s.vehicle.model.right}/${s.vehicle.model.of}, ${s.vehicle.colour.right}/${s.vehicle.colour.of}`],
-    ["Median time per case", (s) => (s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s` : "n/a")],
-    ["Cost per case", (s) => `$${s.cost.mean.toFixed(3)}`],
-    ["AI failures", (s) => String(s.failures)],
-  ];
-  return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Saved runs side by side</h3>
-        <span className="sub">Same cases and rules. Each column changes the model or the prompt version, which is how every change gets scored before it goes live.</span>
-      </div>
-      <div className="card-body">
-        <table className="t">
-          <thead>
-            <tr>
-              <th>Measure</th>
-              {runs.map((r) => (
-                <th key={label(r.run)}>{label(r.run)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(([measure, f]) => (
-              <tr key={measure}>
-                <td>{measure}</td>
-                {runs.map((r) => (
-                  <td key={label(r.run)}>{f(r.summary)}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function Confusion({ s }: { s: Summary }) {
-  return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Where the routes landed</h3>
-        <span className="sub">Rows: expert label. Columns: our route.</span>
-      </div>
-      <div className="card-body">
-        <table className="t">
-          <thead>
-            <tr>
-              <th>Expert said</th>
-              {ROUTES.map((r) => (
-                <th key={r}>{ROUTE_LABELS[r]}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {ROUTES.filter((r) => r !== "manual_triage").map((exp) => (
-              <tr key={exp}>
-                <td>{ROUTE_LABELS[exp]}</td>
-                {ROUTES.map((act) => (
-                  <td key={act} style={{ fontWeight: exp === act ? 700 : 400, color: s.confusion[exp][act] && exp !== act ? "var(--adjuster)" : undefined }}>
-                    {s.confusion[exp][act]}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-const fieldText: Record<FieldScore, string> = {
-  correct: "✓",
-  correctly_unknown: "✓ (didn't guess)",
-  wrong: "✕ wrong",
-  guessed: "✕ guessed",
-  missed: "✕ left blank",
-  "n/a": "",
-};
-
-function CaseTable({ scored }: { scored: ScoredCase[] }) {
-  return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Every case</h3>
-        <span className="sub">Highlighted rows disagree with the expert label</span>
-      </div>
-      <div className="card-body" style={{ overflowX: "auto" }}>
-        <table className="t">
-          <thead>
-            <tr>
-              <th>Photo</th>
-              <th>Case</th>
-              <th>Expected</th>
-              <th>Our route</th>
-              <th>Why</th>
-              <th>Make · model · colour</th>
-              <th>Estimate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {scored.map((s) => {
-              const r = s.result;
-              const d = s.decision;
-              const reasons = d?.reasons.map((x) => x.id).join(", ") || (r.ok ? "none" : "AI failed");
+          <div className="card-body ev-misses">
+            {misses.map((m) => {
+              const n = NOTES[m.result.caseId];
+              const flipped = m.result.repeatRoutes && new Set(m.result.repeatRoutes).size > 1;
               return (
-                <tr key={r.caseId} className={s.acceptable ? "" : "mismatch"}>
-                  <td>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={publicPath(r.photos[0])} alt="" style={{ width: 72, height: 48, objectFit: "cover", borderRadius: 4 }} />
-                  </td>
-                  <td>
-                    <div className="mono">{r.caseId}</div>
-                    <div className="hint">{r.labels.whatItTests}</div>
-                  </td>
-                  <td>
-                    {ROUTE_LABELS[r.labels.expectedRoute]}
-                    {r.labels.mustEscalate && <div className="chip chip-bad" style={{ marginTop: 2 }}>must escalate</div>}
-                  </td>
-                  <td className={`route-${s.route}`}>
-                    <span className="route-pill">{ROUTE_LABELS[s.route]}</span>
-                  </td>
-                  <td className="mono">{reasons}</td>
-                  <td style={{ fontSize: 12 }}>
-                    {d ? (
+                <div key={m.result.caseId} className="ev-miss">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={publicPath(m.result.photos[0])} alt="" />
+                  <div>
+                    <div className="ev-miss-head">
+                      <span>{n?.what ?? m.result.labels.whatItTests}</span>
+                      <span className={`chip ${m.acceptable ? "chip-warn" : "chip-bad"}`}>{flipped ? "Unstable at the limit" : m.acceptable ? "Acceptable, not exact" : "Wrong route"}</span>
+                    </div>
+                    <div className="ev-miss-routes">
+                      Expert: <b>{ROUTE_LABELS[m.result.labels.expectedRoute]}</b> · Ours: <b>{ROUTE_LABELS[m.route as Route]}</b>{flipped ? " on the saved run" : ""}
+                    </div>
+                    {n && (
                       <>
-                        <div>
-                          {d.requiredOutputs.vehicle.make.value ?? "?"} {fieldText[s.vehicle.make]}
-                        </div>
-                        <div>
-                          {d.requiredOutputs.vehicle.model.value ?? "?"} {fieldText[s.vehicle.model]}
-                        </div>
-                        <div>
-                          {d.requiredOutputs.vehicle.colour.value ?? "?"} {fieldText[s.vehicle.colour]}
-                        </div>
+                        <div>{n.why}</div>
+                        <div className="hint">What we&apos;d do: {n.next}</div>
                       </>
-                    ) : (
-                      "n/a"
                     )}
-                  </td>
-                  <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-                    {s.cost.low !== null ? (
-                      <>
-                        {usd(s.cost.low)} to {usd(s.cost.high!)}
-                        <div className="hint">{s.cost.sideOfLimit === "below" ? "under the limit" : s.cost.sideOfLimit === "above" ? "over the limit" : "straddles the limit"}</div>
-                      </>
-                    ) : (
-                      <span className="hint">withheld</span>
-                    )}
-                    <div className="hint">label: {r.labels.expectedCostBand}</div>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+            <div className="ev-fixed">
+              <div className="section-label">Already fixed, from the first run (prompt v1)</div>
+              <ul>
+                {FIXED_IN_V2.map((f) => (
+                  <li key={f.what}>
+                    <s>{f.what}.</s> {f.fix}.
+                  </li>
+                ))}
+              </ul>
+              <div className="hint">Prompt v2 was written after seeing these, so its gain on the same cases is flattering. With your data we&apos;d keep a locked test set nobody tunes against.</div>
+            </div>
+          </div>
+        </section>
 
-function Writeup() {
-  return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Evaluation approach</h3>
-        <a className="sub" href={`${REPO}/blob/main/eval/README.md`}>
-          How the set is labelled
-        </a>
-      </div>
-      <div className="card-body">
-        <p style={{ marginTop: 0 }}>
-          <b>What matters most.</b> The mistakes don&apos;t cost the same. A complex claim slipping onto the fast path is the expensive one, so escalation recall comes first. Then routing agreement with your experts, while watching that we don&apos;t escalate
-          so much that the time savings disappear. Then the brief&apos;s outputs: is make, model and colour right or correctly left blank, and does the damage summary name the right area without missing or inventing damage.
-        </p>
-        <p>
-          <b>Where it fails.</b> A complex claim on the fast path (rare, expensive). Confidently naming the wrong car. Missing or inventing damage. Escalating too much. Reused or edited photos. Known weak spots today: a sideways photo isn&apos;t
-          recognised, pixel checks can&apos;t tell motion blur from a smooth close-up, glare is only caught by the AI, and the reused-photo check misses rotated copies.
-        </p>
-        <p>
-          <b>The repair estimate.</b> We&apos;d score past claims and compare our range with what you finally paid: how often it contains the paid cost, and how wide it is. The mistake that matters is a range on the wrong side of the fast-path
-          limit or the total-loss line. When it&apos;s too low, the shop files a supplement, as today; near a limit it gets flagged or goes to an adjuster; it is never the amount paid. Reviewers&apos; range adjustments are captured as &quot;AI was off by X&quot;.
-        </p>
-        <p>
-          <b>What we need from you.</b> A few hundred past claims with photos, the route each took, the final paid cost and any supplements. Time from two estimating experts to label them. How today&apos;s triage performs (late escalations,
-          supplement rate) so there&apos;s a baseline to beat. Your eligibility rules, labour rates and vehicle values.
-        </p>
-        <p style={{ marginBottom: 0 }}>
-          <b>How not to fool ourselves.</b> Prompt v2 was written after looking at v1&apos;s mistakes on these same cases, so its improvement is flattering. With your data we&apos;d keep a locked test set nobody tunes against. This set is also
-          escalation-heavy (11 of 26 must escalate), unlike a real claims mix, so real results would be reported by segment and weighted to your actual mix. After the historical test, the system would run silently alongside your adjusters
-          before routing anything, and in production we&apos;d watch reviewer overrides, supplements on fast-path claims, and drift.
-        </p>
-      </div>
+        <CaseTable scored={scored} />
+
+        <div className="ev-two">
+          <LiveRunner onProgress={(r) => setLive(r)} />
+        <section className="card">
+          <div className="card-head">
+            <h3>What it takes to trust it on your claims</h3>
+            <a className="sub" href={`${REPO}#customer-data-and-expertise-needed`}>
+              Detail in the README
+            </a>
+          </div>
+          <div className="card-body ev-needs ev-needs-2">
+            <div>
+              <b>A few hundred past claims</b>
+              <span>with photos, the route taken, the final paid cost and supplements</span>
+            </div>
+            <div>
+              <b>Two estimating experts</b>
+              <span>labelling independently; their agreement is the ceiling to beat</span>
+            </div>
+            <div>
+              <b>Today&apos;s baseline</b>
+              <span>late escalations, supplement rate, reviewer minutes per claim</span>
+            </div>
+            <div>
+              <b>A locked test set</b>
+              <span>scored before any prompt, model or rule change goes live</span>
+            </div>
+          </div>
+        </section>
+
+        </div>
+      </main>
     </div>
   );
 }
