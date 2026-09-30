@@ -5,8 +5,8 @@ A small labelled set for checking that nothing broke, not a statistical proof. T
 ## Files
 
 - `cases.csv` has one row per test case. A case can have several photos (separated by `;`) and can change claim details with `claim_overrides` (for example `injuryReported=true`).
-- `claims.json` has claim details used by the test cases. Cases can also use the demo claims `A`, `B` and `C`.
-- `images/` holds the test photos. Most are edits or crops of two source photos, so they test robustness more than coverage.
+- `claims.json` has claim details used by the test cases. Cases can also use the demo claims `A` to `E`.
+- `images/` holds the test photos. Most are edits or crops of two source photos, so they test robustness more than coverage. Four are real road-car escalations (flood, frontal crush, a van crushed by a wall, a car into a tree), supplied from Wikimedia Commons; their licences still need confirming before any wider use.
 
 ## Columns
 
@@ -32,7 +32,7 @@ Two people label each case on their own, then compare and settle disagreements. 
 
 ## Still to add
 
-About 15 photos with different cars and damage levels. Sourcing notes: record the licence and link for every image, and mark generated images as synthetic.
+The set now has 26 cases, 11 of which must escalate. The main gap is the other direction: very few cases should take the photo estimate path, so over-escalation can't be measured well yet. Sourcing notes: record the licence and link for every image, and mark generated images as synthetic.
 
 | Case | Vehicle | Damage | Expected route |
 |---|---|---|---|
@@ -43,10 +43,8 @@ About 15 photos with different cars and damage levels. Sourcing notes: record th
 | Minor-looking bumper damage | EV or luxury sedan | Sensor area, expensive parts | Adjuster |
 | Front-corner damage | Economy sedan, around 2008, low value | Moderate | Adjuster / total loss |
 | Door and fender | Mid-size sedan | Two panels, near the limit | Either |
-| Frontal crush, airbags out | Sedan | Severe | Adjuster |
 | Rollover | SUV | Roof crush | Adjuster |
 | Side impact | Any | Pillar pushed in | Adjuster |
-| Flood or fire | Any | Waterline or burn | Adjuster |
 | Windscreen crack | Sedan | At the camera | Photo estimate with review flag |
 | Motorcycle | Motorcycle | Fairing and levers | Adjuster |
 | Commercial van | Van | Rear door dent | Adjuster |

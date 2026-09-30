@@ -66,7 +66,7 @@ export interface Summary {
   total: number;
   assessed: number;
   failures: number;
-  escalation: { caught: number; of: number; missedIds: string[] };
+  escalation: { caught: number; of: number; missedIds: string[]; viaFailure: number };
   agreement: { exact: number; acceptable: number; of: number };
   overEscalated: { count: number; of: number; ids: string[] };
   confusion: Record<Route, Record<Route, number>>;
@@ -157,6 +157,8 @@ export function summarise(scored: ScoredCase[]): Summary {
       caught: must.filter((s) => !s.missedEscalation).length,
       of: must.length,
       missedIds: must.filter((s) => s.missedEscalation).map((s) => s.result.caseId),
+      // Reached a person only because the AI failed, not because the rules escalated it.
+      viaFailure: must.filter((s) => s.route === "manual_triage").length,
     },
     agreement: { exact: scored.filter((s) => s.exact).length, acceptable: scored.filter((s) => s.acceptable).length, of: scored.length },
     overEscalated: { count: notMust.filter((s) => s.overEscalated).length, of: notMust.length, ids: notMust.filter((s) => s.overEscalated).map((s) => s.result.caseId) },

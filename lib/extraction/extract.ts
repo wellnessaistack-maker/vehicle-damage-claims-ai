@@ -9,7 +9,11 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { makeClient } from "./client.ts";
 import { costUsd, modelFromEnv } from "./models.ts";
 import { PROMPT_VERSION, SYSTEM_PROMPT } from "./prompt.ts";
+import { normaliseExtraction } from "./normalise.ts";
 import { extractionSchema, type Extraction } from "./schema.ts";
+
+// Built once: the JSON schema sent to the API as the required output format.
+const OUTPUT_FORMAT = betaZodOutputFormat(extractionSchema);
 
 export type FailureKind = "no_api_key" | "timeout" | "rate_limited" | "api_error" | "refused" | "invalid_output";
 
@@ -83,13 +87,15 @@ export async function extract(
     attempts++;
     let response;
     try {
-      response = await client.beta.messages.parse({
+      response = await client.beta.messages.create({
         model,
         max_tokens: 16000,
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",
         system: SYSTEM_PROMPT,
-        output_config: { effort: "low", format: betaZodOutputFormat(extractionSchema) },
+        // The SDK builds the JSON schema from our zod schema; we parse the answer
+        // ourselves so a near-miss can be repaired and retried rather than thrown.
+        output_config: { effort: "low", format: { type: "json_schema", schema: OUTPUT_FORMAT.schema } },
         messages: [{ role: "user", content }],
       });
     } catch (err) {
@@ -107,8 +113,17 @@ export async function extract(
       lastProblem = "The AI's answer was cut off before it finished.";
       continue;
     }
-    const parsed = extractionSchema.safeParse(response.parsed_output);
+    const text = response.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+    let raw: unknown;
+    try {
+      raw = JSON.parse(text);
+    } catch {
+      lastProblem = "The AI's answer wasn't valid JSON.";
+      continue;
+    }
+    const parsed = extractionSchema.safeParse(normaliseExtraction(raw));
     if (!parsed.success) {
+      console.error("[extract] answer didn't match the schema:", parsed.error.issues.slice(0, 3));
       lastProblem = "The AI's answer didn't match the required format.";
       continue;
     }

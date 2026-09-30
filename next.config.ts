@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   // The evaluation runner reads the labelled cases and photos from disk.
   outputFileTracingIncludes: {
     "/api/eval-run/**": ["./eval/**/*", "./demo-images/**/*"],
+    "/api/eval-cases": ["./eval/cases.csv", "./eval/claims.json"],
   },
 };
 

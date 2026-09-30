@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 
 import results from "@/eval/results/latest.json";
-import { modelInfo } from "@/lib/extraction/models.ts";
-import { scoreCase, summarise, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
-import { DEFAULT_SETTINGS, ROUTE_LABELS, usd, type Route } from "@/lib/policy/protocol.ts";
+import { loadDemoPhoto } from "@/lib/client/intake.ts";
+import { MODELS, modelInfo } from "@/lib/extraction/models.ts";
+import { scoreCase, summarise, type EvalCaseResult, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
+import type { Assessment } from "@/lib/pipeline.ts";
+import { DEFAULT_SETTINGS, PROTOCOL_VERSION, ROUTE_LABELS, usd, type Route } from "@/lib/policy/protocol.ts";
 
 const RUNS = (results as { runs: EvalRun[] }).runs;
 const ROUTES: Route[] = ["photo_estimate", "more_evidence", "adjuster", "manual_triage"];
@@ -13,11 +15,15 @@ const REPO = "https://github.com/wellnessaistack-maker/vehicle-damage-claims-ai"
 
 export default function EvaluationPage() {
   const [runIdx, setRunIdx] = useState(0);
+  const [live, setLive] = useState<EvalRun | null>(null);
   const scoredRuns = useMemo(
-    () => RUNS.map((run) => ({ run, scored: run.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS)) })).map((x) => ({ ...x, summary: summarise(x.scored) })),
-    [],
+    () =>
+      [...(live ? [live] : []), ...RUNS]
+        .map((run) => ({ run, live: run === live, scored: run.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS)) }))
+        .map((x) => ({ ...x, summary: summarise(x.scored) })),
+    [live],
   );
-  const current = scoredRuns[runIdx];
+  const current = scoredRuns[Math.min(runIdx, scoredRuns.length - 1)];
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
@@ -41,29 +47,34 @@ export default function EvaluationPage() {
           </p>
         </div>
 
+        <LiveRunner
+          onProgress={(run) => {
+            setLive(run);
+            setRunIdx(0);
+          }}
+        />
+
         {!current ? (
           <div className="card">
-            <div className="card-body">
-              No evaluation run has been saved yet. Run <code>npm run eval</code> with an API key, then commit <code>eval/results/latest.json</code>.
-            </div>
+            <div className="card-body">No saved run yet. Use &quot;Run the labelled set now&quot; above, or run <code>npm run eval</code> locally and commit the results.</div>
           </div>
         ) : (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <div className="seg">
                 {scoredRuns.map((r, i) => (
-                  <button key={r.run.model} className={i === runIdx ? "on" : ""} onClick={() => setRunIdx(i)}>
-                    {modelInfo(r.run.model).label}
+                  <button key={`${r.run.model}-${r.run.runAt}`} className={r === current ? "on" : ""} onClick={() => setRunIdx(i)}>
+                    {r.live ? "Live run" : "Saved run"}: {modelInfo(r.run.model).label}
                   </button>
                 ))}
               </div>
               <span className="hint">
-                {current.run.cases.length} cases · run {new Date(current.run.runAt).toLocaleString()} · prompt {current.run.promptVersion} · protocol v{current.run.protocolVersion} · labels are draft, pending expert review
+                {current.run.cases.length} cases · {new Date(current.run.runAt).toLocaleString()} · prompt {current.run.promptVersion} · protocol v{current.run.protocolVersion} · labels are draft, pending expert review
               </span>
             </div>
 
             <Headline s={current.summary} />
-            {scoredRuns.length > 1 && <ModelComparison runs={scoredRuns} />}
+            {scoredRuns.filter((r) => !r.live).length > 1 && <ModelComparison runs={scoredRuns.filter((r) => !r.live)} />}
             <Confusion s={current.summary} />
             <CaseTable scored={current.scored} />
           </>
@@ -74,6 +85,138 @@ export default function EvaluationPage() {
     </div>
   );
 }
+
+interface LiveCase {
+  caseId: string;
+  photos: string[];
+  priorClaimPhotos: string[];
+  claim: EvalCaseResult["claim"];
+  labels: EvalCaseResult["labels"];
+}
+
+/** Runs every labelled case through the same /api/assess route the worklist uses. */
+function LiveRunner({ onProgress }: { onProgress: (run: EvalRun) => void }) {
+  const [model, setModel] = useState(MODELS[0].id);
+  const [state, setState] = useState<"idle" | "running" | "done">("idle");
+  const [done, setDone] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [err, setErr] = useState<string | null>(null);
+  const [last, setLast] = useState<EvalRun | null>(null);
+
+  const start = async () => {
+    setErr(null);
+    setState("running");
+    setDone(0);
+    let cases: LiveCase[];
+    try {
+      cases = await (await fetch("/api/eval-cases")).json();
+    } catch {
+      setErr("Couldn't load the labelled cases.");
+      setState("idle");
+      return;
+    }
+    setTotal(cases.length);
+    const run: EvalRun = { runAt: new Date().toISOString(), model, promptVersion: "", protocolVersion: PROTOCOL_VERSION, cases: [] };
+    const results: EvalCaseResult[] = [];
+    let next = 0;
+    const worker = async () => {
+      while (next < cases.length) {
+        const c = cases[next++];
+        const r = await runOne(c, model);
+        results.push(r.result);
+        if (r.promptVersion) run.promptVersion = r.promptVersion;
+        setDone(results.length);
+        const order = new Map(cases.map((x, i) => [x.caseId, i]));
+        const sorted = [...results].sort((a, b) => order.get(a.caseId)! - order.get(b.caseId)!);
+        const snapshot = { ...run, cases: sorted };
+        setLast(snapshot);
+        onProgress(snapshot);
+      }
+    };
+    await Promise.all(Array.from({ length: 4 }, worker));
+    setState("done");
+  };
+
+  const download = () => {
+    if (!last) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ runs: [last] }, null, 2)], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `eval-${last.model}-${last.runAt.slice(0, 16)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h3>Run the labelled set now</h3>
+        <span className="sub">Same route, prompt and rules as the worklist. About 26 AI calls, a minute or two, and roughly a dollar or two.</span>
+      </div>
+      <div className="card-body" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <select className="text-input" style={{ width: 200 }} value={model} onChange={(e) => setModel(e.target.value)} disabled={state === "running"}>
+          {MODELS.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+        <button className="btn btn-primary" onClick={() => void start()} disabled={state === "running"}>
+          {state === "running" ? "Running..." : state === "done" ? "Run again" : "Run now"}
+        </button>
+        {state !== "idle" && (
+          <span className="hint">
+            {state === "running" && <span className="spinner" style={{ marginRight: 6, verticalAlign: -2 }} />}
+            {done} of {total} cases done
+          </span>
+        )}
+        {state === "done" && (
+          <button className="btn btn-sm" onClick={download}>
+            Download results
+          </button>
+        )}
+        {err && <span className="err">{err}</span>}
+      </div>
+    </div>
+  );
+}
+
+async function runOne(c: LiveCase, model: string): Promise<{ result: EvalCaseResult; promptVersion?: string }> {
+  const started = Date.now();
+  const base = { caseId: c.caseId, photos: c.photos, claim: c.claim, labels: c.labels };
+  try {
+    const photos = await Promise.all(c.photos.map((p) => loadDemoPhoto(publicPath(p))));
+    const res = await fetch("/api/assess", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        claim: c.claim,
+        photos: photos.map((p) => ({ name: p.name, base64: p.base64 })),
+        model,
+        pastClaims: c.priorClaimPhotos.length ? "demo" : "none",
+      }),
+    });
+    const a = (await res.json()) as Assessment & { error?: string };
+    if (!res.ok || a.error) throw new Error(a.error ?? `HTTP ${res.status}`);
+    return {
+      promptVersion: a.ok ? a.meta.promptVersion : a.promptVersion,
+      result: {
+        ...base,
+        ok: a.ok,
+        failure: a.ok ? undefined : a.failure.message,
+        extraction: a.ok ? a.extraction : undefined,
+        photoMetrics: a.photos,
+        latencyMs: a.timings.totalMs,
+        costUsd: a.ok ? a.meta.costUsd : 0,
+        modelServed: a.ok ? a.meta.modelServed : undefined,
+      },
+    };
+  } catch (e) {
+    return { result: { ...base, ok: false, failure: e instanceof Error ? e.message : "Request failed", photoMetrics: [], latencyMs: Date.now() - started, costUsd: 0 } };
+  }
+}
+
+const publicPath = (p: string) => "/" + p.replace(/^demo-images\//, "demo/");
 
 function Headline({ s }: { s: Summary }) {
   return (
@@ -90,6 +233,9 @@ function Headline({ s }: { s: Summary }) {
           <div className="d">
             Of the cases an expert would send to an adjuster, how many we escalated too.
             {s.escalation.missedIds.length > 0 && <> Missed: {s.escalation.missedIds.join(", ")}.</>}
+            {s.escalation.viaFailure > 0 && (
+              <b style={{ color: "var(--adjuster)" }}> {s.escalation.viaFailure} of these reached a person only because the AI failed.</b>
+            )}
           </div>
         </div>
         <div className="stat">
@@ -257,7 +403,7 @@ function CaseTable({ scored }: { scored: ScoredCase[] }) {
                 <tr key={r.caseId} className={s.acceptable ? "" : "mismatch"}>
                   <td>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/${r.photos[0].replace(/^demo-images\//, "demo/").replace(/^eval\/images\//, "eval/images/")}`} alt="" style={{ width: 72, height: 48, objectFit: "cover", borderRadius: 4 }} />
+                    <img src={publicPath(r.photos[0])} alt="" style={{ width: 72, height: 48, objectFit: "cover", borderRadius: 4 }} />
                   </td>
                   <td>
                     <div className="mono">{r.caseId}</div>

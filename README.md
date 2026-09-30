@@ -79,11 +79,34 @@ approve, adjust the range, send the customer message, assign, change the route (
 A few choices worth calling out:
 
 - **The AI describes, the code decides.** The AI returns facts a reviewer could check by looking at the photo: is the badge visible, is this a close-up, does the damage run off the edge of the frame, are the airbags out. It never returns a route. The routing protocol in [`lib/policy/protocol.ts`](lib/policy/protocol.ts) decides, and every rule has a test.
-- **The AI only sees the photos.** Policy details and the customer's description go to the rules, not the model. If the model were told "the policy says Honda Civic", it would tend to say Civic, which would quietly break the "don't guess the car" check and the mismatch checks.
+- **The AI only sees the photos; the claim details go to the rules.** See [What the AI sees, and why](#what-the-ai-sees-and-why).
 - **Evidence sufficiency doesn't rely on the AI's confidence.** Self-reported confidence is poorly calibrated and can't be audited. Instead three kinds of checks feed the rules: pixel checks in code, observations the AI reports as plain facts, and cross-checks between them (for example, if no badge is visible, the make is blanked even if the AI named one).
 - **The most cautious route wins.** Adjuster, then more evidence, then the photo estimate path. If a claim is already clearly serious, we don't ask the customer for more photos.
 - **Route and review flag are separate.** Some rules keep the route but flag the claim for a person, such as damage in a sensor area, a range that straddles the fast-path limit, or a car that doesn't match the policy.
 - **One source of truth for the rules.** The protocol panel in the app is generated from the same file the engine runs, so the document an estimating expert signs off can't drift from the code.
+
+### What the AI sees, and why
+
+The deck's flow is "photo plus claim context in, route out", and that's still true for the system as a whole. The choice is *which part* gets the claim context:
+
+| Input | Goes to | Why |
+|---|---|---|
+| Photos | The AI | Reading photos is the one thing that needs AI |
+| Policy vehicle (year, make, model, colour, powertrain) | The rules | The AI identifies the car blind, then the rules compare its answer with the policy. If the AI were told "the policy says Honda Civic", it would lean towards saying Civic, and the mismatch check, the "don't guess the car" behaviour on close-ups and a basic fraud signal would all quietly stop working |
+| Customer's description of the loss | The rules (as the structured impact area) | Same reason: an independent check that the damage is where the customer said. It also keeps customer-written text away from the model, which removes a way to slip instructions into the AI |
+| Vehicle value, injury, drivable, photo requests so far | The rules | These are facts, not things to interpret. Code handles them exactly and the same way every time |
+
+The trade-off: the AI prices the car it *sees*, not the exact trim on the policy. That barely matters in the prototype, because when the car can't be identified the estimate is withheld anyway. In production the better answer is deterministic too: decode the VIN to get the exact year, trim and driver-assistance equipment, and feed that into pricing and into rules such as "this car has front radar, so recalibration applies". A second, optional AI check could compare the customer's free-text description with the photos, kept separate from the identification step so it can't bias it.
+
+### Why one structured AI call, not tool calls or an agent
+
+The AI makes exactly one call per claim and returns a fixed-format answer (Claude's structured outputs, checked again in code). It doesn't use tool calls and it isn't an agent. That's deliberate:
+
+- **The steps are known in advance.** Check photos, read photos, apply rules. Nothing needs the model to decide what to do next, so letting it would add latency, cost and unpredictability for no gain.
+- **The model extracts; the code decides.** With tools, the model would choose when to look things up or act. Here every lookup and every decision is ordinary code, so it's auditable and testable, and the same input takes the same path every time.
+- **One call is easy to measure and to fail safely.** One latency number, one cost number, one retry, then manual triage.
+
+Where tools would come in for production: looking up the VIN, the policy, labour rates or a vendor's price. Those would still be called by our code in a fixed order, not chosen by the model. The one place a model-driven loop might earn its keep is the reviewer's "Ask" box, for example letting the assistant pull up the policy wording, and even there it could only explain, never change the route.
 
 ### The routing protocol
 
@@ -146,7 +169,11 @@ Around the model:
 
 **The repair estimate.** The real test is scoring past claims and comparing our range with the final paid cost: how often it contains the paid cost, and how wide it is, since a wide enough range always looks accurate. We can't measure that without the carrier's paid-claims data, and the app says so on every estimate. The mistake that matters most is a range on the wrong side of the fast-path limit or the total-loss line. When the estimate is too low, the shop files a supplement, as it does today; when it's near a limit, the claim gets flagged or goes to an adjuster; it is never the amount paid.
 
-The labelled set, how to label it and the cases still to add are in [`eval/README.md`](eval/README.md). It's about 22 cases today: a check that nothing broke, not proof it works.
+**What we need from the customer.** A few hundred past claims with photos, the route each took, the final paid cost and any supplements; time from two estimating experts to label them; today's baseline for late escalations, supplements and reviewer minutes; and their eligibility rules, labour rates and vehicle values. (More detail in [Customer data and expertise needed](#customer-data-and-expertise-needed).)
+
+**Showing it in the demo.** The **Evaluation** page shows the saved run and the model comparison, and **Run the labelled set now** re-runs all 26 cases live through the same route the worklist uses, with the measures updating as results arrive. In the routing protocol panel, **Test against labelled cases** shows what a rule change would do to escalation recall before it's published.
+
+The labelled set is 26 cases, 11 of which must escalate: the demo claims, edits of two source photos (dark, blurred, compressed, glare, rotated, mirrored, cropped, black and white), four real road-car escalations (frontal crush, flood, a van crushed by a wall, a car into a tree), and "same photo, different claim details" cases such as an injury or a wrong description. How to label it and what to add next are in [`eval/README.md`](eval/README.md). The biggest gap is that only a couple of cases should take the photo estimate path, so we can't yet say much about escalating too often.
 
 ## Important failure modes
 
@@ -196,21 +223,22 @@ The labelled set, how to label it and the cases still to add are in [`eval/READM
 
 ## Demo walkthrough (20 minutes)
 
-1. **Load demo queue.** Four claims sort themselves into lanes. The worklist is the thing to clear by end of day.
+1. **Load demo queue.** Five claims sort themselves into lanes. The worklist is the thing to clear by end of day.
 2. **A (Civic, clear side view).** The brief's outputs first, then the range against the limits, then Photo estimate path. Approve; it moves to the next claim.
 3. **B (close-up of the same door).** Doesn't guess the car. The customer message lists the retake and why. Send it, then use **Demo: attach the customer's retake**; it moves to the photo estimate path.
 4. **C (race car).** Adjuster / total loss, estimate withheld, reasons listed. Ask in the case thread: "What makes this structural?"
-5. **E (a flipped copy of a past claim's photo).** Matched to a past claim and referred to SIU.
-6. **Decision record and routing protocol.** Model, prompt and protocol versions, every rule fired or not, raw AI output. Switch to Protocol owner, change the fast-path limit, and test against the labelled cases.
-7. **Architecture panel.** Prototype vs. production, platform limits, and simulate an AI failure to show manual triage. Paste `https://169.254.169.254/` as a link to show it's blocked.
-8. **Evaluation page.** The three measures from the deck, the model comparison, and what needs the carrier's data.
+5. **D (an ordinary sedan with a crushed front).** The same route for a normal road car: structural damage, not drivable, and a repair that may cost more than the car is worth.
+6. **E (a flipped copy of a past claim's photo).** Matched to a past claim and referred to SIU.
+7. **Decision record and routing protocol.** Model, prompt and protocol versions, every rule fired or not, raw AI output. Switch to Protocol owner, change the fast-path limit, and test against the labelled cases.
+8. **Architecture panel.** Prototype vs. production, platform limits, and simulate an AI failure to show manual triage. Paste `https://169.254.169.254/` as a link to show it's blocked.
+9. **Evaluation page.** The three measures from the deck, the model comparison, **Run the labelled set now**, and what needs the carrier's data.
 
 ## Repository layout
 
 ```
-app/                  Next.js pages and API routes (assess, ask, health, eval-run)
+app/                  Next.js pages and API routes (assess, ask, health, eval-cases, eval-run)
 components/           Worklist, photo viewer, assessment panel, drawers, intake
-demo-images/          Demo claims, one folder per claim (A, B, C, E)
+demo-images/          Demo claims, one folder per claim (A, B, C, D, E)
 eval/                 Labelled cases, claim details, test images, saved results
 lib/extraction/       The AI call, prompt, output format and model prices
 lib/policy/           Routing protocol, cost range and rule engine, with tests

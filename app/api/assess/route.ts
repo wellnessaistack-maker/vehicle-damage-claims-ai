@@ -32,6 +32,9 @@ const bodySchema = z.object({
   settings: z.record(z.string(), z.unknown()).optional(),
   model: z.enum(MODELS.map((m) => m.id) as [string, ...string[]]).optional(),
   simulate: z.enum(["timeout", "invalid_output"]).optional(),
+  // "none" skips the demo past-claims index; the evaluation uses it for cases
+  // that are edits of the past-claim photo but aren't testing reuse.
+  pastClaims: z.enum(["demo", "none"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -75,6 +78,7 @@ export async function POST(req: Request) {
       settings: clampSettings(body.settings ?? {}),
       model: body.model,
       simulate: body.simulate,
+      pastClaims: body.pastClaims === "none" ? [] : undefined,
     });
     return Response.json({ ...result, fetched });
   } catch {

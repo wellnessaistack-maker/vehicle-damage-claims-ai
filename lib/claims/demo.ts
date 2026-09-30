@@ -39,6 +39,18 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     vehicleDrivable: false,
     priorEvidenceRequests: 0,
   },
+  D: {
+    claimId: "CLM-2026-10485",
+    policyholder: "Grace Okafor",
+    policyVehicle: { year: 2008, make: "Nissan", model: "Altima", colour: "White", powertrain: "combustion" },
+    vehicleValueUsd: 5500,
+    lossDate: "2026-09-27",
+    lossDescription: "Another car ran a red light and hit the front of my car. Towed from the scene.",
+    reportedImpactArea: "front",
+    injuryReported: false,
+    vehicleDrivable: false,
+    priorEvidenceRequests: 0,
+  },
   E: {
     claimId: "CLM-2026-10484",
     policyholder: "Tom Becker",
