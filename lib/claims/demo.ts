@@ -32,7 +32,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
   },
   C: {
     claimId: "CLM-2026-10483",
-    policyholder: "Charles the Clerk",
+    policyholder: "Charles Leclerc",
     policyVehicle: { year: null, make: null, model: null, colour: null, powertrain: "unknown" },
     vehicleValueUsd: null,
     lossDate: "2026-09-26",
@@ -41,7 +41,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     injuryReported: false,
     vehicleDrivable: false,
     priorEvidenceRequests: 0,
-    contact: { phone: "(555) 010-0123", email: "charles.theclerk@example.com", preferred: "email" },
+    contact: { phone: "(555) 010-0123", email: "charles.leclerc@example.com", preferred: "email" },
   },
   D: {
     claimId: "CLM-2026-10485",
