@@ -59,19 +59,40 @@ To deploy your own copy, import the repo into Vercel and add `ANTHROPIC_API_KEY`
 
 ```mermaid
 flowchart LR
-  UI["Reviewer's browser<br/>worklist and assessment<br/>state lives in the tab only"]
-  subgraph Server["Vercel serverless function: nothing stored"]
-    Prep["1 Prepare photos<br/>rotate, resize<br/>links fetched safely"]
-    Checks["2 Photo checks, code<br/>brightness, sharpness,<br/>reused photo"]
-    Rules["4 Routing protocol, code<br/>locked safety rules,<br/>configurable limits"]
-  end
-  Claude["3 Claude API<br/>one structured call<br/>sees the photos only"]
+  rev(["Reviewer"])
 
-  UI -->|"photos, shrunk in the browser"| Prep --> Checks --> Claude --> Rules
-  Checks -.->|"check results"| Rules
-  UI -->|"claim and policy details, mock"| Rules
-  Rules -->|"outputs, route and reasons"| UI
+  subgraph BR["Browser"]
+    ui["Worklist and assessment<br/>state lives in the tab"]
+  end
+
+  subgraph VC["Vercel function · nothing stored"]
+    direction LR
+    prep["① Prepare photos<br/>rotate, resize"]
+    checks["② Photo checks<br/>brightness, sharpness,<br/>reused photo"]
+    rules["④ Routing protocol<br/>locked rules,<br/>configurable limits"]
+  end
+
+  ai["③ Claude<br/>one call per claim<br/>sees photos only"]
+
+  rev --> ui
+  ui -- "photos" --> prep --> checks --> ai --> rules
+  checks -. "check results" .-> rules
+  ui -. "claim and policy details" .-> rules
+  rules == "route, reasons, estimate" ==> ui
+
+  classDef person fill:#e0e7ff,stroke:#4f46e5,color:#1e1b4b,stroke-width:1.5px
+  classDef screen fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px
+  classDef code fill:#dcfce7,stroke:#16a34a,color:#052e16,stroke-width:1.5px
+  classDef model fill:#ffedd5,stroke:#ea580c,color:#431407,stroke-width:1.5px
+  class rev person
+  class ui screen
+  class prep,checks,rules code
+  class ai model
+  style BR fill:#f8fafc,stroke:#94a3b8,color:#334155
+  style VC fill:#f8fafc,stroke:#94a3b8,color:#334155
 ```
+
+Colour key: green is plain code, orange is the AI, purple is people.
 
 One claim, start to finish:
 
@@ -93,22 +114,54 @@ A few choices worth calling out:
 
 ### In production
 
-The same four steps, moved inside the carrier's own cloud account and wired to their claims system. This is the high-level shape; the named services are AWS examples, and each has a Google Cloud or Azure equivalent. Claude runs on AWS (Bedrock) and Google Cloud (Vertex AI), so photos don't have to leave the carrier's account.
+The same steps, moved inside the carrier's own cloud account and wired to their claims system. This is the high-level shape, and it works the same on AWS, Google Cloud or Azure. Claude runs on AWS (Bedrock) and Google Cloud (Vertex AI), so photos don't have to leave the carrier's account.
 
 ```mermaid
-flowchart LR
-  Cust["Customer app<br/>guided photo capture"] --> Store["Photo store<br/>encrypted, retention rules<br/>(e.g. S3)"]
-  Store --> Queue["Queue<br/>absorbs bursts after a storm<br/>(e.g. SQS)"]
-  Queue --> Assess["Assessment service<br/>photo checks + one AI call<br/>(Claude on Bedrock)"]
-  Assess --> Rules["Routing protocol<br/>versioned, owner-approved"]
-  Claims["Claims system<br/>(e.g. Guidewire)"] -->|"policy and claim details"| Rules
-  Rules --> Log["Decision log<br/>every route and reason"]
-  Log --> Rev["Reviewer screen<br/>single sign-on"]
-  Rev -->|"approve, adjust, route, hand off"| Claims
-  Gate["Release gate<br/>changes scored on the labelled set"] -.-> Assess
-  Gate -.-> Rules
-  Log -.-> Mon["Monitoring<br/>overrides, cost, drift"]
+flowchart TB
+  cust(["Customer"])
+
+  subgraph IN["1 · Intake"]
+    direction LR
+    app["Photo capture app<br/>guided views"] --> store[("Photo store<br/>encrypted, retention rules")] --> queue[["Queue<br/>absorbs storm surges"]]
+  end
+
+  subgraph AS["2 · Assessment, in the carrier's cloud account"]
+    direction LR
+    svc["Assessment service<br/>photo checks"] <--> ai["Claude<br/>via Bedrock or Vertex AI"]
+    svc --> rules["Routing protocol<br/>versioned, owner-approved"]
+    gate["Release gate<br/>changes scored on<br/>labelled claims"] -. "releases" .-> rules
+  end
+
+  subgraph RC["3 · Decision and review"]
+    direction LR
+    log[("Decision log<br/>every route and reason")] --> rev(["Reviewer<br/>decision written back<br/>to the claims system"])
+    log -.-> mon["Monitoring<br/>overrides, cost, drift"]
+  end
+
+  cms[("Claims system<br/>policy and claim details")]
+
+  cust --> IN
+  IN -- "one message per claim" --> AS
+  cms -- "policy facts" --> AS
+  AS -- "route and reasons" --> RC
+
+
+  classDef person fill:#e0e7ff,stroke:#4f46e5,color:#1e1b4b,stroke-width:1.5px
+  classDef code fill:#dcfce7,stroke:#16a34a,color:#052e16,stroke-width:1.5px
+  classDef model fill:#ffedd5,stroke:#ea580c,color:#431407,stroke-width:1.5px
+  classDef data fill:#e0f2fe,stroke:#0284c7,color:#082f49,stroke-width:1.5px
+  classDef ops fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px
+  class cust,rev person
+  class app,svc,rules code
+  class ai model
+  class store,queue,log,cms data
+  class gate,mon ops
+  style IN fill:#f8fafc,stroke:#94a3b8,color:#334155
+  style AS fill:#f8fafc,stroke:#94a3b8,color:#334155
+  style RC fill:#f8fafc,stroke:#94a3b8,color:#334155
 ```
+
+Colour key: green is plain code, orange is the AI, blue is stored data, purple is people.
 
 What changes from the prototype, and why:
 
