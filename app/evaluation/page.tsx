@@ -4,12 +4,15 @@ import { useMemo, useState } from "react";
 
 import results from "@/eval/results/latest.json";
 import { loadDemoPhoto } from "@/lib/client/intake.ts";
-import { MODELS, modelInfo } from "@/lib/extraction/models.ts";
+import { DEFAULT_MODEL, MODELS, modelInfo } from "@/lib/extraction/models.ts";
 import { scoreCase, summarise, type EvalCaseResult, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
 import type { Assessment } from "@/lib/pipeline.ts";
 import { DEFAULT_SETTINGS, PROTOCOL_VERSION, ROUTE_LABELS, usd, type Route } from "@/lib/policy/protocol.ts";
 
-const RUNS = (results as { runs: EvalRun[] }).runs;
+// Newest prompt first, and the default model first within a prompt version.
+const RUNS = [...(results as { runs: EvalRun[] }).runs].sort(
+  (a, b) => b.promptVersion.localeCompare(a.promptVersion) || Number(b.model === DEFAULT_MODEL) - Number(a.model === DEFAULT_MODEL),
+);
 const ROUTES: Route[] = ["photo_estimate", "more_evidence", "adjuster", "manual_triage"];
 const REPO = "https://github.com/wellnessaistack-maker/vehicle-damage-claims-ai";
 
@@ -64,7 +67,8 @@ export default function EvaluationPage() {
               <div className="seg">
                 {scoredRuns.map((r, i) => (
                   <button key={`${r.run.model}-${r.run.runAt}`} className={r === current ? "on" : ""} onClick={() => setRunIdx(i)}>
-                    {r.live ? "Live run" : "Saved run"}: {modelInfo(r.run.model).label}
+                    {r.live ? "Live run" : "Saved"}: {modelInfo(r.run.model).label}
+                    {!r.live && r.run.promptVersion ? `, ${r.run.promptVersion}` : ""}
                   </button>
                 ))}
               </div>
@@ -287,6 +291,7 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
 }
 
 function ModelComparison({ runs }: { runs: { run: EvalRun; summary: Summary }[] }) {
+  const label = (r: EvalRun) => `${modelInfo(r.model).label}, ${r.promptVersion}`;
   const rows: [string, (s: Summary) => string][] = [
     ["Escalation recall", (s) => `${s.escalation.caught} of ${s.escalation.of}`],
     ["Routing agreement (exact)", (s) => `${s.agreement.exact} of ${s.agreement.of}`],
@@ -301,8 +306,8 @@ function ModelComparison({ runs }: { runs: { run: EvalRun; summary: Summary }[] 
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Model comparison</h3>
-        <span className="sub">Same cases, same prompt, same rules. Only the model changes.</span>
+        <h3>Saved runs side by side</h3>
+        <span className="sub">Same cases and rules. Each column changes the model or the prompt version, which is how every change gets scored before it goes live.</span>
       </div>
       <div className="card-body">
         <table className="t">
@@ -310,16 +315,16 @@ function ModelComparison({ runs }: { runs: { run: EvalRun; summary: Summary }[] 
             <tr>
               <th>Measure</th>
               {runs.map((r) => (
-                <th key={r.run.model}>{modelInfo(r.run.model).label}</th>
+                <th key={label(r.run)}>{label(r.run)}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map(([label, f]) => (
-              <tr key={label}>
-                <td>{label}</td>
+            {rows.map(([measure, f]) => (
+              <tr key={measure}>
+                <td>{measure}</td>
                 {runs.map((r) => (
-                  <td key={r.run.model}>{f(r.summary)}</td>
+                  <td key={label(r.run)}>{f(r.summary)}</td>
                 ))}
               </tr>
             ))}

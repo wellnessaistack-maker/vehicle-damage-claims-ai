@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 
 import results from "@/eval/results/latest.json";
+import { DEFAULT_MODEL } from "@/lib/extraction/models.ts";
+import { PROMPT_VERSION } from "@/lib/extraction/prompt.ts";
 import { currentDecision, type CaseItem } from "@/lib/client/cases.ts";
 import { scoreCase, summarise, type EvalRun } from "@/lib/eval/metrics.ts";
 import {
@@ -30,6 +32,8 @@ const GROUPS: { id: RuleGroup; title: string; blurb: string }[] = [
 ];
 
 const RUNS = (results as { runs: EvalRun[] }).runs;
+// The protocol test replays the default model's run on the current prompt.
+const BASE_RUN = RUNS.find((r) => r.model === DEFAULT_MODEL && r.promptVersion === PROMPT_VERSION) ?? RUNS[0];
 
 export function ProtocolDrawer(props: {
   settings: Settings;
@@ -48,8 +52,8 @@ export function ProtocolDrawer(props: {
   const set = (key: keyof Settings, value: unknown) => props.onChange(clampSettings({ ...settings, [key]: value }));
 
   const comparison = useMemo((): Comparison => {
-    if (!test || RUNS.length === 0) return null;
-    const run = RUNS[0];
+    if (!test || !BASE_RUN) return null;
+    const run = BASE_RUN;
     const before = run.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS));
     const after = run.cases.map((c) => scoreCase(c, settings));
     return {

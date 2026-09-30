@@ -1,5 +1,7 @@
-// GET /api/eval-run/<model>/<case,case,...|all>/<repeat>
+// GET /api/eval-run/<model>/<case,case,...|all>/<repeat>[/compact]
 //   e.g. /api/eval-run/claude-opus-5-5/all/1
+// "compact" leaves out the claim details and labels (they come from
+// eval/cases.csv); use scripts/import-eval.ts to turn it into a saved run.
 //
 // Runs the labelled evaluation set on the server. Each run costs API credits,
 // so on Vercel it needs a secret token as the first path segment
@@ -26,12 +28,15 @@ export async function GET(req: Request, ctx: { params: Promise<{ args?: string[]
     return Response.json({ error: "No API key configured." }, { status: 503 });
   }
   const url = new URL(req.url);
-  const [pModel, pCases, pRepeat] = args;
+  const [pModel, pCases, pRepeat, pFormat] = args;
   const model = pModel ?? url.searchParams.get("model") ?? MODELS[0].id;
   if (!MODELS.some((m) => m.id === model)) return Response.json({ error: "Unknown model." }, { status: 400 });
   const repeat = Math.min(3, Math.max(1, Number(pRepeat ?? url.searchParams.get("repeat") ?? 1)));
   const casesArg = pCases ?? url.searchParams.get("cases") ?? "all";
   const only = casesArg === "all" ? undefined : casesArg.split(",").filter(Boolean);
   const run = await runEvaluation({ model, repeat, only, concurrency: 8 });
+  if (pFormat === "compact") {
+    return Response.json({ ...run, cases: run.cases.map(({ claim: _c, labels: _l, photos: _p, ...rest }) => rest) });
+  }
   return Response.json(run);
 }

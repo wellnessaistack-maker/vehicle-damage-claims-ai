@@ -136,7 +136,7 @@ export const SETTING_DEFS: SettingDef[] = [
     key: "hiddenDamageAllowancePct",
     kind: "number",
     label: "Hidden-damage allowance",
-    help: "Added to the top of the range when there is moderate or severe damage, for damage behind the panels.",
+    help: "Added to the top of the range for damage that may be hidden behind the panels: moderate damage to the front or rear ends, or any severe damage.",
     min: 0,
     max: 50,
     step: 5,
@@ -501,16 +501,18 @@ export const RULES: Rule[] = [
     tier: "locked",
     effect: "more_evidence",
     title: "Photo quality too poor",
-    when: "A photo is too dark, too soft, too small, washed out, or glare or an obstruction hides the damage. The pixel checks follow the photo quality bar setting.",
+    when: "The photos are too dark, too soft, too small or washed out (with several photos, only if none is good enough), or glare or an obstruction hides the damage. The pixel checks follow the photo quality bar setting.",
     settings: ["photoQuality"],
     check: ({ x, photos, settings }) => {
       const t = PHOTO_QUALITY_THRESHOLDS[settings.photoQuality];
       const problems: string[] = [];
       const retakes: RetakeRequest[] = [];
-      const dark = photos.filter((p) => p.brightness < t.minBrightness);
-      const soft = photos.filter((p) => p.sharpness < t.minSharpness);
-      const small = photos.filter((p) => Math.min(p.width, p.height) < t.minShortEdgePx);
-      const washed = photos.filter((p) => p.clippedHighlights > t.maxClippedHighlights);
+      // With several photos, a problem only counts if no photo is free of it.
+      const allFail = (bad: (p: PhotoMetrics) => boolean) => (photos.length > 0 && photos.every(bad) ? photos : []);
+      const dark = allFail((p) => p.brightness < t.minBrightness);
+      const soft = allFail((p) => p.sharpness < t.minSharpness);
+      const small = allFail((p) => Math.min(p.width, p.height) < t.minShortEdgePx);
+      const washed = allFail((p) => p.clippedHighlights > t.maxClippedHighlights);
       const issues = x.evidence.photo_issues;
       if (dark.length || issues.includes("too_dark")) {
         problems.push(dark.length ? `too dark (${dark.map((p) => p.name).join(", ")})` : "too dark");
