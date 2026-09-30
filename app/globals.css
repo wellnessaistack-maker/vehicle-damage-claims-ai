@@ -370,3 +370,9 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .ev-fold[open] > summary { border-bottom: 1px solid var(--line); }
 .ev-fold > .card { border: 0; box-shadow: none; margin: 0; }
 @media (max-width: 1100px) { .ev-score { grid-template-columns: repeat(2, 1fr); } .ev-needs { grid-template-columns: repeat(2, 1fr); } }
+.ev-strip { display: flex; flex-wrap: wrap; gap: 8px 22px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; color: var(--text-2); }
+.ev-strip b { color: var(--text-3); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 6px; }
+.ev-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.ev-two > .card { margin: 0; }
+.ev-needs-2 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1100px) { .ev-two { grid-template-columns: 1fr; } }

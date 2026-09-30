@@ -237,7 +237,7 @@ export function Stat({ label, value, note }: { label: string; value: string; not
   );
 }
 
-export function ModelComparison({ runs }: { runs: { run: EvalRun; summary: Summary }[] }) {
+export function ModelComparison({ runs, title, sub }: { runs: { run: EvalRun; summary: Summary }[]; title?: string; sub?: string }) {
   const label = (r: EvalRun) => `${modelInfo(r.model).label}, ${r.promptVersion}`;
   const rows: [string, (s: Summary) => string][] = [
     ["Escalation recall", (s) => `${s.escalation.caught} of ${s.escalation.of}`],
@@ -253,8 +253,8 @@ export function ModelComparison({ runs }: { runs: { run: EvalRun; summary: Summa
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Saved runs side by side</h3>
-        <span className="sub">Same cases and rules. Each column changes the model or the prompt version, which is how every change gets scored before it goes live.</span>
+        <h3>{title ?? "Saved runs side by side"}</h3>
+        <span className="sub">{sub ?? "Same cases and rules. Each column changes the model or the prompt version, which is how every change gets scored before it goes live."}</span>
       </div>
       <div className="card-body">
         <table className="t">

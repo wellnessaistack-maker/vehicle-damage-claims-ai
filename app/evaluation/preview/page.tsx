@@ -45,7 +45,10 @@ export default function EvaluationPreview() {
   const scored = useMemo(() => run.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS)), [run]);
   const s = useMemo(() => summarise(scored), [scored]);
   const saved = useMemo(
-    () => RUNS.map((r) => ({ run: r, summary: summarise(r.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS))) })),
+    () =>
+      [...RUNS]
+        .sort((a, b) => b.promptVersion.localeCompare(a.promptVersion) || Number(b.model === DEFAULT_MODEL) - Number(a.model === DEFAULT_MODEL))
+        .map((r) => ({ run: r, summary: summarise(r.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS))) })),
     [],
   );
   const misses = scored.filter((x) => !x.exact || (x.result.repeatRoutes && new Set(x.result.repeatRoutes).size > 1));
@@ -113,6 +116,30 @@ export default function EvaluationPreview() {
           </div>
         </div>
 
+        <div className="ev-strip">
+          <span>
+            <b>Didn&apos;t guess when unsure</b> {s.abstention.correct} of {s.abstention.of}
+          </span>
+          <span>
+            <b>Make · model · colour</b> {s.vehicle.make.right}/{s.vehicle.make.of} · {s.vehicle.model.right}/{s.vehicle.model.of} · {s.vehicle.colour.right}/{s.vehicle.colour.of}
+          </span>
+          <span>
+            <b>Review flags raised</b> {s.flags.caught} of {s.flags.of}
+          </span>
+          <span>
+            <b>Same route every run</b> {s.stability ? `${s.stability.stable} of ${s.stability.of}` : "not measured"}
+          </span>
+          <span>
+            <b>Slowest 1 in 20</b> {s.latency ? `${(s.latency.p95 / 1000).toFixed(1)} s` : "n/a"}
+          </span>
+        </div>
+
+        {/* Models and routes, side by side */}
+        <div className="ev-two">
+          <ModelComparison runs={saved} title="Models and prompts side by side" sub="Same 26 cases, same rules" />
+          <Confusion s={s} />
+        </div>
+
         {/* 2. Where it went wrong */}
         <section className="card">
           <div className="card-head">
@@ -159,7 +186,10 @@ export default function EvaluationPreview() {
           </div>
         </section>
 
-        {/* 3. What we need */}
+        <CaseTable scored={scored} />
+
+        <div className="ev-two">
+          <LiveRunner onProgress={(r) => setLive(r)} />
         <section className="card">
           <div className="card-head">
             <h3>What it takes to trust it on your claims</h3>
@@ -167,7 +197,7 @@ export default function EvaluationPreview() {
               Detail in the README
             </a>
           </div>
-          <div className="card-body ev-needs">
+          <div className="card-body ev-needs ev-needs-2">
             <div>
               <b>A few hundred past claims</b>
               <span>with photos, the route taken, the final paid cost and supplements</span>
@@ -187,34 +217,7 @@ export default function EvaluationPreview() {
           </div>
         </section>
 
-        {/* 4. Detail, folded */}
-        <div className="section-label" style={{ marginBottom: -6 }}>
-          The detail
         </div>
-        <details className="card ev-fold">
-          <summary>
-            Every case <span className="hint">{run.cases.length} claims, with photo, expected route, our route and the rules that fired</span>
-          </summary>
-          <CaseTable scored={scored} />
-        </details>
-        <details className="card ev-fold">
-          <summary>
-            Where the routes landed <span className="hint">expected route against ours</span>
-          </summary>
-          <Confusion s={s} />
-        </details>
-        <details className="card ev-fold">
-          <summary>
-            Opus and Sonnet side by side <span className="hint">same cases, same rules</span>
-          </summary>
-          <ModelComparison runs={saved} />
-        </details>
-        <details className="card ev-fold">
-          <summary>
-            Re-run it yourself <span className="hint">6 cases live, well under a dollar; or all 26</span>
-          </summary>
-          <LiveRunner onProgress={(r) => setLive(r)} />
-        </details>
       </main>
     </div>
   );
