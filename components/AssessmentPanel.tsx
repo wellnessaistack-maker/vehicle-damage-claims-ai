@@ -8,7 +8,7 @@ import { loadDemoPhoto, shrink, kindOf, type CasePhoto } from "@/lib/client/inta
 import { decide, type Decision, type EstimateOutput } from "@/lib/policy/engine.ts";
 import { ROUTE_LABELS, usd, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
-type Mode = null | "change" | "adjust" | "send" | "comment" | "ask";
+type Mode = null | "change" | "adjust" | "send" | "comment" | "ask" | "contact" | "update";
 
 export function AssessmentPanel(props: {
   item: CaseItem | null;
@@ -103,19 +103,6 @@ export function AssessmentPanel(props: {
             <RequiredOutputs d={d!} />
             <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />
             <PolicyChecks d={d!} />
-            {item.status !== "done" && route !== "manual_triage" && (
-              <ContactCard
-                item={item}
-                route={route}
-                message={message}
-                setMessage={setMessage}
-                channel={channel}
-                setChannel={setChannel}
-                sendUpdate={sendUpdate}
-                setSendUpdate={setSendUpdate}
-                onThread={props.onThread}
-              />
-            )}
             <Checklist d={d!} />
           </>
         )}
@@ -132,7 +119,10 @@ export function AssessmentPanel(props: {
         setMode={setMode}
         message={message}
         channel={channel}
+        setChannel={setChannel}
         sendUpdate={sendUpdate}
+        setSendUpdate={setSendUpdate}
+        setMessage={setMessage}
         onComplete={props.onComplete}
         onThread={props.onThread}
         onReassess={props.onReassess}
@@ -513,7 +503,10 @@ function ActionBar(props: {
   setMode: (m: Mode) => void;
   message: string;
   channel: Channel | null;
+  setChannel: (c: Channel) => void;
   sendUpdate: boolean;
+  setSendUpdate: (b: boolean) => void;
+  setMessage: (m: string) => void;
   onComplete: (id: string, outcome: Omit<CaseOutcome, "at">) => void;
   onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
   onReassess: (id: string) => void;
@@ -549,7 +542,12 @@ function ActionBar(props: {
   };
 
   // While a form is open, its own button is the only way forward.
-  const formOpen = mode === "adjust" || mode === "change" || mode === "send";
+  const formOpen = mode === "adjust" || mode === "change" || mode === "send" || mode === "contact" || mode === "update";
+  const name = firstName(item.claim) ?? "the customer";
+  const contactable = channels(item.claim).length > 0;
+  const [adhoc, setAdhoc] = useState(`Hi ${firstName(item.claim) ?? "there"},\n\n`);
+  const [hideRequest, setHideRequest] = useState(false);
+  const picker = contactable ? <ChannelPicker claim={item.claim} channel={channel} setChannel={props.setChannel} /> : null;
   const totalLoss = !!d?.reasons.some((r) => r.id === "C2");
   const adjusterTargets = totalLoss ? ["total_loss"] : ["field"];
   if (d?.siuReferral) adjusterTargets.push("siu");
@@ -575,6 +573,11 @@ function ActionBar(props: {
       {route !== "manual_triage" && (
         <button className="btn btn-sm" onClick={() => open("change")}>
           Change route
+        </button>
+      )}
+      {route !== "more_evidence" && (
+        <button className="btn btn-sm" onClick={() => open("contact")}>
+          Contact customer
         </button>
       )}
       <button className="btn btn-sm" onClick={() => setMode(mode === "comment" ? null : "comment")}>
@@ -647,8 +650,76 @@ function ActionBar(props: {
     );
   }
 
+  const verb = channel === "email" ? "email" : "text";
   return (
     <div className="actionbar">
+      {mode === "contact" && (
+        <div className="contact-composer">
+          <div className="contact-head">
+            <b>Message {name}</b>
+            {picker}
+          </div>
+          {contactable ? (
+            <textarea rows={4} value={adhoc} onChange={(ev) => setAdhoc(ev.target.value)} />
+          ) : (
+            <div className="hint">No phone or email on file. Add them under Edit claim details.</div>
+          )}
+          <div className="composer-row">
+            <button className="btn btn-sm btn-ghost" onClick={() => setMode(null)}>
+              Cancel
+            </button>
+            <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen((o) => !o)}>
+              Log a call
+            </button>
+            <button
+              className="btn btn-sm btn-primary"
+              disabled={!contactable || !adhoc.replace(/^Hi [^,\n]*,\s*/, "").trim()}
+              onClick={() => {
+                tellCustomer(adhoc);
+                setAdhoc(`Hi ${firstName(item.claim) ?? "there"},\n\n`);
+                setMode(null);
+              }}
+            >
+              Send {verb}
+            </button>
+          </div>
+        </div>
+      )}
+      {mode === "update" && (
+        <div className="contact-composer">
+          <div className="contact-head">
+            <b>Update for {name}, sent {route === "photo_estimate" ? "when you approve" : "when you send the claim on"}</b>
+            {picker}
+          </div>
+          <textarea rows={4} value={props.message} onChange={(ev) => props.setMessage(ev.target.value)} />
+          <div className="composer-row">
+            {route === "adjuster" && <span className="hint" style={{ marginRight: "auto" }}>Never mentions a total loss or a fraud review.</span>}
+            <button className="btn btn-sm btn-primary" onClick={() => setMode(null)}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+      {callOpen && item.status !== "done" && (
+        <CallForm
+          claim={item.claim}
+          onLog={(text) => {
+            props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
+            setCallOpen(false);
+          }}
+          onCancel={() => setCallOpen(false)}
+        />
+      )}
+      {!formOpen && contactable && (route === "photo_estimate" || route === "adjuster") && (
+        <div className="update-line">
+          <label>
+            <input type="checkbox" checked={props.sendUpdate} onChange={(ev) => props.setSendUpdate(ev.target.checked)} /> Also {verb} {name} an update
+          </label>
+          <button className="linkish" onClick={() => open("update")}>
+            Edit message
+          </button>
+        </div>
+      )}
       {mode === "send" && (
         <div className="inline-form">
           <div className="row">
@@ -831,27 +902,52 @@ function ActionBar(props: {
         </div>
       )}
       {!formOpen && route === "more_evidence" && (
-        <div className="actionbar-row">
-          <button
-            className="btn btn-warn"
-            onClick={() => {
-              const n = d?.retakes.length ?? 1;
-              const what = `${n} photo${n === 1 ? "" : "s"}`;
-              const due = shortDate(followUpDate(new Date().toISOString()));
-              const how = channel ? sentVia(item.claim, channel) : "Sent the customer a message";
-              tellCustomer(props.message);
-              done({
-                action: "message_sent",
-                route,
-                summary: `${how} asking for ${what}. Follow up by ${due} if there's no reply.`,
-                sentTo: [],
-              });
-            }}
-            disabled={!props.message.trim()}
-          >
-            {channel === "text" ? "Text the customer" : channel === "email" ? "Email the customer" : "Send customer message"}
-          </button>
-        </div>
+        hideRequest ? (
+          <div className="actionbar-row">
+            <button className="btn btn-warn" onClick={() => setHideRequest(false)}>
+              Ask {name} for photos
+            </button>
+          </div>
+        ) : (
+          <div className="contact-composer">
+            <div className="contact-head">
+              <b>Recommended: ask {name} for {d?.retakes.length ?? 1} photo{(d?.retakes.length ?? 1) === 1 ? "" : "s"}</b>
+              {picker ?? <span className="hint">No phone or email on file; send it outside the tool, then mark it sent.</span>}
+              <span style={{ flex: 1 }} />
+              <button className="btn btn-sm btn-ghost" onClick={() => setHideRequest(true)}>
+                Hide
+              </button>
+            </div>
+            <textarea rows={4} value={props.message} onChange={(ev) => props.setMessage(ev.target.value)} />
+            <div className="composer-row">
+              <span className="hint" style={{ marginRight: "auto" }}>
+                Includes an upload link. The claim then waits, with a follow-up date.
+              </span>
+              <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen((o) => !o)}>
+                Log a call
+              </button>
+              <button
+                className="btn btn-sm btn-warn"
+                onClick={() => {
+                  const n = d?.retakes.length ?? 1;
+                  const what = `${n} photo${n === 1 ? "" : "s"}`;
+                  const due = shortDate(followUpDate(new Date().toISOString()));
+                  const how = channel ? sentVia(item.claim, channel) : "Sent the customer a message";
+                  tellCustomer(props.message);
+                  done({
+                    action: "message_sent",
+                    route,
+                    summary: `${how} asking for ${what}. Follow up by ${due} if there's no reply.`,
+                    sentTo: [],
+                  });
+                }}
+                disabled={!props.message.trim()}
+              >
+                {channel === "text" ? `Text ${name}` : channel === "email" ? `Email ${name}` : "Mark as sent"}
+              </button>
+            </div>
+          </div>
+        )
       )}
       {!formOpen && route === "adjuster" && (
         <div className="actionbar-row">
@@ -885,71 +981,19 @@ function ActionBar(props: {
   );
 }
 
-function ContactCard(props: {
-  item: CaseItem;
-  route: Route;
-  message: string;
-  setMessage: (m: string) => void;
-  channel: Channel | null;
-  setChannel: (c: Channel) => void;
-  sendUpdate: boolean;
-  setSendUpdate: (b: boolean) => void;
-  onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
-}) {
-  const { item, route, channel } = props;
-  const claim = item.claim;
+function ChannelPicker({ claim, channel, setChannel }: { claim: CaseItem["claim"]; channel: Channel | null; setChannel: (c: Channel) => void }) {
   const available = channels(claim);
-  const [callOpen, setCallOpen] = useState(false);
-  const isRequest = route === "more_evidence";
-  const when = route === "photo_estimate" ? "when I approve" : "when I send the claim on";
   return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Contact the customer</h3>
-        <span className="sub">
-          {firstName(claim) ? claim.policyholder : "No policyholder on file"}
-          {claim.contact ? ` · prefers ${claim.contact.preferred === "text" ? "text" : "email"}` : ""}
-        </span>
-        <span style={{ flex: 1 }} />
-        <button className="btn btn-sm" disabled={!claim.contact?.phone} onClick={() => setCallOpen((o) => !o)} title={claim.contact?.phone ? `Call ${claim.contact.phone}` : "No phone number on file"}>
-          Log a call
-        </button>
-      </div>
-      <div className="card-body contact">
-        {available.length === 0 ? (
-          <div className="hint">No phone or email on file. Add them under Edit claim details, or contact the customer outside the tool.</div>
-        ) : (
-          <div className="contact-row">
-            <span className="hint">Send by</span>
-            <div className="seg">
-              {available.map((c) => (
-                <button key={c} className={channel === c ? "on" : ""} onClick={() => props.setChannel(c)}>
-                  {c === "text" ? `Text ${claim.contact?.phone}` : `Email ${claim.contact?.email}`}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {!isRequest && (
-          <label className="contact-check">
-            <input type="checkbox" checked={props.sendUpdate} onChange={(e) => props.setSendUpdate(e.target.checked)} /> Send this update {when}
-            {route === "adjuster" && <span className="hint"> (it never mentions a total loss or a fraud review)</span>}
-          </label>
-        )}
-        {(isRequest || props.sendUpdate) && <textarea className="message" value={props.message} onChange={(e) => props.setMessage(e.target.value)} />}
-        {isRequest && <div className="hint">Goes out when you click the button below, with a secure upload link. The claim then waits in Waiting, with a follow-up date.</div>}
-        {callOpen && (
-          <CallForm
-            claim={claim}
-            onLog={(text) => {
-              props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
-              setCallOpen(false);
-            }}
-            onCancel={() => setCallOpen(false)}
-          />
-        )}
-      </div>
-    </div>
+    <span className="picker">
+      <span className="seg seg-sm">
+        {available.map((c) => (
+          <button key={c} className={channel === c ? "on" : ""} onClick={() => setChannel(c)}>
+            {c === "text" ? "Text" : "Email"}
+          </button>
+        ))}
+      </span>
+      <span className="hint">to {channel === "email" ? claim.contact?.email : claim.contact?.phone}</span>
+    </span>
   );
 }
 
