@@ -8,6 +8,7 @@ import {
   currentDecision,
   failureNote,
   firstReviewNote,
+  holderLine,
   newClaimId,
   now,
   REVIEWER,
@@ -22,6 +23,7 @@ import type { Assessment } from "@/lib/pipeline.ts";
 import { DEFAULT_SETTINGS, type Settings } from "@/lib/policy/protocol.ts";
 
 import { AssessmentPanel } from "./AssessmentPanel.tsx";
+import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { ArchitectureDrawer } from "./ArchitectureDrawer.tsx";
 import { DecisionRecordDrawer } from "./DecisionRecordDrawer.tsx";
 import { IntakeModal, type NewCase } from "./IntakeModal.tsx";
@@ -200,8 +202,20 @@ export function Workspace() {
     [update],
   );
 
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const complete = useCallback(
     (id: string, outcome: Omit<CaseOutcome, "at">) => {
+      const c = cases.find((x) => x.id === id);
+      const next = cases.find((x) => x.status !== "done" && x.id !== id);
+      const holder = holderLine({ ...outcome, at: now() });
+      const where = outcome.action === "message_sent" ? "moved to Waiting on customer" : `moved to Completed${holder ? `. ${holder}` : ""}`;
+      setToast(`${c?.claim.claimId ?? "Claim"} ${where}. ${next ? `Next up: ${next.claim.claimId}.` : "Inbox clear."}`);
       update(id, (c) => ({
         ...c,
         status: "done",
@@ -210,7 +224,7 @@ export function Workspace() {
       }));
       advanceFrom(id);
     },
-    [update, advanceFrom],
+    [cases, update, advanceFrom],
   );
 
   const reassess = useCallback(
@@ -283,6 +297,7 @@ export function Workspace() {
           loadingDemo={loadingDemo}
           openCount={openCases.length}
         />
+        <ErrorBoundary key={selected?.id ?? "none"} label="Assessment">
         <AssessmentPanel
           key={selected?.id ?? "none"}
           item={selected}
@@ -295,10 +310,16 @@ export function Workspace() {
           onOpenRecord={() => setDrawer("record")}
           onOpenProtocol={() => setDrawer("protocol")}
         />
+        </ErrorBoundary>
         {/* Claim details and photos are reference material, so they sit on the right. */}
         <Viewer item={selected} settings={settings} onUpdateClaim={updateClaim} onReassess={reassess} />
       </div>
 
+      {toast && (
+        <div className="toast" role="status" onClick={() => setToast(null)}>
+          {toast}
+        </div>
+      )}
       {intakeOpen && <IntakeModal onClose={() => setIntakeOpen(false)} onAdd={(n) => { addCases(n); setIntakeOpen(false); }} />}
       {drawer === "protocol" && (
         <ProtocolDrawer

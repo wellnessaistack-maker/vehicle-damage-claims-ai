@@ -16,7 +16,36 @@ export interface ThreadEntry {
   at: string;
 }
 
-export type OutcomeAction = "approved" | "message_sent" | "assigned_adjuster" | "assigned_manual" | "route_changed";
+export type OutcomeAction = "approved" | "message_sent" | "assigned_adjuster" | "assigned_manual" | "route_changed" | "handed_off";
+
+/** Who a claim can be sent to. Mock names; in production this is the carrier's own directory and queues. */
+export interface Recipient {
+  id: string;
+  name: string;
+  role: string;
+  /** What the recipient is for, shown when choosing. */
+  forWhat: string;
+}
+
+export const DIRECTORY: Recipient[] = [
+  { id: "estimating", name: "Estimating team", role: "Desk appraisers", forWhat: "Writes the final estimate on the photo path" },
+  { id: "field", name: "Field adjuster queue", role: "Field adjusters", forWhat: "Inspects the car in person" },
+  { id: "total_loss", name: "Total loss unit", role: "Total loss specialists", forWhat: "Valuation and settlement when repair may cost more than the car is worth" },
+  { id: "siu", name: "Special Investigations Unit", role: "SIU", forWhat: "Possible fraud, such as reused photos" },
+  { id: "manual", name: "Manual triage queue", role: "Claims handlers", forWhat: "Today's process, for anything the tool couldn't assess" },
+  { id: "dana", name: "Dana Kim", role: "Senior appraiser", forWhat: "Second opinion on a price or a borderline route" },
+  { id: "marcus", name: "Marcus Hill", role: "Claims supervisor", forWhat: "Escalations, complaints and exceptions to the protocol" },
+];
+
+export const recipient = (id: string) => DIRECTORY.find((r) => r.id === id)!;
+
+/** Where a claim goes next on each route when the reviewer accepts it. */
+export const ROUTE_OWNER: Record<Route, string> = {
+  photo_estimate: "estimating",
+  more_evidence: "estimating",
+  adjuster: "field",
+  manual_triage: "manual",
+};
 
 export interface CaseOutcome {
   action: OutcomeAction;
@@ -24,6 +53,8 @@ export interface CaseOutcome {
   summary: string;
   reason?: string;
   adjustedRange?: { lowUsd: number; highUsd: number };
+  /** Who holds the claim now. Empty while it waits on the customer. */
+  sentTo?: string[];
   at: string;
 }
 
@@ -55,7 +86,14 @@ export function newClaimId(): string {
 /** The decision under the current settings and claim details. Rules only, no AI call. */
 export function currentDecision(c: CaseItem, settings: Settings): Decision | null {
   if (!c.assessment?.ok) return null;
-  return decide(c.assessment.extraction, c.claim, c.assessment.photos, settings);
+  return decide(c.assessment.extraction, c.claim, c.assessment.photos, settings, { reviewerRange: c.outcome?.adjustedRange });
+}
+
+/** Plain-language "Now with ..." line for a finished claim. */
+export function holderLine(o: CaseOutcome): string {
+  if (o.action === "message_sent") return "Waiting on the customer";
+  if (!o.sentTo?.length) return "";
+  return `Now with ${o.sentTo.map((id) => recipient(id).name).join(" and ")}`;
 }
 
 export function routeOf(c: CaseItem, settings: Settings): Route | null {

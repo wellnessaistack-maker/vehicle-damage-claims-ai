@@ -1,6 +1,6 @@
 "use client";
 
-import { currentDecision, type CaseItem } from "@/lib/client/cases.ts";
+import { currentDecision, holderLine, type CaseItem } from "@/lib/client/cases.ts";
 import { DEFAULT_SETTINGS, ROUTE_LABELS, SETTING_DEFS, type Settings } from "@/lib/policy/protocol.ts";
 
 export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseItem; settings: Settings; onClose: () => void }) {
@@ -91,6 +91,12 @@ export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseIt
               <dd>{d?.humanReview.required ? d.humanReview.reasons.join(" ") : a?.ok ? "Not flagged" : "Manual triage"}</dd>
               <dt>Reviewer action</dt>
               <dd>{item.outcome ? `${item.outcome.summary}${item.outcome.reason ? ` Reason: ${item.outcome.reason}` : ""}` : "None yet"}</dd>
+              {item.outcome && holderLine(item.outcome) && (
+                <>
+                  <dt>Who has it</dt>
+                  <dd>{holderLine(item.outcome)}</dd>
+                </>
+              )}
             </dl>
           </section>
 
@@ -199,7 +205,18 @@ export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseIt
                         <span className="mono">{r.id}</span> {r.title}
                       </td>
                       <td>{r.tier === "locked" ? "Locked" : "Configurable"}</td>
-                      <td>{r.fired ? <b>Fired: {r.reason}</b> : <span className="hint">Did not fire</span>}</td>
+                      <td>
+                        {r.fired ? <b>Fired: {r.reason}</b> : <span className="hint">Did not fire</span>}
+                        {r.citations && (
+                          <ul className="hint" style={{ margin: "4px 0 0", paddingLeft: 16 }}>
+                            {r.citations.map((c, i) => (
+                              <li key={i}>
+                                {c.source}: {c.text}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

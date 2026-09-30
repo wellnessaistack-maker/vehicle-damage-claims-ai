@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { currentDecision, routeOf, timeAgo, vehicleLine, type CaseItem } from "@/lib/client/cases.ts";
+import { currentDecision, recipient, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
 import { ROUTE_LABELS, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
 const LANES: Route[] = ["adjuster", "more_evidence", "photo_estimate", "manual_triage"];
@@ -13,7 +13,14 @@ const OUTCOME_LABELS: Record<string, string> = {
   assigned_adjuster: "With adjuster",
   assigned_manual: "In manual review",
   route_changed: "Route changed",
+  handed_off: "Handed off",
 };
+
+function doneLabel(o: CaseOutcome) {
+  if (o.action === "message_sent") return "Waiting on customer";
+  const first = o.sentTo?.[0];
+  return first ? `With ${recipient(first).name.replace(/ (team|queue|unit)$/i, "")}` : OUTCOME_LABELS[o.action];
+}
 
 export function Worklist(props: {
   cases: CaseItem[];
@@ -26,8 +33,19 @@ export function Worklist(props: {
   openCount: number;
 }) {
   const { cases, settings, selectedId, onSelect } = props;
-  const [showDone, setShowDone] = useState(true);
+  // Inbox holds what still needs this reviewer. A claim leaves it only when a final action is taken:
+  // approved, routed or handed off. A photo request waits on the customer, then comes back.
+  const [view, setView] = useState<"inbox" | "waiting" | "completed">("inbox");
   const done = cases.filter((c) => c.status === "done");
+  const waiting = done.filter((c) => c.outcome?.action === "message_sent");
+  const completed = done.filter((c) => c.outcome?.action !== "message_sent");
+
+  // Follow the selected claim, e.g. a customer's reply brings it back to the inbox.
+  const selected = cases.find((c) => c.id === selectedId);
+  const selectedView = !selected ? null : selected.status !== "done" ? "inbox" : selected.outcome?.action === "message_sent" ? "waiting" : "completed";
+  useEffect(() => {
+    if (selectedView) setView(selectedView);
+  }, [selectedId, selectedView]);
   const pending = cases.filter((c) => c.status === "queued" || c.status === "processing");
   const total = cases.length;
   const pct = total ? Math.round((done.length / total) * 100) : 0;
@@ -51,7 +69,7 @@ export function Worklist(props: {
       <button key={c.id} className={`wl-item ${c.id === selectedId ? "active" : ""}`} onClick={() => onSelect(c.id)}>
         <div className="wl-item-top">
           <span>{c.claim.claimId}</span>
-          <span>{c.status === "done" && c.outcome ? OUTCOME_LABELS[c.outcome.action] : timeAgo(c.addedAt)}</span>
+          <span>{c.status === "done" && c.outcome ? doneLabel(c.outcome) : timeAgo(c.addedAt)}</span>
         </div>
         <div className="wl-item-sub">
           {c.claim.policyholder === "Not on file" ? (c.folder ? `Folder: ${c.folder.split("/").pop()}` : "Uploaded photos") : c.claim.policyholder}
@@ -73,13 +91,26 @@ export function Worklist(props: {
         <div className="wl-title">
           <h2>My worklist</h2>
           <span className="wl-count">
-            {props.openCount} open · {done.length} done
+            {props.openCount} to review · {completed.length} completed
           </span>
         </div>
         <div className="progress" aria-label="Progress to an empty worklist">
           <div style={{ width: `${pct}%` }} />
         </div>
         <div className="wl-goal">{total === 0 ? "Nothing in your queue yet." : props.openCount === 0 ? "Worklist clear. Nice work." : "Goal: clear the worklist by end of day."}</div>
+        <div className="wl-tabs" role="tablist">
+          {(
+            [
+              ["inbox", "Inbox", props.openCount],
+              ["waiting", "Waiting", waiting.length],
+              ["completed", "Completed", completed.length],
+            ] as const
+          ).map(([key, label, n]) => (
+            <button key={key} role="tab" title={key === "waiting" ? "Waiting on the customer's photos" : undefined} aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>
+              {label} <span className="n">{n}</span>
+            </button>
+          ))}
+        </div>
         <div className="wl-actions">
           <button className="btn btn-primary" onClick={props.onAdd}>
             + Add claims
@@ -95,7 +126,8 @@ export function Worklist(props: {
             Add photos (a single photo, a folder per claim, or a link), or load the demo queue.
           </div>
         )}
-        {pending.length > 0 && (
+        {view === "inbox" && total > 0 && props.openCount === 0 && <div className="wl-empty">Inbox clear. Finished claims are under Completed.</div>}
+        {view === "inbox" && pending.length > 0 && (
           <>
             <div className="wl-group-head">
               <span className="spinner" /> Assessing <span className="n">{pending.length}</span>
@@ -103,26 +135,34 @@ export function Worklist(props: {
             {pending.map((c) => item(c, null))}
           </>
         )}
-        {LANES.map((lane) => {
-          const inLane = cases.filter((c) => c.status === "ready" && routeOf(c, settings) === lane);
-          if (inLane.length === 0) return null;
-          return (
-            <div key={lane} className={`route-${lane}`}>
-              <div className="wl-group-head">
-                <span className="dot" /> {ROUTE_LABELS[lane]} <span className="n">{inLane.length}</span>
+        {view === "inbox" &&
+          LANES.map((lane) => {
+            const inLane = cases.filter((c) => c.status === "ready" && routeOf(c, settings) === lane);
+            if (inLane.length === 0) return null;
+            return (
+              <div key={lane} className={`route-${lane}`}>
+                <div className="wl-group-head">
+                  <span className="dot" /> {ROUTE_LABELS[lane]} <span className="n">{inLane.length}</span>
+                </div>
+                {inLane.map((c) => item(c, lane))}
               </div>
-              {inLane.map((c) => item(c, lane))}
-            </div>
-          );
-        })}
-        {done.length > 0 && (
-          <>
-            <button className="wl-group-head btn-ghost" style={{ border: 0, width: "100%", cursor: "pointer", background: "none" }} onClick={() => setShowDone((s) => !s)}>
-              {showDone ? "▾" : "▸"} Done today <span className="n">{done.length}</span>
-            </button>
-            {showDone && done.map((c) => item(c, c.outcome?.route ?? routeOf(c, settings)))}
-          </>
-        )}
+            );
+          })}
+        {view === "waiting" &&
+          (waiting.length ? (
+            <>
+              <div className="wl-hint">Photos requested. When the customer replies, the claim is re-assessed and comes back to your inbox.</div>
+              {waiting.map((c) => item(c, c.outcome?.route ?? null))}
+            </>
+          ) : (
+            <div className="wl-empty">No claims waiting on a customer.</div>
+          ))}
+        {view === "completed" &&
+          (completed.length ? (
+            completed.map((c) => item(c, c.outcome?.route ?? null))
+          ) : (
+            <div className="wl-empty">Nothing completed yet. A claim lands here once it&apos;s approved, routed or handed off.</div>
+          ))}
       </div>
     </aside>
   );
