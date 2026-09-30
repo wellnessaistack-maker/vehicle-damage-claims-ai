@@ -16,7 +16,7 @@ A prototype first-review tool for an auto insurer's claims team. A reviewer drop
 | Damage summary | Assessment card, one line, e.g. "Left rear door dent with scraping" |
 | A rough AI-generated repair estimate | Assessment card: a range with its main drivers, never a single payable number |
 | How to run it | [Setup](#setup) |
-| Architecture and data flow | [Architecture](#architecture-and-data-flow), and the **Architecture** panel in the app |
+| Architecture and data flow | [Architecture](#architecture-and-data-flow): the prototype today, and a production design on AWS |
 | Why these tools | [Why these tools](#why-these-tools) |
 | How we know it works | [Evaluation](#evaluation), the **Evaluation** page and [`eval/README.md`](eval/README.md), plus [when fewer claims need a person](#when-fewer-claims-need-a-person) |
 | What we'd do next | [Next steps](#what-wed-do-next-with-more-time) |
@@ -55,23 +55,32 @@ To deploy your own copy, import the repo into Vercel and add `ANTHROPIC_API_KEY`
 
 ## Architecture and data flow
 
+### The prototype today
+
+```mermaid
+flowchart LR
+  UI["Reviewer's browser<br/>worklist and assessment<br/>state lives in the tab only"]
+  subgraph Server["Vercel serverless function: nothing stored"]
+    Prep["1 Prepare photos<br/>rotate, resize<br/>links fetched safely"]
+    Checks["2 Photo checks, code<br/>brightness, sharpness,<br/>reused photo"]
+    Rules["4 Routing protocol, code<br/>locked safety rules,<br/>configurable limits"]
+  end
+  Claude["3 Claude API<br/>one structured call<br/>sees the photos only"]
+
+  UI -->|"photos, shrunk in the browser"| Prep --> Checks --> Claude --> Rules
+  Checks -.->|"check results"| Rules
+  UI -->|"claim and policy details, mock"| Rules
+  Rules -->|"outputs, route and reasons"| UI
 ```
-Reviewer screen (browser)
-  │  photos shrunk to 1600 px in the browser (fits Vercel's 4.5 MB limit, strips location data)
-  │  or https links, fetched by the server
-  ▼
-POST /api/assess  (one serverless function; nothing is stored)
-  1. Prepare photos    fix rotation, resize, re-encode
-  2. Photo checks      brightness, sharpness, size, black and white, match against past-claim photos
-                       (plain code, no AI)
-  3. AI extraction     one Claude call per claim, all its photos, fixed output format:
-                       vehicle, damage items with rough costs, what the photos show, risk signs
-  4. Routing protocol  written rules decide the route, using the AI's facts, the photo checks
-                       and the claim details (which the AI never sees)
-  ▼
-Reviewer sees the vehicle, damage summary and estimate, the route, the reasons, and acts:
-approve, adjust the range, send the customer message, assign, change the route (with a reason), comment or ask
-```
+
+One claim, start to finish:
+
+1. **Prepare photos.** Fix rotation, resize and re-encode. Photos from links come through the safe fetcher first.
+2. **Photo checks.** Brightness, sharpness, size, black and white, and a match against past-claim photos. Plain code, no AI.
+3. **AI extraction.** One Claude call per claim with all its photos, returning a fixed format: vehicle, damage items with rough costs, what the photos show, and risk signs.
+4. **Routing protocol.** Written rules decide the route from the AI's facts, the photo checks and the claim details, which the AI never sees.
+
+The reviewer then sees the vehicle, damage summary and estimate, the route and the reasons, and acts: approve, adjust the range, send the customer message, send the claim to a person or team, change the route with a reason, comment or ask.
 
 A few choices worth calling out:
 
@@ -81,6 +90,42 @@ A few choices worth calling out:
 - **The most cautious route wins.** Adjuster, then more evidence, then the photo estimate path. If a claim is already clearly serious, we don't ask the customer for more photos.
 - **Route and review flag are separate.** Some rules keep the route but flag the claim for a person, such as damage in a sensor area, a range that straddles the fast-path limit, or a car that doesn't match the policy.
 - **One source of truth for the rules.** The protocol panel in the app is generated from the same file the engine runs, so the document an estimating expert signs off can't drift from the code.
+
+### In production
+
+The same four steps, moved inside the carrier's own cloud account and wired to their claims system. This is the high-level shape; the named services are AWS examples, and each has a Google Cloud or Azure equivalent. Claude runs on AWS (Bedrock) and Google Cloud (Vertex AI), so photos don't have to leave the carrier's account.
+
+```mermaid
+flowchart LR
+  Cust["Customer app<br/>guided photo capture"] --> Store["Photo store<br/>encrypted, retention rules<br/>(e.g. S3)"]
+  Store --> Queue["Queue<br/>absorbs bursts after a storm<br/>(e.g. SQS)"]
+  Queue --> Assess["Assessment service<br/>photo checks + one AI call<br/>(Claude on Bedrock)"]
+  Assess --> Rules["Routing protocol<br/>versioned, owner-approved"]
+  Claims["Claims system<br/>(e.g. Guidewire)"] -->|"policy and claim details"| Rules
+  Rules --> Log["Decision log<br/>every route and reason"]
+  Log --> Rev["Reviewer screen<br/>single sign-on"]
+  Rev -->|"approve, adjust, route, hand off"| Claims
+  Gate["Release gate<br/>changes scored on the labelled set"] -.-> Assess
+  Gate -.-> Rules
+  Log -.-> Mon["Monitoring<br/>overrides, cost, drift"]
+```
+
+What changes from the prototype, and why:
+
+| Prototype | Production |
+|---|---|
+| No database; worklist in the browser | Integration with the claims system (for example Guidewire) |
+| No image storage | Photos in the carrier's storage, with retention rules and location data stripped |
+| One synchronous request per claim | Queue and workers, retries and rate limiting, so a hailstorm doesn't time out |
+| Decision record downloadable | Every decision record kept as an audit log |
+| Versions shown on each result | Version registry; every prompt, model or rule change scored against the labelled set before release |
+| Mock role for protocol changes | Single sign-on, role-based access, two-person approval for protocol changes |
+| Mock list of people and teams to hand off to | The carrier's own queues and directory, with hand-offs written back to the claim file |
+| Every claim approved by a person | Staged automation for narrow, low-harm slices, as described in [When fewer claims need a person](#when-fewer-claims-need-a-person) |
+| One demo past-claim photo | Near-duplicate index across all photos, plus a specialist tool for edited or generated images |
+| AI's general price knowledge | Estimating-platform labour times and the carrier's paid-claims history |
+| Latency and cost per case on screen | Monitoring and alerts on latency, cost, failure rate and reviewer override rate |
+| Single photo or folder | Guided capture of the required views, and possibly walk-around video with the sharpest frames picked automatically |
 
 ### What the AI sees, and why
 
@@ -113,6 +158,10 @@ Two tiers:
 - **Configurable settings** a protocol owner can change within safe bounds: fast-path limit ($2,500), total-loss line (60% of vehicle value), whether sensor-area damage flags or escalates, how strict the photo checks are, how many times to ask for photos before escalating, and the illustrative cost adjustments.
 
 In the app, switching the role to **Protocol owner (mock)** lets you change settings. The worklist re-routes instantly, because only the rules re-run, not the AI. **Test against labelled cases** replays the saved AI extractions from the last evaluation under the draft settings, and shows which cases change route and what happens to escalation recall.
+
+**Protocol and policy are different things.** The policy is the customer's contract: the insured vehicle, coverage and deductible. The protocol is the carrier's claims-handling guideline: when a claim can take the fast path, when it's likely a total loss, and which photos are enough. The rules read facts from the policy record (vehicle, value, powertrain), but they never interpret policy wording, and coverage stays with the claims system.
+
+In production a carrier would run a small set of protocols rather than one, picked by facts on the policy: the state (total-loss thresholds are set by state law and vary widely), the product and the vehicle type. Choosing the protocol is a plain lookup on those fields, not AI. A protocol owner could use AI to draft a protocol from a written guideline, but a person approves it, and it's scored against the labelled set before it goes live.
 
 ### The repair-cost range
 
@@ -258,23 +307,6 @@ For a sense of scale, the published figures come from vendors and industry repor
 - **Today's baseline:** how often claims escalate late, supplement rates, reviewer minutes per claim, repeat customer contacts.
 - **Their rules and numbers:** photo-estimate eligibility, fast-path limits, state total-loss thresholds, labour rates, and vehicle values (for example from a valuation service).
 - **Security and compliance** input on where photos may be processed, retention, and model data terms.
-
-## What changes for production
-
-| Prototype | Production |
-|---|---|
-| No database; worklist in the browser | Integration with the claims system (for example Guidewire) |
-| No image storage | Photos in the carrier's storage, with retention rules and location data stripped |
-| One synchronous request per claim | Queue and workers, retries and rate limiting, so a hailstorm doesn't time out |
-| Decision record downloadable | Every decision record kept as an audit log |
-| Versions shown on each result | Version registry; every prompt, model or rule change scored against the labelled set before release |
-| Mock role for protocol changes | Single sign-on, role-based access, two-person approval for protocol changes |
-| Mock list of people and teams to hand off to | The carrier's own queues and directory, with hand-offs written back to the claim file |
-| Every claim approved by a person | Staged automation for narrow, low-harm slices, as described [above](#when-fewer-claims-need-a-person) |
-| One demo past-claim photo | Near-duplicate index across all photos, plus a specialist tool for edited or generated images |
-| AI's general price knowledge | Estimating-platform labour times and the carrier's paid-claims history |
-| Latency and cost per case on screen | Monitoring and alerts on latency, cost, failure rate and reviewer override rate |
-| Single photo or folder | Guided capture of the required views, and possibly walk-around video with the sharpest frames picked automatically |
 
 ## What we'd do next with more time
 
