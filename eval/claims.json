@@ -1,0 +1,26 @@
+{
+  "CAMRY": {
+    "claimId": "EVAL-CAMRY",
+    "policyholder": "Alex Morgan",
+    "policyVehicle": { "year": 2019, "make": "Toyota", "model": "Camry", "colour": "Grey", "powertrain": "combustion" },
+    "vehicleValueUsd": 17000,
+    "lossDate": "2026-09-20",
+    "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+    "reportedImpactArea": "front",
+    "injuryReported": false,
+    "vehicleDrivable": true,
+    "priorEvidenceRequests": 0
+  },
+  "BLANK": {
+    "claimId": "EVAL-BLANK",
+    "policyholder": "Sam Taylor",
+    "policyVehicle": { "year": null, "make": null, "model": null, "colour": null, "powertrain": "unknown" },
+    "vehicleValueUsd": null,
+    "lossDate": "2026-09-20",
+    "lossDescription": "Not provided",
+    "reportedImpactArea": "unknown",
+    "injuryReported": false,
+    "vehicleDrivable": null,
+    "priorEvidenceRequests": 0
+  }
+}

@@ -1,0 +1,267 @@
+// Runs the routing protocol. The AI's extraction goes in; a route, the reasons
+// for it and the brief's required outputs come out. Pure and deterministic:
+// the same inputs always give the same decision.
+
+import type { ClaimContext, PhotoMetrics } from "../claims/types.ts";
+import type { Extraction } from "../extraction/schema.ts";
+import { buildCostRange, type CostDriver } from "./cost.ts";
+import {
+  PHOTO_QUALITY_THRESHOLDS,
+  PROTOCOL_VERSION,
+  ROUTE_LABELS,
+  RULES,
+  type Effect,
+  type RetakeRequest,
+  type Route,
+  type RuleGroup,
+  type Settings,
+} from "./protocol.ts";
+
+export interface RuleResult {
+  id: string;
+  title: string;
+  group: RuleGroup;
+  tier: "locked" | "configurable";
+  effect: Effect;
+  fired: boolean;
+  reason?: string;
+  evidence?: string;
+}
+
+export interface OutputField {
+  value: string | null;
+  note?: string;
+}
+
+export interface EstimateOutput {
+  status: "shown" | "reference_only" | "withheld";
+  lowUsd: number | null;
+  highUsd: number | null;
+  drivers: CostDriver[];
+  note: string;
+  fastPathLimitUsd: number;
+  totalLossLineUsd: number | null;
+  accuracyNote: string;
+}
+
+export interface ChecklistItem {
+  label: string;
+  ok: boolean;
+  detail?: string;
+}
+
+export interface Decision {
+  protocolVersion: string;
+  settings: Settings;
+  route: Route;
+  routeLabel: string;
+  humanReview: { required: boolean; reasons: string[] };
+  siuReferral: boolean;
+  requiredOutputs: {
+    vehicle: {
+      make: OutputField;
+      model: OutputField;
+      colour: OutputField;
+      yearRange: string | null;
+      vehicleClass: string;
+    };
+    damageSummary: string;
+    estimate: EstimateOutput;
+  };
+  /** Rules that fired, most serious first. These are the reasons shown to the reviewer. */
+  reasons: RuleResult[];
+  /** Every rule in the protocol, fired or not. */
+  ruleResults: RuleResult[];
+  retakes: RetakeRequest[];
+  customerMessage: string | null;
+  evidenceChecklist: ChecklistItem[];
+}
+
+const EFFECT_ORDER: Record<Effect, number> = { adjuster: 0, more_evidence: 1, review: 2 };
+
+export const ACCURACY_NOTE = "Accuracy not yet measured. We need your final paid costs to check it.";
+
+export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[], settings: Settings): Decision {
+  const cost = buildCostRange(x, settings);
+  const firedSoFar: string[] = [];
+  const ruleResults: RuleResult[] = [];
+  const retakes: RetakeRequest[] = [];
+  let siuReferral = false;
+
+  for (const rule of RULES) {
+    const hit = rule.check({ x, claim, photos, settings, cost, firedSoFar });
+    const effect = hit?.effect ?? rule.effect;
+    ruleResults.push({
+      id: rule.id,
+      title: rule.title,
+      group: rule.group,
+      tier: rule.tier,
+      effect,
+      fired: !!hit,
+      reason: hit?.reason,
+      evidence: hit?.evidence || undefined,
+    });
+    if (!hit) continue;
+    firedSoFar.push(rule.id);
+    if (hit.referToSiu) siuReferral = true;
+    for (const r of hit.retakes ?? []) {
+      if (!retakes.some((t) => t.view === r.view)) retakes.push(r);
+    }
+  }
+
+  const fired = ruleResults.filter((r) => r.fired);
+  const reasons = [...fired].sort((a, b) => EFFECT_ORDER[a.effect] - EFFECT_ORDER[b.effect]);
+
+  // The most cautious route wins.
+  let route: Route = "photo_estimate";
+  if (fired.some((r) => r.effect === "adjuster")) route = "adjuster";
+  else if (fired.some((r) => r.effect === "more_evidence")) route = "more_evidence";
+
+  const reviewReasons = fired.filter((r) => r.effect === "review").map((r) => r.reason!);
+  const humanReview =
+    route === "adjuster"
+      ? { required: true, reasons: ["An adjuster reviews every claim on this route.", ...reviewReasons] }
+      : { required: reviewReasons.length > 0, reasons: reviewReasons };
+
+  const evidenceFired = fired.some((r) => r.group === "evidence" && r.effect === "more_evidence") ||
+    fired.some((r) => r.id === "E7");
+
+  return {
+    protocolVersion: PROTOCOL_VERSION,
+    settings,
+    route,
+    routeLabel: ROUTE_LABELS[route],
+    humanReview,
+    siuReferral,
+    requiredOutputs: {
+      vehicle: vehicleOutputs(x, photos),
+      damageSummary: damageSummary(x),
+      estimate: estimateOutput(x, claim, settings, cost, route, fired.map((r) => r.id), evidenceFired),
+    },
+    reasons,
+    ruleResults,
+    retakes: route === "more_evidence" ? retakes : [],
+    customerMessage: route === "more_evidence" ? customerMessage(claim, retakes) : null,
+    evidenceChecklist: checklist(x, photos, settings, fired.map((r) => r.id)),
+  };
+}
+
+function vehicleOutputs(x: Extraction, photos: PhotoMetrics[]): Decision["requiredOutputs"]["vehicle"] {
+  const v = x.vehicle;
+  if (!v.vehicle_present) {
+    const none = { value: null, note: "No vehicle in the photos" };
+    return { make: none, model: none, colour: none, yearRange: null, vehicleClass: "none" };
+  }
+  const identified = v.identification_basis !== "not_identifiable";
+  const idNote = identified ? `Identified from ${v.identification_basis === "badge_or_logo_visible" ? "a visible badge or logo" : "the body shape"}` : undefined;
+  const unknownId = { value: null, note: "Not determinable from these photos" };
+
+  const greyscale = photos.some((p) => p.greyscale) || x.evidence.photo_issues.includes("black_and_white");
+  let colour: OutputField;
+  if (greyscale) colour = { value: null, note: "Not determinable: black-and-white photo" };
+  else if (!v.colour) colour = { value: null, note: "Not determinable from these photos" };
+  else colour = { value: v.colour };
+
+  return {
+    make: identified && v.make ? { value: v.make, note: idNote } : unknownId,
+    model: identified && v.model ? { value: v.model, note: idNote } : unknownId,
+    colour,
+    yearRange: identified ? v.year_range : null,
+    vehicleClass: v.vehicle_class,
+  };
+}
+
+function damageSummary(x: Extraction): string {
+  if (!x.vehicle.vehicle_present) return "No vehicle visible, so no damage could be assessed.";
+  if (x.damage.no_visible_damage || x.damage.items.length === 0) return "No damage visible in these photos.";
+  return x.damage.summary;
+}
+
+function estimateOutput(
+  x: Extraction,
+  claim: ClaimContext,
+  s: Settings,
+  cost: ReturnType<typeof buildCostRange>,
+  route: Route,
+  firedIds: string[],
+  evidenceFired: boolean,
+): EstimateOutput {
+  const base = {
+    fastPathLimitUsd: s.fastPathLimitUsd,
+    totalLossLineUsd: claim.vehicleValueUsd ? Math.round(claim.vehicleValueUsd * s.totalLossRatio) : null,
+    accuracyNote: ACCURACY_NOTE,
+  };
+  const withheld = (note: string): EstimateOutput => ({ ...base, status: "withheld", lowUsd: null, highUsd: null, drivers: [], note });
+
+  if (!x.vehicle.vehicle_present) return withheld("No vehicle in the photos, so there's nothing to estimate.");
+  if (x.damage.no_visible_damage || x.damage.items.length === 0) return withheld("No damage visible, so there's nothing to estimate.");
+  if (firedIds.includes("P1")) return withheld("Not a normal road car. An adjuster will assess it instead of a photo estimate.");
+  if (firedIds.includes("I2")) return withheld("The photos seem to show different cars, so we haven't estimated.");
+  if (evidenceFired) return withheld("We can't size the damage until we have the photos we asked for.");
+  if (!cost) return withheld("No damage items to price.");
+
+  if (route === "adjuster") {
+    return {
+      ...base,
+      status: "reference_only",
+      lowUsd: cost.lowUsd,
+      highUsd: cost.highUsd,
+      drivers: cost.drivers,
+      note: "For the adjuster's reference only. Not used to settle the claim.",
+    };
+  }
+  return {
+    ...base,
+    status: "shown",
+    lowUsd: cost.lowUsd,
+    highUsd: cost.highUsd,
+    drivers: cost.drivers,
+    note: "Rough AI estimate, not a payable amount. The final estimate is written in the estimating system.",
+  };
+}
+
+export function customerMessage(claim: ClaimContext, retakes: RetakeRequest[]): string {
+  const firstName = claim.policyholder.split(" ")[0] || "there";
+  const list = retakes.map((r, i) => `${i + 1}. ${r.view}, ${r.why}.`).join("\n");
+  return [
+    `Hi ${firstName},`,
+    "",
+    `Thanks for sending photos for claim ${claim.claimId}. To keep things moving, could you send us a few more?`,
+    "",
+    list,
+    "",
+    "A few tips: take them in daylight if you can, hold your phone steady, and keep the whole damaged area in the frame.",
+    "",
+    "You can reply to this message with the photos.",
+    "",
+    "Thanks,",
+    "Your claims team",
+  ].join("\n");
+}
+
+function checklist(x: Extraction, photos: PhotoMetrics[], s: Settings, firedIds: string[]): ChecklistItem[] {
+  const t = PHOTO_QUALITY_THRESHOLDS[s.photoQuality];
+  const issues = x.evidence.photo_issues;
+  const names = (ps: PhotoMetrics[]) => ps.map((p) => p.name).join(", ");
+  const dark = photos.filter((p) => p.brightness < t.minBrightness);
+  const soft = photos.filter((p) => p.sharpness < t.minSharpness);
+  const small = photos.filter((p) => Math.min(p.width, p.height) < t.minShortEdgePx);
+  const grey = photos.filter((p) => p.greyscale);
+
+  return [
+    { label: "Vehicle in the photos", ok: x.vehicle.vehicle_present },
+    {
+      label: "Car identified from a badge or body shape",
+      ok: x.vehicle.vehicle_present && x.vehicle.identification_basis !== "not_identifiable",
+      detail: x.vehicle.identification_evidence,
+    },
+    { label: "Whole damaged area in frame", ok: !firedIds.includes("E3") },
+    { label: "Bright enough", ok: dark.length === 0 && !issues.includes("too_dark"), detail: dark.length ? names(dark) : undefined },
+    { label: "Sharp enough", ok: soft.length === 0 && !issues.includes("blur"), detail: soft.length ? names(soft) : undefined },
+    { label: "High enough resolution", ok: small.length === 0 && !issues.includes("low_resolution"), detail: small.length ? names(small) : undefined },
+    { label: "No glare or obstruction over the damage", ok: !issues.includes("glare_over_damage") && !issues.includes("damage_obstructed") },
+    { label: "Colour photo", ok: grey.length === 0 && !issues.includes("black_and_white"), detail: grey.length ? names(grey) : undefined },
+    { label: "Only one car in the photo", ok: !x.vehicle.multiple_vehicles_in_frame },
+    { label: "Not seen on a past claim", ok: !firedIds.includes("I1") },
+  ];
+}
