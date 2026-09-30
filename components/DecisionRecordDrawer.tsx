@@ -121,7 +121,7 @@ export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseIt
                   </dd>
                   <dt>Tokens and cost</dt>
                   <dd>
-                    {a.meta.inputTokens.toLocaleString()} in, {a.meta.outputTokens.toLocaleString()} out, about ${a.meta.costUsd.toFixed(3)}
+                    {a.meta.inputTokens.toLocaleString()} in, {a.meta.outputTokens.toLocaleString()} out, estimated ${a.meta.costUsd.toFixed(3)} at list prices (billed spend can be higher; check the Anthropic console)
                   </dd>
                   <dt>Assessed at</dt>
                   <dd>{new Date(a.assessedAt).toLocaleString()}</dd>

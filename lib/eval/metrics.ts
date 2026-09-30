@@ -214,3 +214,18 @@ export function applyOverrides(claim: ClaimContext, overrides: string): ClaimCon
   }
   return out;
 }
+
+/**
+ * Lower end of a 95% Wilson interval: with k successes out of n, the true rate
+ * is plausibly as low as this. Shown so a small set isn't over-read (11 of 11
+ * is still consistent with a true rate around 74%).
+ */
+export function plausibleLow(k: number, n: number): number | null {
+  if (n === 0) return null;
+  const z = 1.96;
+  const p = k / n;
+  const denom = 1 + (z * z) / n;
+  const centre = p + (z * z) / (2 * n);
+  const margin = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
+  return Math.max(0, (centre - margin) / denom);
+}

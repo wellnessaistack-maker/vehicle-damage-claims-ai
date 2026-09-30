@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import results from "@/eval/results/latest.json";
 import { loadDemoPhoto } from "@/lib/client/intake.ts";
 import { DEFAULT_MODEL, MODELS, modelInfo } from "@/lib/extraction/models.ts";
-import { scoreCase, summarise, type EvalCaseResult, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
+import { plausibleLow, scoreCase, summarise, type EvalCaseResult, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
 import type { Assessment } from "@/lib/pipeline.ts";
 import { DEFAULT_SETTINGS, PROTOCOL_VERSION, ROUTE_LABELS, usd, type Route } from "@/lib/policy/protocol.ts";
 
@@ -99,8 +99,12 @@ interface LiveCase {
 }
 
 /** Runs every labelled case through the same /api/assess route the worklist uses. */
+// A handful of cases that cover each route, so a live demo run stays cheap.
+const QUICK_SET = ["A_civic", "B_civic_closeup", "C_f1", "D_nissan_front_crush", "06_mirrored_duplicate", "V1_injury"];
+
 function LiveRunner({ onProgress }: { onProgress: (run: EvalRun) => void }) {
   const [model, setModel] = useState(MODELS[0].id);
+  const [full, setFull] = useState(false);
   const [state, setState] = useState<"idle" | "running" | "done">("idle");
   const [done, setDone] = useState(0);
   const [total, setTotal] = useState(0);
@@ -114,6 +118,7 @@ function LiveRunner({ onProgress }: { onProgress: (run: EvalRun) => void }) {
     let cases: LiveCase[];
     try {
       cases = await (await fetch("/api/eval-cases")).json();
+      if (!full) cases = cases.filter((c) => QUICK_SET.includes(c.caseId));
     } catch {
       setErr("Couldn't load the labelled cases.");
       setState("idle");
@@ -155,7 +160,7 @@ function LiveRunner({ onProgress }: { onProgress: (run: EvalRun) => void }) {
     <div className="card">
       <div className="card-head">
         <h3>Run the labelled set now</h3>
-        <span className="sub">Same route, prompt and rules as the worklist. About 26 AI calls, a minute or two, and roughly a dollar or two.</span>
+        <span className="sub">Same route, prompt and rules as the worklist. Each case is one real AI call and costs money.</span>
       </div>
       <div className="card-body" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <select className="text-input" style={{ width: 200 }} value={model} onChange={(e) => setModel(e.target.value)} disabled={state === "running"}>
@@ -165,6 +170,10 @@ function LiveRunner({ onProgress }: { onProgress: (run: EvalRun) => void }) {
             </option>
           ))}
         </select>
+        <label className="hint" style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="checkbox" checked={full} onChange={(e) => setFull(e.target.checked)} disabled={state === "running"} />
+          All 26 cases (otherwise a quick set of {QUICK_SET.length} covering each route)
+        </label>
         <button className="btn btn-primary" onClick={() => void start()} disabled={state === "running"}>
           {state === "running" ? "Running..." : state === "done" ? "Run again" : "Run now"}
         </button>
@@ -234,6 +243,7 @@ function Headline({ s }: { s: Summary }) {
           <div className="v">
             {s.escalation.caught} of {s.escalation.of}
           </div>
+          <Plausible k={s.escalation.caught} n={s.escalation.of} />
           <div className="d">
             Of the cases an expert would send to an adjuster, how many we escalated too.
             {s.escalation.missedIds.length > 0 && <> Missed: {s.escalation.missedIds.join(", ")}.</>}
@@ -247,6 +257,7 @@ function Headline({ s }: { s: Summary }) {
           <div className="v">
             {s.agreement.exact} of {s.agreement.of}
           </div>
+          <Plausible k={s.agreement.exact} n={s.agreement.of} />
           <div className="d">
             Exact match. {s.agreement.acceptable} of {s.agreement.of} counting routes the label marks as also acceptable. Expert-to-expert agreement is the realistic ceiling; we don&apos;t have it yet.
           </div>
@@ -267,14 +278,28 @@ function Headline({ s }: { s: Summary }) {
         <Stat label="Didn't guess when it couldn't tell" value={`${s.abstention.correct} of ${s.abstention.of}`} note="Make, model or colour left blank where the label says it can't be known from the photo." />
         <Stat label="Make / model / colour" value={`${s.vehicle.make.right}/${s.vehicle.make.of} · ${s.vehicle.model.right}/${s.vehicle.model.of} · ${s.vehicle.colour.right}/${s.vehicle.colour.of}`} note="Correct, or correctly 'can't tell'." />
         <Stat label="Expected review flags raised" value={`${s.flags.caught} of ${s.flags.of}`} note="Rules like 'damage doesn't match the description' firing where they should." />
-        <Stat label="Same route on a re-run" value={s.stability ? `${s.stability.stable} of ${s.stability.of}` : "Not measured"} note="The AI can give slightly different answers each time. Run with --repeat 3 to measure." />
         <Stat
-          label="Time and cost per case"
+          label="Same route on every run"
+          value={s.stability ? `${s.stability.stable} of ${s.stability.of}` : "Not measured"}
+          note={s.stability ? "Each case run four times. Instability shows up where the range sits right at a limit." : "The AI can give slightly different answers each time. Run with --repeat 3 to measure."}
+        />
+        <Stat
+          label="Time and estimated cost per case"
           value={s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s · $${s.cost.mean.toFixed(3)}` : "n/a"}
-          note={s.latency ? `Median time; slowest 5% ${(s.latency.p95 / 1000).toFixed(1)} s. ${s.failures} AI failure${s.failures === 1 ? "" : "s"}.` : ""}
+          note={s.latency ? `Median time; slowest 5% ${(s.latency.p95 / 1000).toFixed(1)} s. ${s.failures} AI failure${s.failures === 1 ? "" : "s"}. Cost is estimated from token counts and list prices; actual billed spend has run higher, so the Anthropic console is the source of truth.` : ""}
         />
       </div>
     </>
+  );
+}
+
+function Plausible({ k, n }: { k: number; n: number }) {
+  const low = plausibleLow(k, n);
+  if (low === null) return null;
+  return (
+    <div className="hint" style={{ marginBottom: 4 }}>
+      With only {n} cases, the true rate could be as low as about {Math.round(low * 100)}%.
+    </div>
   );
 }
 
@@ -471,20 +496,25 @@ function Writeup() {
       </div>
       <div className="card-body">
         <p style={{ marginTop: 0 }}>
-          <b>What matters most.</b> The costly mistake is a complex claim slipping onto the fast path, so escalation recall comes first. Then routing agreement with your experts, while watching that we don&apos;t escalate so much that the time
-          savings disappear. Then the brief&apos;s outputs: is make, model and colour right or correctly left blank, and does the damage summary name the right area without missing or inventing damage.
+          <b>What matters most.</b> The mistakes don&apos;t cost the same. A complex claim slipping onto the fast path is the expensive one, so escalation recall comes first. Then routing agreement with your experts, while watching that we don&apos;t escalate
+          so much that the time savings disappear. Then the brief&apos;s outputs: is make, model and colour right or correctly left blank, and does the damage summary name the right area without missing or inventing damage.
         </p>
         <p>
-          <b>Where it fails.</b> A complex claim on the fast path (rare, expensive). Confidently naming the wrong car. Missing or inventing damage. Escalating too much. Reused or edited photos. Known weak spots today: pixel checks can&apos;t tell motion
-          blur from a smooth close-up, glare is only caught by the AI, and the reused-photo check misses rotated copies.
+          <b>Where it fails.</b> A complex claim on the fast path (rare, expensive). Confidently naming the wrong car. Missing or inventing damage. Escalating too much. Reused or edited photos. Known weak spots today: a sideways photo isn&apos;t
+          recognised, pixel checks can&apos;t tell motion blur from a smooth close-up, glare is only caught by the AI, and the reused-photo check misses rotated copies.
         </p>
         <p>
           <b>The repair estimate.</b> We&apos;d score past claims and compare our range with what you finally paid: how often it contains the paid cost, and how wide it is. The mistake that matters is a range on the wrong side of the fast-path
           limit or the total-loss line. When it&apos;s too low, the shop files a supplement, as today; near a limit it gets flagged or goes to an adjuster; it is never the amount paid. Reviewers&apos; range adjustments are captured as &quot;AI was off by X&quot;.
         </p>
-        <p style={{ marginBottom: 0 }}>
+        <p>
           <b>What we need from you.</b> A few hundred past claims with photos, the route each took, the final paid cost and any supplements. Time from two estimating experts to label them. How today&apos;s triage performs (late escalations,
           supplement rate) so there&apos;s a baseline to beat. Your eligibility rules, labour rates and vehicle values.
+        </p>
+        <p style={{ marginBottom: 0 }}>
+          <b>How not to fool ourselves.</b> Prompt v2 was written after looking at v1&apos;s mistakes on these same cases, so its improvement is flattering. With your data we&apos;d keep a locked test set nobody tunes against. This set is also
+          escalation-heavy (11 of 26 must escalate), unlike a real claims mix, so real results would be reported by segment and weighted to your actual mix. After the historical test, the system would run silently alongside your adjusters
+          before routing anything, and in production we&apos;d watch reviewer overrides, supplements on fast-path claims, and drift.
         </p>
       </div>
     </div>
