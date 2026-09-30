@@ -715,7 +715,7 @@ function ActionBar(props: {
           {contactable ? (
             <textarea rows={4} value={adhoc} onChange={(ev) => setAdhoc(ev.target.value)} />
           ) : (
-            <div className="hint">No phone or email on file. Add them under Edit claim details.</div>
+            <div className="hint">No phone or email on file. Add them under Edit details.</div>
           )}
           <div className="composer-row">
             <button className="btn btn-sm btn-ghost" onClick={() => setMode(null)}>

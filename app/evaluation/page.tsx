@@ -21,9 +21,9 @@ const NOTES: Record<string, { what: string; why: string; next: string }> = {
     next: "Straighten photos in code before the AI sees them. Costs the customer one extra photo today; never a missed escalation.",
   },
   "00a_camry": {
-    what: "Front-corner damage priced right at the $2,500 limit.",
-    why: "Over four runs it went to an adjuster once and the photo path three times.",
-    next: "This is why ranges that straddle the limit are flagged for a price check. With your data we'd tune the limit rules on real paid costs.",
+    what: "Front-corner damage with a wide price range across the $2,500 limit.",
+    why: "Over four runs it went to an adjuster once and the photo path three times. The expert label prefers the photo path but accepts an adjuster.",
+    next: "Ranges that run far past the limit now go to an adjuster (rule C4), which should stop the flip. With your data we'd tune that setting on real paid costs.",
   },
   "03_compressed": {
     what: "A heavily compressed, forwarded copy of a photo.",
