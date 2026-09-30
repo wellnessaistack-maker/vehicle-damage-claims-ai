@@ -24,7 +24,9 @@ export function AssessmentPanel(props: {
   const [mode, setMode] = useState<Mode>(null);
   const d = item ? currentDecision(item, settings) : null;
   const [message, setMessage] = useState<string>(d?.customerMessage ?? "");
-  useEffect(() => setMessage(d?.customerMessage ?? ""), [d?.customerMessage]);
+  useEffect(() => {
+    setMessage(d?.customerMessage ?? "");
+  }, [d?.customerMessage]);
 
   if (!item) {
     return (
@@ -383,7 +385,11 @@ function Thread(props: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ block: "nearest" }), [item.thread.length]);
+  // Braces matter: newer Chrome returns a Promise from scrollIntoView, and an
+  // effect must return nothing or a cleanup function.
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "nearest" });
+  }, [item.thread.length]);
 
   const history = () => {
     const pairs: { question: string; answer: string }[] = [];
