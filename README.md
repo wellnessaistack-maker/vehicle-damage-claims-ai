@@ -30,7 +30,7 @@ You asked whether AI can read a customer's photo and help your team handle the c
 | Route | What happens |
 |---|---|
 | Photo estimate path | The reviewer approves the route and estimate range, and the claim goes to the estimating team as a starting point |
-| Request more evidence | The reviewer sends a ready-made message saying exactly which photos to retake and why. The claim waits, then comes back when the customer replies |
+| Request more evidence | The reviewer texts or emails a ready-made message saying exactly which photos to retake and why, with an upload link. The claim waits with a follow-up date, then comes back when the customer replies |
 | Adjuster / total loss | The claim goes to the field adjuster queue, or the total loss unit when repair may cost more than the car is worth, plus the fraud team (SIU) when a photo matches a past claim |
 
 If the AI fails, the claim shows **Not assessed: manual triage**, which is today's normal process. It never guesses.
@@ -40,6 +40,7 @@ A few things the screen does that matter to a claims team:
 - **Every reason cites what it checked:** the policy record, the claim form, what the AI saw, the code's photo checks, and the rule and setting that applied. A policy checks table compares what's on file with what the photos show, and says plainly that coverage and deductibles are not checked here.
 - **Every claim ends with a named owner.** The reviewer approves, adjusts the range, changes the route, or hands the claim to a person or team with a note. They can ask a colleague for a second opinion without letting go of it.
 - **Corrections go back through the rules.** Raising a $2,100 estimate to $2,800 moves the claim to an adjuster instead of quietly approving it on the fast path.
+- **The customer hears from us at every step.** Each claim shows the customer's phone, email and preferred channel. The reviewer can text or email a ready-made update with the decision (neutral on the adjuster route: it never mentions a total loss or a fraud review), log a call, and chase a photo request with a reminder by its follow-up date. Everything sent is recorded in the case thread.
 - **The inbox only holds work still to do.** Finished claims move to **Completed**, photo requests to **Waiting**.
 
 ## Setup
@@ -171,6 +172,7 @@ Colour key: green is plain code, orange is the AI, blue is stored data, purple i
 | Decision record you can download | Every decision kept in an audit log, with monitoring on latency, cost, failures and overrides |
 | Versions shown on each result | Every prompt, model or rule change scored against the labelled set before release |
 | Mock roles and a mock list of teams | Single sign-on, role-based access, two-person approval for protocol changes |
+| Customer messages and calls recorded in the case thread | Sent through the carrier's own texting, email and telephony systems, with consent and contact preferences from the policy record |
 | Every claim approved by a person | Staged automation for narrow, low-harm cases (see [below](#when-fewer-claims-need-a-person)) |
 | One demo past-claim photo | Near-duplicate search across all photos, plus a specialist check for edited or generated images |
 | The AI's general price knowledge | Estimating-platform labour times and the carrier's paid-claims history |

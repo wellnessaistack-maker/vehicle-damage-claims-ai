@@ -19,4 +19,11 @@ export const claimSchema = z.object({
   injuryReported: z.boolean(),
   vehicleDrivable: z.boolean().nullable(),
   priorEvidenceRequests: z.number().int().min(0).max(10),
+  contact: z
+    .object({
+      phone: z.string().max(40).nullable(),
+      email: z.string().max(120).nullable(),
+      preferred: z.enum(["text", "email"]),
+    })
+    .optional(),
 });

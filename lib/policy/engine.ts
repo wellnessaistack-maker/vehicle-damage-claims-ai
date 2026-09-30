@@ -260,7 +260,7 @@ export function customerMessage(claim: ClaimContext, retakes: RetakeRequest[]): 
     "",
     "A few tips: take them in daylight if you can, hold your phone steady, and keep the whole damaged area in the frame.",
     "",
-    "You can reply to this message with the photos.",
+    `Add them with this secure link: claims.example.com/upload/${claim.claimId}, or simply reply with the photos.`,
     "",
     "Thanks,",
     "Your claims team",

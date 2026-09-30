@@ -24,6 +24,14 @@ export interface ClaimContext {
   vehicleDrivable: boolean | null;
   /** How many times we have already asked this customer for more photos. */
   priorEvidenceRequests: number;
+  /** How to reach the customer. Used by the reviewer's screen only; never sent to the AI. */
+  contact?: CustomerContact;
+}
+
+export interface CustomerContact {
+  phone: string | null;
+  email: string | null;
+  preferred: "text" | "email";
 }
 
 /** Measured by code from the pixels. No AI involved. */

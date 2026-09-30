@@ -1,4 +1,5 @@
-// Mock claim details for the demo cases. Names, IDs and values are made up.
+// Mock claim details for the demo cases. Names, IDs, values and contact details are made up
+// (555-01xx numbers and example.com addresses are reserved for fiction).
 
 import type { ClaimContext } from "./types.ts";
 
@@ -14,6 +15,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     injuryReported: false,
     vehicleDrivable: true,
     priorEvidenceRequests: 0,
+    contact: { phone: "(555) 010-0142", email: "maria.lopez@example.com", preferred: "text" },
   },
   B: {
     claimId: "CLM-2026-10482",
@@ -26,6 +28,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     injuryReported: false,
     vehicleDrivable: true,
     priorEvidenceRequests: 0,
+    contact: { phone: "(555) 010-0187", email: "daniel.kim@example.com", preferred: "text" },
   },
   C: {
     claimId: "CLM-2026-10483",
@@ -38,6 +41,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     injuryReported: false,
     vehicleDrivable: false,
     priorEvidenceRequests: 0,
+    contact: { phone: "(555) 010-0123", email: "priya.shah@example.com", preferred: "email" },
   },
   D: {
     claimId: "CLM-2026-10485",
@@ -50,6 +54,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     injuryReported: false,
     vehicleDrivable: false,
     priorEvidenceRequests: 0,
+    contact: { phone: "(555) 010-0169", email: "grace.okafor@example.com", preferred: "text" },
   },
   E: {
     claimId: "CLM-2026-10484",
@@ -62,6 +67,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     injuryReported: false,
     vehicleDrivable: true,
     priorEvidenceRequests: 0,
+    contact: { phone: "(555) 010-0151", email: "tom.becker@example.com", preferred: "email" },
   },
 };
 
