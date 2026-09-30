@@ -314,12 +314,14 @@ Today every claim gets a person's approval. That's the right place to start, not
 
 **What could be automated, and what never should be.** Only two low-harm actions are candidates: asking the customer for more photos, and sending a small photo estimate to estimating. Total loss, injury, fraud referrals, denials, reduced payments and anything the tool couldn't assess stay with a person. The protocol is already built this way: a claim that trips a locked rule can't reach the fast path. Regulation points the same way. The NAIC's model bulletin on insurers' use of AI (December 2023, adopted by roughly half of US states) expects controls that match the potential harm, Colorado's rules under SB21-169 now cover private passenger auto, and states are starting to target AI making adverse claim decisions on its own.
 
+These stages follow the proposal's phases. They pick up after scope and baseline, and after the historical evaluation (which the Evaluation page shows in miniature).
+
 | Stage | The AI | People | To move on |
 |---|---|---|---|
-| 1. Shadow | Recommends routes on live claims; nobody acts on them | Work claims as today | Its routes compared with adjusters' decisions over a few months |
-| 2. Assisted (this prototype) | Pre-fills the case and recommends a route | Approve every claim | The evidence below, on the carrier's own claims |
-| 3. Automatic for one narrow slice | Sends photo requests on its own first; later, approves small photo estimates in one segment | Review a random sample, plus everything flagged | Sampled reviews keep agreeing; supplements and complaints don't rise |
-| 4. Wider | One more segment at a time | Sample and monitor | Each segment passes the same checks on its own |
+| 1. Live comparison | Recommends routes on live claims in the background; nobody acts on them | Work claims as today | Its routes compared with adjusters' decisions for 4 to 6 weeks |
+| 2. Limited pilot (what this prototype shows) | Pre-fills the case and recommends a route for one agreed claim segment | Approve every route | The evidence below, on the carrier's own claims |
+| 3. Automatic for one narrow slice | Sends photo requests on its own first; later, sends small photo estimates to estimating without a reviewer, in one segment | Review a random sample, plus everything flagged | Sampled reviews keep agreeing; supplements and complaints don't rise |
+| 4. Expand | One more segment at a time | Sample and monitor | Each segment passes the same checks on its own |
 
 **How we'd know a slice is ready.** No regulator sets these numbers, so the claims and risk owners agree them up front:
 
