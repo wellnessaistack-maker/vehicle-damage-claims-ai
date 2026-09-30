@@ -7,23 +7,23 @@ A prototype first-review tool for an auto insurer's claims team. A reviewer drop
 - Live prototype: https://vehicle-damage-claims-ai.vercel.app
 - Evaluation: the **Evaluation** page in the app, and [`eval/README.md`](eval/README.md)
 
-## What the brief asks for, and where it is
+## What you asked for
 
-| Requirement | Where |
+| You asked for | Where to find it |
 |---|---|
 | Accept a photo by upload or URL | **+ Add claims**: a single photo, a folder per claim, or pasted links |
-| Vehicle metadata: make, model, colour | Top of the assessment card, with how each was identified, or "not determinable" rather than a guess |
+| Make, model and colour | Top of the assessment card, with how each was identified, or "not determinable" rather than a guess |
 | Damage summary | Assessment card, one line, e.g. "Left rear door dent with scraping" |
-| Rough AI-generated repair estimate | Assessment card: a range with its main drivers, never a single payable number |
-| Setup instructions | [Setup](#setup) |
+| A rough AI-generated repair estimate | Assessment card: a range with its main drivers, never a single payable number |
+| How to run it | [Setup](#setup) |
 | Architecture and data flow | [Architecture](#architecture-and-data-flow), and the **Architecture** panel in the app |
 | Why these tools | [Why these tools](#why-these-tools) |
-| Evaluation approach | [Evaluation](#evaluation), the **Evaluation** page and [`eval/README.md`](eval/README.md), plus [when fewer claims need a person](#when-fewer-claims-need-a-person) |
+| How we know it works | [Evaluation](#evaluation), the **Evaluation** page and [`eval/README.md`](eval/README.md), plus [when fewer claims need a person](#when-fewer-claims-need-a-person) |
 | What we'd do next | [Next steps](#what-wed-do-next-with-more-time) |
 
 ## The product idea
 
-Before AI prices a claim, it should decide where the claim goes. Most of the value is in that first routing decision: simple claims move faster, customers are asked for the right photos once, and complex claims reach a person before anyone writes an estimate. So the prototype returns the brief's three outputs, then recommends one of three routes:
+Before AI prices a claim, it should decide where the claim goes. Most of the value is in that first routing decision: simple claims move faster, customers are asked for the right photos once, and complex claims reach a person before anyone writes an estimate. So the prototype returns the three things you asked for (make, model and colour, a damage summary, and a rough repair estimate), then recommends one of three routes:
 
 | Route | What happens |
 |---|---|
@@ -69,7 +69,7 @@ POST /api/assess  (one serverless function; nothing is stored)
   4. Routing protocol  written rules decide the route, using the AI's facts, the photo checks
                        and the claim details (which the AI never sees)
   ▼
-Reviewer sees the brief's outputs, the route, the reasons, and acts:
+Reviewer sees the vehicle, damage summary and estimate, the route, the reasons, and acts:
 approve, adjust the range, send the customer message, assign, change the route (with a reason), comment or ask
 ```
 
@@ -116,7 +116,7 @@ In the app, switching the role to **Protocol owner (mock)** lets you change sett
 
 ### The repair-cost range
 
-The AI prices each damage item it sees, from its general knowledge of typical US repair costs. That is the brief's "rough AI-generated estimate", and it is labelled that way. Code then adds the items up and applies a few visible adjustments: an allowance for damage hidden behind panels, a sensor recalibration line, and a wider range when the photos only show part of the damage. Every adjustment amount is an **illustrative placeholder**, not sourced data.
+The AI prices each damage item it sees, from its general knowledge of typical US repair costs. That is the "rough AI-generated estimate" you asked for, and it is labelled that way. Code then adds the items up and applies a few visible adjustments: an allowance for damage hidden behind panels, a sensor recalibration line, and a wider range when the photos only show part of the damage. Every adjustment amount is an **illustrative placeholder**, not sourced data.
 
 The range is shown against the fast-path limit and the total-loss line, because its real job is deciding which side of a limit a claim falls on:
 
@@ -170,7 +170,7 @@ That's the whole list. There's no database, queue or image store, on purpose.
 
 ## Evaluation
 
-**How we'd know it's working.** The costly mistake is a complex claim slipping onto the fast path, so the first measure is escalation recall: of the claims an expert would send to an adjuster, how many we escalated too. Next is routing agreement with expert labels, watched alongside how often we escalate for no reason, because too much caution eats the time savings. Then the brief's outputs: is make, model and colour right or correctly left blank, and does the damage summary name the right area without missing or inventing damage. We also track whether the route stays the same on a re-run, time and cost per case, and failures. The Evaluation page reports all of this as plain counts, with no pass or fail targets; those get agreed with the carrier's claims and risk owners.
+**How we'd know it's working.** The costly mistake is a complex claim slipping onto the fast path, so the first measure is escalation recall: of the claims an expert would send to an adjuster, how many we escalated too. Next is routing agreement with expert labels, watched alongside how often we escalate for no reason, because too much caution eats the time savings. Then the three outputs: is make, model and colour right or correctly left blank, and does the damage summary name the right area without missing or inventing damage. We also track whether the route stays the same on a re-run, time and cost per case, and failures. The Evaluation page reports all of this as plain counts, with no pass or fail targets; those get agreed with the carrier's claims and risk owners.
 
 **Where it fails, and what matters most.** A complex claim on the fast path (rare, expensive). Confidently naming the wrong car, which leads to wrong pricing and can hide fraud. Missing or inventing damage. Escalating so much that the business case disappears. Reused or edited photos: we catch simple reuse, not edits or generated images. A single photo rarely shows hidden damage, which is why the rules lean cautious.
 
