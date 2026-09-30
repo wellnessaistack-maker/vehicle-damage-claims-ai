@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { recipient, safeDecision, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
+import { downloadFile, logCsv, summarize, type ReviewLogEntry } from "@/lib/client/review-log.ts";
 import { ROUTE_LABELS, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
 const LANES: Route[] = ["adjuster", "more_evidence", "photo_estimate", "manual_triage"];
@@ -31,6 +32,7 @@ export function Worklist(props: {
   onLoadDemo: () => void;
   loadingDemo: boolean;
   openCount: number;
+  reviewLog: ReviewLogEntry[];
 }) {
   const { cases, settings, selectedId, onSelect } = props;
   // Inbox holds what still needs this reviewer. A claim leaves it only when a final action is taken:
@@ -79,6 +81,11 @@ export function Worklist(props: {
         <div className="wl-item-reason">
           {c.status === "processing" && <span className="spinner" style={{ marginRight: 6, verticalAlign: -2 }} />}
           {route && c.status === "done" && <span className={`route-${route}`}><span className="dot" style={{ display: "inline-block", marginRight: 6 }} /></span>}
+          {c.status === "done" && c.outcome?.agreement && c.outcome.agreement !== "kept" && (
+            <span className="chip chip-warn wl-override" title={`Recommended: ${ROUTE_LABELS[c.outcome.recommendedRoute ?? "manual_triage"]}`}>
+              {c.outcome.agreement === "changed_route" ? "Route changed" : "Range adjusted"}
+            </span>
+          )}
           {reason}
         </div>
       </button>
@@ -157,6 +164,7 @@ export function Worklist(props: {
           ) : (
             <div className="wl-empty">No claims waiting on a customer.</div>
           ))}
+        {view === "completed" && props.reviewLog.length > 0 && <AgreementSummary log={props.reviewLog} />}
         {view === "completed" &&
           (completed.length ? (
             completed.map((c) => item(c, c.outcome?.route ?? null))
@@ -165,5 +173,32 @@ export function Worklist(props: {
           ))}
       </div>
     </aside>
+  );
+}
+
+/** How often the reviewer kept the recommendation, across every decision in this session. */
+function AgreementSummary({ log }: { log: ReviewLogEntry[] }) {
+  const s = summarize(log);
+  const pct = Math.round((s.kept / s.total) * 100);
+  return (
+    <div className="wl-agree">
+      <div className="wl-agree-top">
+        <b>
+          Kept the recommendation on {s.kept} of {s.total} decision{s.total === 1 ? "" : "s"}
+        </b>
+        <span className="hint">{pct}%</span>
+      </div>
+      <div className="wl-agree-bar" aria-hidden>
+        <span className="k" style={{ flex: s.kept }} />
+        <span className="a" style={{ flex: s.adjusted }} />
+        <span className="c" style={{ flex: s.changed }} />
+      </div>
+      <div className="hint">
+        {s.changed} route{s.changed === 1 ? "" : "s"} changed · {s.adjusted} range{s.adjusted === 1 ? "" : "s"} adjusted. Includes photo requests. Each change is logged with the reason.
+      </div>
+      <button className="btn btn-sm" onClick={() => downloadFile("review-log.csv", logCsv(log), "text/csv")}>
+        Download review log (CSV)
+      </button>
+    </div>
   );
 }

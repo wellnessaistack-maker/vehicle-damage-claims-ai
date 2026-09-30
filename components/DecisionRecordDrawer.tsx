@@ -1,9 +1,10 @@
 "use client";
 
 import { currentDecision, holderLine, type CaseItem } from "@/lib/client/cases.ts";
-import { DEFAULT_SETTINGS, ROUTE_LABELS, SETTING_DEFS, type Settings } from "@/lib/policy/protocol.ts";
+import { AGREEMENT_LABELS, downloadFile, testCaseRow, type ReviewLogEntry } from "@/lib/client/review-log.ts";
+import { DEFAULT_SETTINGS, ROUTE_LABELS, SETTING_DEFS, usd as usd0, type Settings } from "@/lib/policy/protocol.ts";
 
-export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseItem; settings: Settings; onClose: () => void }) {
+export function DecisionRecordDrawer({ item, settings, log, onClose }: { item: CaseItem; settings: Settings; log: ReviewLogEntry[]; onClose: () => void }) {
   const a = item.assessment;
   const d = currentDecision(item, settings);
   const changed = SETTING_DEFS.filter((s) => settings[s.key] !== DEFAULT_SETTINGS[s.key]);
@@ -15,41 +16,13 @@ export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseIt
     decisionUnderCurrentSettings: d,
     reviewerActions: item.thread.filter((t) => t.kind === "action" || t.kind === "comment"),
     outcome: item.outcome,
+    reviewDecisions: log,
   };
 
-  const download = (name: string, content: string, type: string) => {
-    const url = URL.createObjectURL(new Blob([content], { type }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = name;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // A reviewer's correction becomes a labelled test case, in the same shape as eval/cases.csv.
-  const testCaseRow = () => {
-    const o = item.outcome!;
-    const v = d?.requiredOutputs.vehicle;
-    const cols = [
-      `REVIEW_${item.claim.claimId}`,
-      item.photos.map((p) => p.url ?? p.name).join(";"),
-      "BLANK",
-      "",
-      "",
-      o.route,
-      o.route,
-      o.route === "adjuster" ? "yes" : "no",
-      "",
-      v?.make.value ?? "CANT_TELL",
-      v?.model.value ?? "CANT_TELL",
-      v?.colour.value ?? "CANT_TELL",
-      o.adjustedRange ? bandFor(o.adjustedRange.highUsd, settings) : "unsure",
-      (o.reason ?? o.summary).replace(/,/g, ";"),
-      "Reviewer correction",
-      "draft (reviewer)",
-    ];
-    return cols.join(",") + "\n";
-  };
+  // The current decision, if the claim is finished; earlier ones stay in the log after a re-assessment.
+  const last = item.outcome ? log[log.length - 1] : undefined;
+  const earlier = last ? log.slice(0, -1) : log;
+  const disagreements = log.filter((e) => e.agreement !== "kept");
 
   return (
     <div className="overlay" onClick={onClose}>
@@ -66,11 +39,14 @@ export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseIt
         </div>
         <div className="drawer-body">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button className="btn btn-sm" onClick={() => download(`${item.claim.claimId}-decision.json`, JSON.stringify(record, null, 2), "application/json")}>
+            <button className="btn btn-sm" onClick={() => downloadFile(`${item.claim.claimId}-decision.json`, JSON.stringify(record, null, 2), "application/json")}>
               Download decision record (JSON)
             </button>
-            {item.outcome && (item.outcome.action === "route_changed" || item.outcome.adjustedRange) && (
-              <button className="btn btn-sm btn-primary" onClick={() => download(`${item.claim.claimId}-test-case.csv`, testCaseRow(), "text/csv")}>
+            {disagreements.length > 0 && (
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={() => downloadFile(`${item.claim.claimId}-test-case.csv`, disagreements.map((e) => testCaseRow(e, settings)).join(""), "text/csv")}
+              >
                 Download correction as a test case
               </button>
             )}
@@ -79,8 +55,30 @@ export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseIt
           <section>
             <div className="section-label">Outcome</div>
             <dl className="kv">
-              <dt>Recommended route</dt>
-              <dd>{d ? d.routeLabel : ROUTE_LABELS.manual_triage}</dd>
+              {last ? (
+                <>
+                  <dt>Recommended route</dt>
+                  <dd>{ROUTE_LABELS[last.recommendedRoute]}</dd>
+                  <dt>Reviewer&apos;s route</dt>
+                  <dd>
+                    {ROUTE_LABELS[last.finalRoute]}{" "}
+                    <span className={`chip ${last.agreement === "kept" ? "chip-ok" : "chip-warn"}`}>{AGREEMENT_LABELS[last.agreement]}</span>
+                  </dd>
+                  {last.adjustedRange && last.aiRange && (
+                    <>
+                      <dt>Range</dt>
+                      <dd>
+                        AI {usd0(last.aiRange.lowUsd)} to {usd0(last.aiRange.highUsd)}; reviewer {usd0(last.adjustedRange.lowUsd)} to {usd0(last.adjustedRange.highUsd)}
+                      </dd>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <dt>Recommended route</dt>
+                  <dd>{d ? d.routeLabel : ROUTE_LABELS.manual_triage}</dd>
+                </>
+              )}
               {a?.ok && a.decision.route !== d?.route && (
                 <>
                   <dt>Route when first assessed</dt>
@@ -91,6 +89,14 @@ export function DecisionRecordDrawer({ item, settings, onClose }: { item: CaseIt
               <dd>{d?.humanReview.required ? d.humanReview.reasons.join(" ") : a?.ok ? "Not flagged" : "Manual triage"}</dd>
               <dt>Reviewer action</dt>
               <dd>{item.outcome ? `${item.outcome.summary}${item.outcome.reason ? ` Reason: ${item.outcome.reason}` : ""}` : "None yet"}</dd>
+              {earlier.length > 0 && (
+                <>
+                  <dt>Earlier decisions</dt>
+                  <dd>
+                    {earlier.map((e) => `${ROUTE_LABELS[e.finalRoute]} (${AGREEMENT_LABELS[e.agreement].toLowerCase()})`).join("; ")}
+                  </dd>
+                </>
+              )}
               {item.outcome && holderLine(item.outcome) && (
                 <>
                   <dt>Who has it</dt>
@@ -240,8 +246,3 @@ function fmtMs(ms: number) {
   return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`;
 }
 
-function bandFor(high: number, s: Settings) {
-  if (high < 1000) return "under_1000";
-  if (high <= s.fastPathLimitUsd) return "1000_2500";
-  return "2500_to_total_loss";
-}

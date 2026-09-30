@@ -163,14 +163,18 @@ test("moderate damage to a bumper adds a labelled hidden-damage allowance", () =
   assert.ok(e.drivers.some((d) => d.source === "rule_adjustment" && /behind the panels/.test(d.label)));
 });
 
-test("B: close-up doesn't guess the car, withholds the estimate and asks for a wider photo", () => {
+test("B: close-up doesn't guess the car, gives only a provisional estimate and asks for a wider photo", () => {
   const d = run(closeupB(), claim(DEMO_CLAIMS.B));
   assert.equal(d.route, "more_evidence");
   assert.deepEqual(firedIds(d).sort(), ["E2", "E3"]);
   assert.equal(d.requiredOutputs.vehicle.make.value, null);
   assert.equal(d.requiredOutputs.vehicle.make.note, "Not determinable from these photos");
-  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+  const e = d.requiredOutputs.estimate;
+  assert.equal(e.status, "provisional");
+  assert.ok(e.lowUsd! > 0 && e.highUsd! >= e.lowUsd!, "still gives a figure from what's visible");
+  assert.match(e.note!, /so far/);
   assert.ok(d.customerMessage);
+  assert.doesNotMatch(d.customerMessage!, /\$/, "the provisional figure is never sent to the customer");
   assert.match(d.customerMessage!, /Hi Daniel/);
   assert.match(d.customerMessage!, /3 metres back/);
   assert.match(d.customerMessage!, /rear left side/);
@@ -181,14 +185,15 @@ test("B: the customer's wider retake moves the claim to the photo estimate path"
   assert.equal(d.route, "photo_estimate");
 });
 
-test("C: race car goes to an adjuster, with the estimate withheld", () => {
+test("C: race car goes to an adjuster, with only a provisional estimate", () => {
   const d = run(raceC(), claim(DEMO_CLAIMS.C));
   assert.equal(d.route, "adjuster");
   assert.equal(d.routeLabel, "Adjuster / total loss");
   assert.ok(firedIds(d).includes("P1"));
   assert.ok(firedIds(d).includes("S4"));
   assert.ok(firedIds(d).includes("S2"));
-  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+  assert.equal(d.requiredOutputs.estimate.status, "provisional");
+  assert.ok(d.requiredOutputs.estimate.lowUsd! > 0);
   assert.equal(d.humanReview.required, true);
   assert.equal(d.customerMessage, null, "don't ask for more photos when it's clearly serious");
 });
@@ -231,13 +236,13 @@ test("a photo matching a past claim goes to an adjuster and is referred to SIU",
   assert.equal(d.evidenceChecklist.find((c) => c.label === "Not seen on a past claim")!.ok, false);
 });
 
-test("a folder with photos of different cars is not estimated", () => {
+test("a folder with photos of different cars only gets a provisional estimate", () => {
   const x = civicA();
   x.vehicle.same_vehicle_in_all_photos = false;
   const d = run(x, claim(), [goodPhoto("a.jpg"), goodPhoto("b.jpg")]);
   assert.equal(d.route, "adjuster");
   assert.equal(d.siuReferral, true);
-  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+  assert.equal(d.requiredOutputs.estimate.status, "provisional");
 });
 
 // --- Evidence -------------------------------------------------------------------------
@@ -293,7 +298,7 @@ test("after the maximum number of photo requests, a person takes over", () => {
   assert.equal(d.route, "adjuster");
   assert.ok(firedIds(d).includes("E7"));
   assert.equal(d.customerMessage, null);
-  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+  assert.equal(d.requiredOutputs.estimate.status, "provisional");
 });
 
 // --- Cost ----------------------------------------------------------------------------
@@ -387,9 +392,9 @@ test("policy checks compare the policy with the photos even when nothing fires",
   assert.equal(closeup.policyChecks.find((p) => p.label === "Insured vehicle")!.status, "not_compared");
 });
 
-test("policy checks don't quote an estimate that was withheld", () => {
+test("policy checks don't quote a provisional estimate", () => {
   const d = run(closeupB(), claim(DEMO_CLAIMS.B));
-  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+  assert.equal(d.requiredOutputs.estimate.status, "provisional");
   const value = d.policyChecks.find((p) => p.label === "Vehicle value")!;
   assert.doesNotMatch(value.observed, /estimate/);
 });

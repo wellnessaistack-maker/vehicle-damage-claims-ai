@@ -309,7 +309,14 @@ export function CaseTable({ scored }: { scored: ScoredCase[] }) {
                         <div className="hint">{s.cost.sideOfLimit === "below" ? "under the limit" : s.cost.sideOfLimit === "above" ? "over the limit" : "straddles the limit"}</div>
                       </>
                     ) : (
-                      <span className="hint">withheld</span>
+                      d?.requiredOutputs.estimate.status === "provisional" && d.requiredOutputs.estimate.lowUsd !== null ? (
+                        <>
+                          {usd(d.requiredOutputs.estimate.lowUsd)} to {usd(d.requiredOutputs.estimate.highUsd!)}
+                          <div className="hint">provisional, not scored</div>
+                        </>
+                      ) : (
+                        <span className="hint">none</span>
+                      )
                     )}
                     <div className="hint">label: {r.labels.expectedCostBand}</div>
                   </td>

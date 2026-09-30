@@ -30,6 +30,7 @@ import { IntakeModal, type NewCase } from "./IntakeModal.tsx";
 import { ProtocolDrawer } from "./ProtocolDrawer.tsx";
 import { Viewer } from "./Viewer.tsx";
 import { Worklist } from "./Worklist.tsx";
+import { agreementOf, logEntry, recommendation, type ReviewLogEntry } from "@/lib/client/review-log.ts";
 
 const CONCURRENCY = 3;
 
@@ -53,6 +54,7 @@ interface Health {
 
 export function Workspace() {
   const [cases, setCases] = useState<CaseItem[]>([]);
+  const [reviewLog, setReviewLog] = useState<ReviewLogEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [role, setRole] = useState<Role>("reviewer");
@@ -223,8 +225,14 @@ export function Workspace() {
   }, [toast]);
 
   const complete = useCallback(
-    (id: string, outcome: Omit<CaseOutcome, "at">) => {
+    (id: string, reviewed: Omit<CaseOutcome, "at">) => {
       const c = cases.find((x) => x.id === id);
+      // Record what was recommended next to what the reviewer chose, so agreement can be measured.
+      const rec = c ? recommendation(c, settings) : null;
+      const recommendedRoute = rec?.route ?? "manual_triage";
+      const outcome: Omit<CaseOutcome, "at"> = { ...reviewed, recommendedRoute, agreement: agreementOf(recommendedRoute, reviewed) };
+      const at = now();
+      if (c) setReviewLog((log) => [...log, logEntry(c, { ...outcome, at }, rec)]);
       const next = cases.find((x) => x.status !== "done" && x.id !== id);
       const holder = holderLine({ ...outcome, at: now() });
       const where = outcome.action === "message_sent" ? "moved to Waiting on customer" : `moved to Completed${holder ? `. ${holder}` : ""}`;
@@ -232,12 +240,12 @@ export function Workspace() {
       update(id, (c) => ({
         ...c,
         status: "done",
-        outcome: { ...outcome, at: now() },
+        outcome: { ...outcome, at },
         thread: [...c.thread, { id: uid("t"), kind: "action", author: REVIEWER.name, text: outcome.summary + (outcome.reason ? ` Reason: ${outcome.reason}` : ""), at: now() }],
       }));
       advanceFrom(id);
     },
-    [cases, update, advanceFrom],
+    [cases, settings, update, advanceFrom],
   );
 
   const reassess = useCallback(
@@ -341,6 +349,7 @@ export function Workspace() {
           onLoadDemo={loadDemoQueue}
           loadingDemo={loadingDemo}
           openCount={openCases.length}
+          reviewLog={reviewLog}
         />
         </ErrorBoundary>
         <ErrorBoundary key={`a-${selected?.id ?? "none"}`} label="Assessment" className="col assess">
@@ -378,7 +387,7 @@ export function Workspace() {
           onClose={() => setDrawer(null)}
         />
       )}
-      {drawer === "record" && selected && <DecisionRecordDrawer item={selected} settings={settings} onClose={() => setDrawer(null)} />}
+      {drawer === "record" && selected && <DecisionRecordDrawer item={selected} settings={settings} log={reviewLog.filter((e) => e.caseId === selected.id)} onClose={() => setDrawer(null)} />}
     </div>
   );
 }

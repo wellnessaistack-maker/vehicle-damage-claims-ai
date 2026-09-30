@@ -38,7 +38,12 @@ export interface OutputField {
 }
 
 export interface EstimateOutput {
-  status: "shown" | "reference_only" | "withheld";
+  /**
+   * shown: usable on the photo path. reference_only: for the adjuster.
+   * provisional: what the photos show so far; never used for routing or quoted to the customer.
+   * withheld: nothing to price (no car or no damage).
+   */
+  status: "shown" | "reference_only" | "provisional" | "withheld";
   lowUsd: number | null;
   highUsd: number | null;
   drivers: CostDriver[];
@@ -159,7 +164,7 @@ export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[
     customerMessage: route === "more_evidence" ? customerMessage(claim, retakes) : null,
     evidenceChecklist: checklist(x, photos, settings, fired.map((r) => r.id)),
     // Policy checks only mention the estimate when the reviewer can see one.
-    policyChecks: policyChecks({ x, claim, photos, settings, cost: estimate.status === "withheld" ? null : cost }),
+    policyChecks: policyChecks({ x, claim, photos, settings, cost: estimate.status === "shown" || estimate.status === "reference_only" ? cost : null }),
   };
 }
 
@@ -222,10 +227,12 @@ function estimateOutput(
 
   if (!x.vehicle.vehicle_present) return withheld("No vehicle in the photos, so there's nothing to estimate.");
   if (x.damage.no_visible_damage || x.damage.items.length === 0) return withheld("No damage visible, so there's nothing to estimate.");
-  if (firedIds.includes("P1")) return withheld("Not a normal road car. An adjuster will assess it instead of a photo estimate.");
-  if (firedIds.includes("I2")) return withheld("The photos seem to show different cars, so we haven't estimated.");
-  if (evidenceFired) return withheld("We can't size the damage until we have the photos we asked for.");
   if (!cost) return withheld("No damage items to price.");
+  // Still give a figure from what can be seen, clearly marked as provisional.
+  const provisional = (note: string): EstimateOutput => ({ ...base, status: "provisional", lowUsd: cost.lowUsd, highUsd: cost.highUsd, drivers: cost.drivers, note });
+  if (firedIds.includes("P1")) return provisional("Not a normal road car, so our repair pricing doesn't really apply. A rough guide only; an adjuster will assess it.");
+  if (firedIds.includes("I2")) return provisional("The photos seem to show different cars, so this may mix them up. A rough guide only.");
+  if (evidenceFired) return provisional("Based only on what the photos show so far. It will change once we have the photos we asked for.");
 
   if (route === "adjuster") {
     return {
