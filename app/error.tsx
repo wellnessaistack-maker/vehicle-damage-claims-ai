@@ -5,7 +5,9 @@ import { useEffect } from "react";
 import { reportClientError } from "@/lib/client/report.ts";
 
 export default function PageError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => reportClientError("page", error, error.digest), [error]);
+  useEffect(() => {
+    reportClientError("page", error, error.digest);
+  }, [error]);
   return (
     <div style={{ padding: 40, maxWidth: 560, margin: "0 auto" }}>
       <h2>Something went wrong on this page</h2>
