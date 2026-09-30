@@ -1,0 +1,92 @@
+{
+  "CAMRY": {
+    "claimId": "EVAL-CAMRY",
+    "policyholder": "Alex Morgan",
+    "policyVehicle": {
+      "year": 2019,
+      "make": "Toyota",
+      "model": "Camry",
+      "colour": "Grey",
+      "powertrain": "combustion"
+    },
+    "vehicleValueUsd": 17000,
+    "lossDate": "2026-09-20",
+    "lossDescription": "Clipped a concrete post turning into a parking space. Front left corner damaged.",
+    "reportedImpactArea": "front",
+    "injuryReported": false,
+    "vehicleDrivable": true,
+    "priorEvidenceRequests": 0
+  },
+  "BLANK": {
+    "claimId": "EVAL-BLANK",
+    "policyholder": "Sam Taylor",
+    "policyVehicle": {
+      "year": null,
+      "make": null,
+      "model": null,
+      "colour": null,
+      "powertrain": "unknown"
+    },
+    "vehicleValueUsd": null,
+    "lossDate": "2026-09-20",
+    "lossDescription": "Not provided",
+    "reportedImpactArea": "unknown",
+    "injuryReported": false,
+    "vehicleDrivable": null,
+    "priorEvidenceRequests": 0
+  },
+  "FLOOD": {
+    "claimId": "EVAL-FLOOD",
+    "policyholder": "Hannah Price",
+    "policyVehicle": {
+      "year": 1988,
+      "make": "Mercedes-Benz",
+      "model": "230TE",
+      "colour": "Beige",
+      "powertrain": "combustion"
+    },
+    "vehicleValueUsd": 3000,
+    "lossDate": "2026-09-20",
+    "lossDescription": "The river burst its banks overnight and the car was standing in water on the driveway.",
+    "reportedImpactArea": "unknown",
+    "injuryReported": false,
+    "vehicleDrivable": null,
+    "priorEvidenceRequests": 0
+  },
+  "VAN": {
+    "claimId": "EVAL-VAN",
+    "policyholder": "Min-jun Park",
+    "policyVehicle": {
+      "year": 2016,
+      "make": "Hyundai",
+      "model": "Grand Starex",
+      "colour": "Yellow",
+      "powertrain": "combustion"
+    },
+    "vehicleValueUsd": 14000,
+    "lossDate": "2026-09-20",
+    "lossDescription": "Part of the building wall collapsed onto the parked van during the earthquake.",
+    "reportedImpactArea": "unknown",
+    "injuryReported": false,
+    "vehicleDrivable": false,
+    "priorEvidenceRequests": 0
+  },
+  "GOLF": {
+    "claimId": "EVAL-GOLF",
+    "policyholder": "Javier Ruiz",
+    "policyVehicle": {
+      "year": 2002,
+      "make": "Volkswagen",
+      "model": "Golf",
+      "colour": "Dark grey",
+      "powertrain": "combustion"
+    },
+    "vehicleValueUsd": 2500,
+    "lossDate": "2026-09-20",
+    "lossDescription": "Lost control on a wet road and hit a tree.",
+    "reportedImpactArea": "front",
+    "injuryReported": false,
+    "vehicleDrivable": false,
+    "priorEvidenceRequests": 0
+  }
+}

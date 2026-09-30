@@ -1,0 +1,374 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import { DEMO_CLAIMS } from "../claims/demo.ts";
+import type { ClaimContext, PhotoMetrics } from "../claims/types.ts";
+import type { Extraction } from "../extraction/schema.ts";
+import { decide } from "./engine.ts";
+import { clampSettings, DEFAULT_SETTINGS, RULES, SETTING_DEFS } from "./protocol.ts";
+
+// --- Fixtures -----------------------------------------------------------------
+
+const goodPhoto = (name = "photo.jpg"): PhotoMetrics => ({
+  name,
+  width: 1536,
+  height: 1024,
+  brightness: 110,
+  sharpness: 2700,
+  clippedHighlights: 0.001,
+  greyscale: false,
+  nearDuplicateOf: null,
+});
+
+/** Photo A: silver Civic, left rear door dent with scraping. */
+function civicA(): Extraction {
+  return {
+    vehicle: {
+      vehicle_present: true,
+      multiple_vehicles_in_frame: false,
+      same_vehicle_in_all_photos: true,
+      vehicle_class: "passenger_car",
+      make: "Honda",
+      model: "Civic",
+      year_range: "2016-2021",
+      colour: "Silver",
+      identification_basis: "badge_or_logo_visible",
+      identification_evidence: "Honda logo and CIVIC badge on the boot lid",
+      powertrain_hint: "likely_combustion",
+    },
+    damage: {
+      summary: "Left rear door dent with scraping, extending towards the rear wheel arch",
+      no_visible_damage: false,
+      items: [
+        {
+          area: "rear_door",
+          side: "left",
+          damage_type: "dent",
+          severity: "moderate",
+          likely_repair: "repair_and_refinish",
+          visible_evidence: "Crease and scrape marks across the lower rear door",
+          cost_low_usd: 700,
+          cost_high_usd: 1400,
+        },
+        {
+          area: "rear_quarter_panel",
+          side: "left",
+          damage_type: "scratch_or_scuff",
+          severity: "minor",
+          likely_repair: "refinish_only",
+          visible_evidence: "Scuffing at the leading edge of the wheel arch",
+          cost_low_usd: 200,
+          cost_high_usd: 450,
+        },
+      ],
+    },
+    evidence: {
+      view_type: "three_quarter",
+      damage_extends_beyond_frame: false,
+      visible_panels: ["front_door", "rear_door", "rear_quarter_panel", "rear_bumper", "boot_or_tailgate"],
+      photo_issues: [],
+    },
+    risk_signs: [],
+  };
+}
+
+/** Photo B: close-up of the same door. No badge, damage runs out of frame. */
+function closeupB(): Extraction {
+  const x = civicA();
+  x.vehicle.make = null;
+  x.vehicle.model = null;
+  x.vehicle.year_range = null;
+  x.vehicle.identification_basis = "not_identifiable";
+  x.vehicle.identification_evidence = "Only a door panel is visible; no badge or distinctive shape";
+  x.evidence.view_type = "close_up";
+  x.evidence.damage_extends_beyond_frame = true;
+  x.evidence.visible_panels = ["rear_door"];
+  return x;
+}
+
+/** Photo C: race-car crash. */
+function raceC(): Extraction {
+  return {
+    vehicle: {
+      vehicle_present: true,
+      multiple_vehicles_in_frame: true,
+      same_vehicle_in_all_photos: true,
+      vehicle_class: "race_or_non_road",
+      make: "McLaren",
+      model: "Formula 1 car",
+      year_range: null,
+      colour: "Orange",
+      identification_basis: "badge_or_logo_visible",
+      identification_evidence: "Team livery and open-wheel single-seater body",
+      powertrain_hint: "unknown",
+    },
+    damage: {
+      summary: "Car airborne over another car with major front and side damage and debris",
+      no_visible_damage: false,
+      items: [
+        {
+          area: "underbody",
+          side: "unknown",
+          damage_type: "crushed",
+          severity: "severe",
+          likely_repair: "replace",
+          visible_evidence: "Floor and sidepod torn, debris in the air",
+          cost_low_usd: 50000,
+          cost_high_usd: 250000,
+        },
+      ],
+    },
+    evidence: { view_type: "wide", damage_extends_beyond_frame: false, visible_panels: ["underbody"], photo_issues: [] },
+    risk_signs: [
+      { sign: "structural_deformation", evidence: "Chassis torn open" },
+      { sign: "wheel_or_suspension_displaced", evidence: "Front wheel detached" },
+    ],
+  };
+}
+
+const claim = (overrides: Partial<ClaimContext> = {}): ClaimContext => ({ ...DEMO_CLAIMS.A, ...overrides });
+const run = (x: Extraction, c: ClaimContext = claim(), photos = [goodPhoto()], settings = DEFAULT_SETTINGS) =>
+  decide(x, c, photos, settings);
+const firedIds = (d: ReturnType<typeof run>) => d.reasons.map((r) => r.id);
+
+// --- Demo cases -----------------------------------------------------------------
+
+test("A: clear photo of the Civic goes to the photo estimate path with every required output", () => {
+  const d = run(civicA());
+  assert.equal(d.route, "photo_estimate");
+  assert.equal(d.routeLabel, "Photo estimate path");
+  assert.equal(d.humanReview.required, false);
+  assert.deepEqual(firedIds(d), []);
+  const out = d.requiredOutputs;
+  assert.equal(out.vehicle.make.value, "Honda");
+  assert.equal(out.vehicle.model.value, "Civic");
+  assert.equal(out.vehicle.colour.value, "Silver");
+  assert.match(out.damageSummary, /rear door/i);
+  assert.equal(out.estimate.status, "shown");
+  assert.ok(out.estimate.lowUsd! > 0 && out.estimate.highUsd! > out.estimate.lowUsd!);
+  assert.ok(out.estimate.highUsd! <= DEFAULT_SETTINGS.fastPathLimitUsd);
+  assert.equal(d.customerMessage, null);
+});
+
+test("A: the range shows its drivers, and marks which parts are rule adjustments", () => {
+  const e = run(civicA()).requiredOutputs.estimate;
+  assert.ok(e.drivers.some((d) => d.source === "ai_estimate"));
+  assert.ok(e.drivers.some((d) => d.source === "rule_adjustment" && /behind the panels/.test(d.label)));
+  assert.match(e.accuracyNote, /final paid costs/);
+});
+
+test("B: close-up doesn't guess the car, withholds the estimate and asks for a wider photo", () => {
+  const d = run(closeupB(), claim(DEMO_CLAIMS.B));
+  assert.equal(d.route, "more_evidence");
+  assert.deepEqual(firedIds(d).sort(), ["E2", "E3"]);
+  assert.equal(d.requiredOutputs.vehicle.make.value, null);
+  assert.equal(d.requiredOutputs.vehicle.make.note, "Not determinable from these photos");
+  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+  assert.ok(d.customerMessage);
+  assert.match(d.customerMessage!, /Hi Daniel/);
+  assert.match(d.customerMessage!, /3 metres back/);
+  assert.match(d.customerMessage!, /rear left side/);
+});
+
+test("B: the customer's wider retake moves the claim to the photo estimate path", () => {
+  const d = run(civicA(), claim({ ...DEMO_CLAIMS.B, priorEvidenceRequests: 1 }), [goodPhoto("closeup.jpg"), goodPhoto("retake.jpg")]);
+  assert.equal(d.route, "photo_estimate");
+});
+
+test("C: race car goes to an adjuster, with the estimate withheld", () => {
+  const d = run(raceC(), claim(DEMO_CLAIMS.C));
+  assert.equal(d.route, "adjuster");
+  assert.equal(d.routeLabel, "Adjuster / total loss");
+  assert.ok(firedIds(d).includes("P1"));
+  assert.ok(firedIds(d).includes("S4"));
+  assert.ok(firedIds(d).includes("S2"));
+  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+  assert.equal(d.humanReview.required, true);
+  assert.equal(d.customerMessage, null, "don't ask for more photos when it's clearly serious");
+});
+
+// --- Safety and scope -------------------------------------------------------------
+
+test("an injury on the claim always goes to an adjuster, whatever the photo shows", () => {
+  const d = run(civicA(), claim({ injuryReported: true }));
+  assert.equal(d.route, "adjuster");
+  assert.deepEqual(firedIds(d), ["S1"]);
+  assert.equal(d.requiredOutputs.estimate.status, "reference_only");
+});
+
+test("airbags deployed goes to an adjuster", () => {
+  const x = civicA();
+  x.risk_signs.push({ sign: "airbag_deployed", evidence: "Deflated airbag visible through the window" });
+  assert.equal(run(x).route, "adjuster");
+});
+
+test("electric car with rear damage goes to an adjuster", () => {
+  const x = civicA();
+  x.damage.items.push({ ...x.damage.items[1], area: "rear_bumper", side: "rear" });
+  const d = run(x, claim({ policyVehicle: { ...DEMO_CLAIMS.A.policyVehicle, powertrain: "electric" } }));
+  assert.equal(d.route, "adjuster");
+  assert.ok(firedIds(d).includes("S6"));
+});
+
+test("motorcycle is outside the pilot segment", () => {
+  const x = civicA();
+  x.vehicle.vehicle_class = "motorcycle";
+  assert.ok(firedIds(run(x)).includes("P2"));
+});
+
+// --- Integrity ----------------------------------------------------------------------
+
+test("a photo matching a past claim goes to an adjuster and is referred to SIU", () => {
+  const d = run(civicA(), claim(), [{ ...goodPhoto(), nearDuplicateOf: "CLM-2026-10481" }]);
+  assert.equal(d.route, "adjuster");
+  assert.equal(d.siuReferral, true);
+  assert.equal(d.evidenceChecklist.find((c) => c.label === "Not seen on a past claim")!.ok, false);
+});
+
+test("a folder with photos of different cars is not estimated", () => {
+  const x = civicA();
+  x.vehicle.same_vehicle_in_all_photos = false;
+  const d = run(x, claim(), [goodPhoto("a.jpg"), goodPhoto("b.jpg")]);
+  assert.equal(d.route, "adjuster");
+  assert.equal(d.siuReferral, true);
+  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+});
+
+// --- Evidence -------------------------------------------------------------------------
+
+test("no vehicle in frame asks for a photo of the car and gives no estimate", () => {
+  const x = civicA();
+  x.vehicle.vehicle_present = false;
+  x.vehicle.vehicle_class = "none";
+  x.damage.items = [];
+  const d = run(x);
+  assert.equal(d.route, "more_evidence");
+  assert.equal(d.requiredOutputs.vehicle.make.note, "No vehicle in the photos");
+  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+});
+
+test("an undamaged car doesn't get invented damage", () => {
+  const x = civicA();
+  x.damage.no_visible_damage = true;
+  x.damage.items = [];
+  const d = run(x);
+  assert.equal(d.route, "more_evidence");
+  assert.deepEqual(firedIds(d), ["E5"]);
+  assert.equal(d.requiredOutputs.damageSummary, "No damage visible in these photos.");
+});
+
+test("a dark photo is caught by the pixel check even if the AI doesn't mention it", () => {
+  const d = run(civicA(), claim(), [{ ...goodPhoto(), brightness: 26 }]);
+  assert.equal(d.route, "more_evidence");
+  assert.match(d.customerMessage!, /daylight/);
+});
+
+test("glare reported by the AI asks for another angle", () => {
+  const x = civicA();
+  x.evidence.photo_issues = ["glare_over_damage"];
+  const d = run(x);
+  assert.equal(d.route, "more_evidence");
+  assert.match(d.customerMessage!, /different angle/);
+});
+
+test("black-and-white photo: colour is not determinable rather than guessed", () => {
+  const d = run(civicA(), claim(), [{ ...goodPhoto(), greyscale: true }]);
+  assert.equal(d.requiredOutputs.vehicle.colour.value, null);
+  assert.match(d.requiredOutputs.vehicle.colour.note!, /black-and-white/);
+});
+
+test("after the maximum number of photo requests, a person takes over", () => {
+  const d = run(closeupB(), claim({ ...DEMO_CLAIMS.B, priorEvidenceRequests: 2 }));
+  assert.equal(d.route, "adjuster");
+  assert.ok(firedIds(d).includes("E7"));
+  assert.equal(d.customerMessage, null);
+  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+});
+
+// --- Cost ----------------------------------------------------------------------------
+
+test("a range straddling the fast-path limit stays on the fast path with a review flag", () => {
+  const x = civicA();
+  x.damage.items[0].cost_low_usd = 1500;
+  x.damage.items[0].cost_high_usd = 2400;
+  const d = run(x);
+  assert.equal(d.route, "photo_estimate");
+  assert.equal(d.humanReview.required, true);
+  assert.deepEqual(firedIds(d), ["C3"]);
+});
+
+test("a range entirely above the fast-path limit goes to an adjuster", () => {
+  const x = civicA();
+  x.damage.items[0].cost_low_usd = 2600;
+  x.damage.items[0].cost_high_usd = 3400;
+  assert.ok(firedIds(run(x)).includes("C1"));
+});
+
+test("the same damage on a cheap old car reaches the total-loss line", () => {
+  const d = run(civicA(), claim({ vehicleValueUsd: 3000 }));
+  assert.equal(d.route, "adjuster");
+  assert.ok(firedIds(d).includes("C2"));
+});
+
+test("raising the fast-path limit changes the route without touching the AI output", () => {
+  const x = civicA();
+  x.damage.items[0].cost_low_usd = 2600;
+  x.damage.items[0].cost_high_usd = 3400;
+  assert.equal(run(x).route, "adjuster");
+  const relaxed = clampSettings({ fastPathLimitUsd: 5000 });
+  assert.equal(run(x, claim(), [goodPhoto()], relaxed).route, "photo_estimate");
+});
+
+// --- Review flags ---------------------------------------------------------------------
+
+test("sensor-area damage flags for review by default, and escalates when the setting says so", () => {
+  const x = civicA();
+  x.risk_signs.push({ sign: "sensor_zone_damage", evidence: "Rear bumper parking sensor area scuffed" });
+  const flagged = run(x);
+  assert.equal(flagged.route, "photo_estimate");
+  assert.equal(flagged.humanReview.required, true);
+  assert.ok(flagged.requiredOutputs.estimate.drivers.some((d) => /recalibration/.test(d.label)));
+  const strict = run(x, claim(), [goodPhoto()], clampSettings({ sensorZoneHandling: "adjuster" }));
+  assert.equal(strict.route, "adjuster");
+});
+
+test("damage on a different side from the customer's description is flagged", () => {
+  const d = run(civicA(), claim({ reportedImpactArea: "front" }));
+  assert.equal(d.route, "photo_estimate");
+  assert.deepEqual(firedIds(d), ["R3"]);
+});
+
+test("a car that doesn't match the policy is flagged; silver and grey count as a match", () => {
+  const x = civicA();
+  assert.deepEqual(firedIds(run(x, claim({ policyVehicle: { ...DEMO_CLAIMS.A.policyVehicle, colour: "Grey" } }))), []);
+  x.vehicle.make = "Toyota";
+  assert.deepEqual(firedIds(run(x)), ["R2"]);
+});
+
+test("possible older damage is flagged", () => {
+  const x = civicA();
+  x.risk_signs.push({ sign: "possible_prior_damage", evidence: "Rust along the scrape" });
+  assert.deepEqual(firedIds(run(x)), ["R4"]);
+});
+
+// --- Protocol hygiene ------------------------------------------------------------------
+
+test("settings are always kept inside their bounds", () => {
+  const s = clampSettings({ fastPathLimitUsd: 999999, totalLossRatio: 0.1, photoQuality: "nonsense" as never });
+  assert.equal(s.fastPathLimitUsd, 10000);
+  assert.equal(s.totalLossRatio, 0.5);
+  assert.equal(s.photoQuality, "standard");
+});
+
+test("rule IDs are unique and every rule reads as plain language", () => {
+  const ids = RULES.map((r) => r.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const r of RULES) {
+    assert.ok(r.title.length > 3 && r.when.length > 10, r.id);
+  }
+});
+
+test("protocol text has no em dashes", () => {
+  const text = JSON.stringify([RULES.map((r) => [r.title, r.when]), SETTING_DEFS]);
+  assert.ok(!text.includes("\u2014") && !text.includes("\u2013"));
+});
