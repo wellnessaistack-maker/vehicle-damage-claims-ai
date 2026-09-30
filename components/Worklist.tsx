@@ -113,7 +113,7 @@ export function Worklist(props: {
         </div>
         <div className="wl-actions">
           <button className="btn btn-primary" onClick={props.onAdd}>
-            + Add claims
+            + Add photos
           </button>
           <button className="btn" onClick={props.onLoadDemo} disabled={props.loadingDemo}>
             {props.loadingDemo ? "Loading..." : "Load demo queue"}

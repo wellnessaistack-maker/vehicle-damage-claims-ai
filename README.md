@@ -11,7 +11,7 @@ A customer takes a photo of their damaged car. AI reads it in seconds and return
 
 | You asked for | Where to find it |
 |---|---|
-| Accept a photo by upload or URL | **+ Add claims**: a single photo, a folder per claim, or pasted links |
+| Accept a photo by upload or URL | **+ Add photos**: a single photo, a folder per claim, or pasted links. No claim form needed; details can be added later |
 | Make, model and colour | Top of the assessment card, with how each was identified, or "not determinable" rather than a guess |
 | Damage summary | Assessment card, one line, e.g. "Left rear door dent with scraping" |
 | A rough AI-generated repair estimate | Assessment card: a range with its main drivers, never a single payable number |
