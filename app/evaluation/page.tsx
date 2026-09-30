@@ -17,7 +17,7 @@ const MAIN = RUNS.find((r) => r.model === DEFAULT_MODEL && r.promptVersion === "
 const NOTES: Record<string, { what: string; why: string; next: string }> = {
   "05_rotated": {
     what: "A clean photo, uploaded sideways.",
-    why: "The model didn't read the car properly on its side, so the rules asked the customer for another photo.",
+    why: "On its side, the model couldn't name the car, so the rules asked the customer for another photo instead of guessing.",
     next: "Straighten photos in code before the AI sees them. Costs the customer one extra photo today; never a missed escalation.",
   },
   "00a_camry": {

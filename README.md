@@ -258,7 +258,7 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 
 **The repair estimate.** The real test is comparing our range with the final paid cost on past claims: how often it contains the paid cost, and how wide it is (a wide enough range always looks accurate). That needs the carrier's paid-claims data, and the app says so on every estimate. The mistake that matters most is a range on the wrong side of a limit; near a limit, the claim is flagged or goes to an adjuster.
 
-**Latest results** (26 cases, 11 must escalate, draft labels, September 2026):
+**Latest results** (26 cases, 11 must escalate, draft labels, September 2026). "Prompt" means the written instructions the AI works from; v1 was the first version and v2 is today's (explained below).
 
 | | Opus 5.5, prompt v1 | Opus 5.5, prompt v2 | Sonnet 5.5, prompt v2 |
 |---|---|---|---|
@@ -269,7 +269,17 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 | Same route on every run (4 runs) | not measured | 25 of 26 | not measured |
 | Repair-range coverage | needs paid-claims data | | |
 
-- **What v2 fixed.** The first run showed four problems: a customer's wider retake judged on the close-up, a sideways photo not recognised, a crumpled bumper called structural, and a door dent pushed over the limit by the hidden-damage allowance. Prompt v2 and a narrower allowance fixed three; the sideways photo is still missed.
+**What changed from prompt v1 to v2.** After the first run we read every case the AI got wrong, changed four instructions in [`lib/extraction/prompt.ts`](lib/extraction/prompt.ts), and re-ran the same 26 cases. Both columns are scored with today's rules, so the difference between them comes from the prompt alone.
+
+| Instruction added in v2 | What v1 got wrong | Result with v2 |
+|---|---|---|
+| Judge the evidence on the best photo in the set | The customer sent a wider photo after a close-up; v1 judged the claim on the close-up and asked for photos again | Fixed: goes to the photo estimate path |
+| "Structural" means the frame, pillars, roof or floor are visibly bent; a crumpled bumper or fender isn't | v1 called a crushed bumper corner structural and sent it to an adjuster | Fixed: asks for a wider photo, as the expert would |
+| A suspicion isn't evidence; report only risk signs you can see | Same case: v1 flagged "possible damage to underlying supports" | Fixed with the rule above |
+| Photos may be sideways; read them as if upright | A clean photo uploaded sideways wasn't read properly | Partly: v2 now sees the whole car, but still can't name it on its side, so it asks for another photo. The real fix is to straighten photos in code first |
+
+Net effect: needless escalations went from 1 to 0, and acceptable routes from 23 to 25 of 26. Exact matches only rose from 22 to 23, because one case priced right at the $2,500 limit (the Camry) landed on the other side of it on the v2 run; that instability is covered below. One more fix from that run was in code, not the prompt: the hidden-damage allowance no longer applies to side damage such as a door dent, which had pushed the demo's clean claim over the limit. It applies to both columns, so it doesn't show up as a difference between them.
+
 - **Read the numbers with care.** 11 of 11 is still consistent with a true recall as low as about 74%. v2 was written after seeing v1's mistakes on these same cases, so its gain is flattering; with real data we'd keep a locked test set nobody tunes against. And the set is escalation-heavy, unlike a real claims mix.
 - **Opus or Sonnet.** They route equally well here, and Sonnet is faster and half the price. Opus stays the default because it was more careful about not guessing, but 26 cases can't separate them. The choice should come from the carrier's own labelled claims.
 
