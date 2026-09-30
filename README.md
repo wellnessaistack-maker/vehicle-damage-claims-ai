@@ -180,12 +180,19 @@ Around the model:
 | Escalated when not needed | 1 of 15 | 0 of 15 | 0 of 15 |
 | Didn't guess when it couldn't tell | 17 of 17 | 17 of 17 | 16 of 17 |
 | Median time per case | 9.6 s | 9.7 s | 7.0 s |
-| Cost per case | $0.038 | $0.039 | $0.019 |
+| Estimated cost per case | $0.038 | $0.039 | $0.019 |
+| Same route on every run (4 runs each) | not measured | 25 of 26 | not measured |
 | Repair-range coverage | not measurable without paid-claims data | | |
 
-On this set the two models route equally well, and Sonnet is faster and half the price. The prototype keeps Opus as the default because it was more careful about not guessing and kept the demo's clean claim under the fast-path limit, but 26 cases can't separate them with any confidence. At a million claims a year the difference is roughly $20,000 either way, small next to the business case, so the choice should come from the customer's own labelled claims.
+The one unstable case is the Camry front corner: its range sits right at the $2,500 limit, so it went to an adjuster once and the photo estimate path three times. That's the expected weak spot, and the reason ranges that straddle the limit are flagged for a price check.
 
-**Showing it in the demo.** The **Evaluation** page shows the saved run and the model comparison, and **Run the labelled set now** re-runs all 26 cases live through the same route the worklist uses, with the measures updating as results arrive. In the routing protocol panel, **Test against labelled cases** shows what a rule change would do to escalation recall before it's published.
+Read these numbers with care. With only 11 must-escalate cases, 11 of 11 is still consistent with a true recall as low as about 74%. Prompt v2 was written after looking at v1's mistakes on these same cases, so its gain is flattering; with the customer's data we'd keep a locked test set that nobody tunes against. And the set is escalation-heavy (11 of 26), unlike a real claims mix, so real results would be reported by segment and weighted to the actual mix.
+
+On this set the two models route equally well, and Sonnet is faster and half the price. The prototype keeps Opus as the default because it was more careful about not guessing and kept the demo's clean claim under the fast-path limit, but 26 cases can't separate them with any confidence. The cost figures are estimates from token counts and list prices. Actual billed spend during this work came out noticeably higher than the estimates, so treat them as a floor and size the real figure from the provider's billing, not from these numbers. Either way the choice between models should come from the customer's own labelled claims.
+
+**After the historical test.** Following the deck's phases, the system would first run silently alongside adjusters on live claims, with its routes compared to theirs before it routes anything. In production we'd watch how often reviewers override the route, supplements on fast-path claims compared with staff-inspected ones, and drift in the photos coming in.
+
+**Showing it in the demo.** The **Evaluation** page shows the saved run and the model comparison, and **Run the labelled set now** re-runs a quick set of six cases (one per route) live through the same route the worklist uses, or all 26 if ticked, with the measures updating as results arrive. In the routing protocol panel, **Test against labelled cases** shows what a rule change would do to escalation recall before it's published.
 
 The labelled set is 26 cases, 11 of which must escalate: the demo claims, edits of two source photos (dark, blurred, compressed, glare, rotated, mirrored, cropped, black and white), four real road-car escalations (frontal crush, flood, a van crushed by a wall, a car into a tree), and "same photo, different claim details" cases such as an injury or a wrong description. How to label it and what to add next are in [`eval/README.md`](eval/README.md). The biggest gap is that only a couple of cases should take the photo estimate path, so we can't yet say much about escalating too often.
 

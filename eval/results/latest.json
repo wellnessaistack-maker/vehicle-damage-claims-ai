@@ -3432,7 +3432,13 @@
           ],
           "latencyMs": 9185,
           "costUsd": 0.0371,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "photo_estimate",
+            "photo_estimate",
+            "photo_estimate",
+            "photo_estimate"
+          ]
         },
         {
           "photos": [
@@ -3540,7 +3546,13 @@
           ],
           "latencyMs": 9160,
           "costUsd": 0.0319,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -3671,7 +3683,13 @@
           ],
           "latencyMs": 10179,
           "costUsd": 0.0424,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "photo_estimate",
+            "photo_estimate",
+            "photo_estimate",
+            "photo_estimate"
+          ]
         },
         {
           "photos": [
@@ -3785,7 +3803,13 @@
           ],
           "latencyMs": 9897,
           "costUsd": 0.038,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -3926,7 +3950,13 @@
           ],
           "latencyMs": 11699,
           "costUsd": 0.0421,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "photo_estimate",
+            "photo_estimate",
+            "photo_estimate"
+          ]
         },
         {
           "photos": [
@@ -4027,7 +4057,13 @@
           ],
           "latencyMs": 8615,
           "costUsd": 0.0303,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -4157,7 +4193,13 @@
           ],
           "latencyMs": 10222,
           "costUsd": 0.0389,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -4277,7 +4319,13 @@
           ],
           "latencyMs": 9317,
           "costUsd": 0.037,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -4419,7 +4467,13 @@
           ],
           "latencyMs": 8766,
           "costUsd": 0.0373,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -4560,7 +4614,13 @@
           ],
           "latencyMs": 11210,
           "costUsd": 0.0412,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -4689,7 +4749,13 @@
           ],
           "latencyMs": 9982,
           "costUsd": 0.0396,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -4829,7 +4895,13 @@
           ],
           "latencyMs": 14461,
           "costUsd": 0.0503,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -4953,7 +5025,13 @@
           ],
           "latencyMs": 8304,
           "costUsd": 0.0354,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -5059,7 +5137,13 @@
           ],
           "latencyMs": 7523,
           "costUsd": 0.0318,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -5141,7 +5225,13 @@
           ],
           "latencyMs": 4435,
           "costUsd": 0.0247,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "more_evidence",
+            "more_evidence",
+            "more_evidence",
+            "more_evidence"
+          ]
         },
         {
           "photos": [
@@ -5255,7 +5345,13 @@
           ],
           "latencyMs": 7450,
           "costUsd": 0.0333,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -5374,7 +5470,13 @@
           ],
           "latencyMs": 7463,
           "costUsd": 0.0328,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -5494,7 +5596,13 @@
           ],
           "latencyMs": 6978,
           "costUsd": 0.0373,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -5616,7 +5724,13 @@
           ],
           "latencyMs": 7172,
           "costUsd": 0.0376,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "photo_estimate",
+            "photo_estimate",
+            "photo_estimate",
+            "photo_estimate"
+          ]
         },
         {
           "photos": [
@@ -5738,7 +5852,13 @@
           ],
           "latencyMs": 7032,
           "costUsd": 0.0372,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -5909,7 +6029,13 @@
           ],
           "latencyMs": 12985,
           "costUsd": 0.0561,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -6019,7 +6145,13 @@
           ],
           "latencyMs": 9958,
           "costUsd": 0.0376,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -6198,7 +6330,13 @@
           ],
           "latencyMs": 12876,
           "costUsd": 0.0481,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -6327,7 +6465,13 @@
           ],
           "latencyMs": 9697,
           "costUsd": 0.0411,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -6502,7 +6646,13 @@
           ],
           "latencyMs": 14046,
           "costUsd": 0.0475,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         },
         {
           "photos": [
@@ -6656,7 +6806,13 @@
           ],
           "latencyMs": 11069,
           "costUsd": 0.044,
-          "modelServed": "claude-opus-5-5"
+          "modelServed": "claude-opus-5-5",
+          "repeatRoutes": [
+            "adjuster",
+            "adjuster",
+            "adjuster",
+            "adjuster"
+          ]
         }
       ]
     },

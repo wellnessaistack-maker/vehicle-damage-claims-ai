@@ -73,7 +73,7 @@ export function AssessmentPanel(props: {
             {reDecided && <span className="chip chip-warn">Re-run with protocol draft</span>}
             {a.ok ? (
               <span className="chip">
-                {(a.timings.totalMs / 1000).toFixed(1)} s · ${a.meta.costUsd.toFixed(3)} · {a.meta.modelServed}
+                {(a.timings.totalMs / 1000).toFixed(1)} s · ~${a.meta.costUsd.toFixed(3)} est. · {a.meta.modelServed}
               </span>
             ) : (
               <span className="chip">{a.failure.simulated ? "Simulated failure" : "AI assessment failed"}</span>

@@ -283,7 +283,6 @@ export function Workspace() {
           loadingDemo={loadingDemo}
           openCount={openCases.length}
         />
-        <Viewer item={selected} settings={settings} onUpdateClaim={updateClaim} onReassess={reassess} />
         <AssessmentPanel
           key={selected?.id ?? "none"}
           item={selected}
@@ -296,6 +295,8 @@ export function Workspace() {
           onOpenRecord={() => setDrawer("record")}
           onOpenProtocol={() => setDrawer("protocol")}
         />
+        {/* Claim details and photos are reference material, so they sit on the right. */}
+        <Viewer item={selected} settings={settings} onUpdateClaim={updateClaim} onReassess={reassess} />
       </div>
 
       {intakeOpen && <IntakeModal onClose={() => setIntakeOpen(false)} onAdd={(n) => { addCases(n); setIntakeOpen(false); }} />}
