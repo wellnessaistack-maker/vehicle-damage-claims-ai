@@ -18,6 +18,7 @@ import {
   type Route,
   type RuleGroup,
   type Settings,
+  type SourceKey,
 } from "@/lib/policy/protocol.ts";
 
 import type { Role } from "./Workspace.tsx";
@@ -30,6 +31,23 @@ const GROUPS: { id: RuleGroup; title: string; blurb: string }[] = [
   { id: "cost", title: "Cost", blurb: "Where the estimate range sits against the limits." },
   { id: "review", title: "Review flags", blurb: "The claim keeps its route, but a person checks." },
 ];
+
+const SOURCE_LABELS: Record<SourceKey, string> = {
+  "policy.vehicle": "policy record (insured vehicle)",
+  "policy.value": "policy record (vehicle value)",
+  "policy.powertrain": "policy record (powertrain)",
+  "claim.injury": "claim form (injury)",
+  "claim.drivable": "claim form (drivable)",
+  "claim.impact": "claim form (point of impact)",
+  "claim.requests": "claim record (photo requests sent)",
+  "ai.vehicle": "photo, AI (vehicle)",
+  "ai.damage": "photo, AI (damage)",
+  "ai.evidence": "photo, AI (what's in frame)",
+  "ai.risk": "photo, AI (risk signs)",
+  "photo.checks": "photo checks (code)",
+  "photo.pastClaims": "past-claim photos",
+  estimate: "estimate range",
+};
 
 const RUNS = (results as { runs: EvalRun[] }).runs;
 // The protocol test replays the default model's run on the current prompt.
@@ -170,7 +188,10 @@ export function ProtocolDrawer(props: {
                         </span>
                       </div>
                       <div className="rule-when">{r.when}</div>
-                      {r.settings && <div className="hint">Uses: {r.settings.map((k) => SETTING_DEFS.find((d) => d.key === k)?.label).join(", ")}</div>}
+                      <div className="hint">
+                        Checks: {r.uses.map((u) => SOURCE_LABELS[u]).join(", ")}
+                        {r.settings && <> · Settings: {r.settings.map((k) => SETTING_DEFS.find((d) => d.key === k)?.label).join(", ")}</>}
+                      </div>
                       {hit && <div className="reason-text" style={{ marginTop: 4 }}>Fired: {hit.reason}</div>}
                     </div>
                   );

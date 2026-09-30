@@ -4,7 +4,8 @@
 
 import type { ClaimContext, PhotoMetrics } from "../claims/types.ts";
 import type { Extraction } from "../extraction/schema.ts";
-import { buildCostRange, type CostDriver } from "./cost.ts";
+import { citationsFor, policyChecks, type Citation, type PolicyCheck } from "./citations.ts";
+import { buildCostRange, type CostDriver, type CostRange } from "./cost.ts";
 import {
   PHOTO_QUALITY_THRESHOLDS,
   PROTOCOL_VERSION,
@@ -15,6 +16,7 @@ import {
   type Route,
   type RuleGroup,
   type Settings,
+  usd,
 } from "./protocol.ts";
 
 export interface RuleResult {
@@ -26,6 +28,8 @@ export interface RuleResult {
   fired: boolean;
   reason?: string;
   evidence?: string;
+  /** What this rule checked and where each fact came from (fired rules only). */
+  citations?: Citation[];
 }
 
 export interface OutputField {
@@ -75,14 +79,22 @@ export interface Decision {
   retakes: RetakeRequest[];
   customerMessage: string | null;
   evidenceChecklist: ChecklistItem[];
+  /** The policy and claim facts compared with the photos, whether or not a rule fired. */
+  policyChecks: PolicyCheck[];
 }
 
 const EFFECT_ORDER: Record<Effect, number> = { adjuster: 0, more_evidence: 1, review: 2 };
 
 export const ACCURACY_NOTE = "Accuracy not yet measured. We need your final paid costs to check it.";
 
-export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[], settings: Settings): Decision {
-  const cost = buildCostRange(x, settings);
+export interface DecideOptions {
+  /** A reviewer's corrected range. The rules re-run on it, so a correction can change the route. */
+  reviewerRange?: { lowUsd: number; highUsd: number } | null;
+}
+
+export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[], settings: Settings, opts: DecideOptions = {}): Decision {
+  const aiCost = buildCostRange(x, settings);
+  const cost = aiCost && opts.reviewerRange ? reviewerCost(aiCost, opts.reviewerRange) : aiCost;
   const firedSoFar: string[] = [];
   const ruleResults: RuleResult[] = [];
   const retakes: RetakeRequest[] = [];
@@ -100,6 +112,7 @@ export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[
       fired: !!hit,
       reason: hit?.reason,
       evidence: hit?.evidence || undefined,
+      citations: hit ? citationsFor(rule, { x, claim, photos, settings, cost }) : undefined,
     });
     if (!hit) continue;
     firedSoFar.push(rule.id);
@@ -126,6 +139,8 @@ export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[
   const evidenceFired = fired.some((r) => r.group === "evidence" && r.effect === "more_evidence") ||
     fired.some((r) => r.id === "E7");
 
+  const estimate = estimateOutput(x, claim, settings, cost, route, fired.map((r) => r.id), evidenceFired);
+
   return {
     protocolVersion: PROTOCOL_VERSION,
     settings,
@@ -136,13 +151,25 @@ export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[
     requiredOutputs: {
       vehicle: vehicleOutputs(x, photos),
       damageSummary: damageSummary(x),
-      estimate: estimateOutput(x, claim, settings, cost, route, fired.map((r) => r.id), evidenceFired),
+      estimate,
     },
     reasons,
     ruleResults,
     retakes: route === "more_evidence" ? retakes : [],
     customerMessage: route === "more_evidence" ? customerMessage(claim, retakes) : null,
     evidenceChecklist: checklist(x, photos, settings, fired.map((r) => r.id)),
+    // Policy checks only mention the estimate when the reviewer can see one.
+    policyChecks: policyChecks({ x, claim, photos, settings, cost: estimate.status === "withheld" ? null : cost }),
+  };
+}
+
+function reviewerCost(ai: CostRange, r: { lowUsd: number; highUsd: number }): CostRange {
+  return {
+    lowUsd: r.lowUsd,
+    highUsd: r.highUsd,
+    drivers: [
+      { label: "Reviewer's adjusted range", lowUsd: r.lowUsd, highUsd: r.highUsd, source: "rule_adjustment", note: `Replaces the AI range of ${usd(ai.lowUsd)} to ${usd(ai.highUsd)}` },
+    ],
   };
 }
 

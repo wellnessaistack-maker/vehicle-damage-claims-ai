@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { currentDecision, REVIEWER, type CaseItem, type CaseOutcome, type ThreadEntry } from "@/lib/client/cases.ts";
+import { currentDecision, DIRECTORY, holderLine, recipient, REVIEWER, ROUTE_OWNER, type CaseItem, type CaseOutcome, type ThreadEntry } from "@/lib/client/cases.ts";
 import { loadDemoPhoto, shrink, kindOf, type CasePhoto } from "@/lib/client/intake.ts";
-import type { Decision, EstimateOutput } from "@/lib/policy/engine.ts";
+import { decide, type Decision, type EstimateOutput } from "@/lib/policy/engine.ts";
 import { ROUTE_LABELS, usd, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
-type Mode = null | "change" | "adjust" | "comment" | "ask";
+type Mode = null | "change" | "adjust" | "send" | "comment" | "ask";
 
 export function AssessmentPanel(props: {
   item: CaseItem | null;
@@ -92,6 +92,7 @@ export function AssessmentPanel(props: {
           <>
             <RequiredOutputs d={d!} />
             <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />
+            <PolicyChecks d={d!} />
             {d!.customerMessage && item.status !== "done" && (
               <div className="card">
                 <div className="card-head">
@@ -114,10 +115,12 @@ export function AssessmentPanel(props: {
         item={item}
         route={route}
         d={d}
+        settings={settings}
         mode={mode}
         setMode={setMode}
         message={message}
         onComplete={props.onComplete}
+        onThread={props.onThread}
         onReassess={props.onReassess}
         onCustomerPhotos={props.onCustomerPhotos}
       />
@@ -286,11 +289,62 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
                   </div>
                   <div className="reason-text">{r.reason}</div>
                   {r.evidence && <div className="reason-evidence">Seen: {r.evidence}</div>}
+                  {r.citations && (
+                    <details className="cites">
+                      <summary>Checked against</summary>
+                      <ul>
+                        {r.citations.map((c, i) => (
+                          <li key={i}>
+                            <span className={`src src-${c.source.split(" ")[0].toLowerCase()}`}>{c.source}</span> {c.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
                 </div>
               </li>
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PolicyChecks({ d }: { d: Decision }) {
+  const icon = { match: "✓", mismatch: "✕", not_compared: "?", info: "i" } as const;
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h3>Policy and claim checks</h3>
+        <span className="sub">What&apos;s on file compared with what the photos show. Nothing here decides coverage.</span>
+      </div>
+      <div className="card-body">
+        <table className="t">
+          <thead>
+            <tr>
+              <th />
+              <th>Check</th>
+              <th>On file</th>
+              <th>From the photos and rules</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.policyChecks.map((p) => (
+              <tr key={p.label}>
+                <td className={`pc pc-${p.status}`}>{icon[p.status]}</td>
+                <td>
+                  <b>{p.label}</b>
+                </td>
+                <td>{p.onFile}</td>
+                <td>
+                  {p.observed}
+                  {p.note && <div className="hint">{p.note}</div>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -436,10 +490,12 @@ function ActionBar(props: {
   item: CaseItem;
   route: Route;
   d: Decision | null;
+  settings: Settings;
   mode: Mode;
   setMode: (m: Mode) => void;
   message: string;
   onComplete: (id: string, outcome: Omit<CaseOutcome, "at">) => void;
+  onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
   onReassess: (id: string) => void;
   onCustomerPhotos: (id: string, photos: CasePhoto[]) => void;
 }) {
@@ -449,6 +505,8 @@ function ActionBar(props: {
   const e = d?.requiredOutputs.estimate;
   const [lo, setLo] = useState(String(e?.lowUsd ?? ""));
   const [hi, setHi] = useState(String(e?.highUsd ?? ""));
+  const [to, setTo] = useState("dana");
+  const [note, setNote] = useState("");
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -456,28 +514,60 @@ function ActionBar(props: {
     props.onComplete(item.id, outcome);
     setMode(null);
   };
+  const open = (m: Mode) => {
+    setReason("");
+    setMode(mode === m ? null : m);
+  };
+
+  // While a form is open, its own button is the only way forward.
+  const formOpen = mode === "adjust" || mode === "change" || mode === "send";
+  const totalLoss = !!d?.reasons.some((r) => r.id === "C2");
+  const adjusterTargets = totalLoss ? ["total_loss"] : ["field"];
+  if (d?.siuReferral) adjusterTargets.push("siu");
+  const names = (ids: string[]) => ids.map((id) => recipient(id).name.replace(/^(Estimating|Total|Field|Manual)/, (m) => m.toLowerCase())).join(" and ");
+
+  // The reviewer's range goes back through the same rules, so a correction can change the route.
+  const loN = Number(lo);
+  const hiN = Number(hi);
+  const rangeValid = lo.trim() !== "" && hi.trim() !== "" && loN >= 0 && hiN >= loN;
+  const preview =
+    mode === "adjust" && rangeValid && item.assessment?.ok
+      ? decide(item.assessment.extraction, item.claim, item.assessment.photos, props.settings, { reviewerRange: { lowUsd: loN, highUsd: hiN } })
+      : null;
+  const previewCostReasons = preview?.reasons.filter((r) => r.group === "cost") ?? [];
+  const previewTotalLoss = !!preview?.reasons.some((r) => r.id === "C2");
+  const previewTargets = preview?.route === "adjuster" ? [previewTotalLoss ? "total_loss" : "field", ...(preview.siuReferral ? ["siu"] : [])] : ["estimating"];
 
   const extras = (
     <>
-      <button className="btn btn-sm" onClick={() => setMode(mode === "change" ? null : "change")}>
-        Change route
+      <button className="btn btn-sm" onClick={() => open("send")}>
+        Send to someone
       </button>
+      {route !== "manual_triage" && (
+        <button className="btn btn-sm" onClick={() => open("change")}>
+          Change route
+        </button>
+      )}
       <button className="btn btn-sm" onClick={() => setMode(mode === "comment" ? null : "comment")}>
         Comment
       </button>
-      <button className="btn btn-sm" onClick={() => setMode(mode === "ask" ? null : "ask")}>
-        Ask
-      </button>
+      {route !== "manual_triage" && (
+        <button className="btn btn-sm" onClick={() => setMode(mode === "ask" ? null : "ask")}>
+          Ask
+        </button>
+      )}
     </>
   );
 
   if (item.status === "done" && item.outcome) {
     const waiting = item.outcome.action === "message_sent";
+    const holder = holderLine(item.outcome);
     return (
       <div className="actionbar">
         <div className="done-banner">
           Done: {item.outcome.summary}
           {item.outcome.reason && <> Reason: {item.outcome.reason}</>}
+          {holder && <div className="done-holder">{holder}</div>}
         </div>
         {waiting && (
           <div className="actionbar-row">
@@ -521,6 +611,61 @@ function ActionBar(props: {
 
   return (
     <div className="actionbar">
+      {mode === "send" && (
+        <div className="inline-form">
+          <div className="row">
+            <label>
+              Send to
+              <select value={to} onChange={(ev) => setTo(ev.target.value)}>
+                {DIRECTORY.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} ({r.role})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="hint">{recipient(to).forWhat}.</div>
+          <label>
+            Note for {recipient(to).name}
+            <textarea rows={2} value={note} onChange={(ev) => setNote(ev.target.value)} placeholder="What do you need from them?" />
+          </label>
+          <div className="composer-row">
+            <button className="btn btn-sm btn-ghost" onClick={() => setMode(null)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-sm"
+              title="Keeps the claim on your worklist and adds the request to the case thread"
+              onClick={() => {
+                props.onThread(item.id, {
+                  kind: "comment",
+                  author: REVIEWER.name,
+                  text: `@${recipient(to).name}: second opinion requested.${note.trim() ? ` ${note.trim()}` : ""} The claim stays on my worklist.`,
+                });
+                setNote("");
+                setMode(null);
+              }}
+            >
+              Ask for a second opinion
+            </button>
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() =>
+                done({
+                  action: "handed_off",
+                  route,
+                  summary: `Handed off to ${recipient(to).name} (${recipient(to).role}) with the recommended route of ${ROUTE_LABELS[route]}.`,
+                  reason: note.trim() || undefined,
+                  sentTo: [to],
+                })
+              }
+            >
+              Hand off
+            </button>
+          </div>
+        </div>
+      )}
       {mode === "change" && (
         <div className="inline-form">
           <div className="row">
@@ -537,18 +682,28 @@ function ActionBar(props: {
               </select>
             </label>
           </div>
+          <div className="hint">Goes to the {names([ROUTE_OWNER[newRoute]])}. Your reason is saved with the decision and can become a test case.</div>
           <label>
-            Reason (required, saved with the decision)
+            Reason (required)
             <textarea rows={2} value={reason} onChange={(ev) => setReason(ev.target.value)} placeholder="What did the AI or the rules get wrong?" />
           </label>
           <div className="composer-row">
             <button className="btn btn-sm btn-ghost" onClick={() => setMode(null)}>
               Cancel
             </button>
+            {!reason.trim() && <span className="hint">Add a reason to continue</span>}
             <button
               className="btn btn-sm btn-primary"
               disabled={!reason.trim()}
-              onClick={() => done({ action: "route_changed", route: newRoute, summary: `Changed the route from ${ROUTE_LABELS[route]} to ${ROUTE_LABELS[newRoute]}.`, reason: reason.trim() })}
+              onClick={() =>
+                done({
+                  action: "route_changed",
+                  route: newRoute,
+                  summary: `Changed the route from ${ROUTE_LABELS[route]} to ${ROUTE_LABELS[newRoute]} and sent it to the ${names([ROUTE_OWNER[newRoute]])}.`,
+                  reason: reason.trim(),
+                  sentTo: [ROUTE_OWNER[newRoute]],
+                })
+              }
             >
               Change route
             </button>
@@ -560,15 +715,23 @@ function ActionBar(props: {
           <div className="row">
             <label>
               Low (USD)
-              <input type="number" value={lo} onChange={(ev) => setLo(ev.target.value)} />
+              <input type="number" min={0} value={lo} onChange={(ev) => setLo(ev.target.value)} />
             </label>
             <label>
               High (USD)
-              <input type="number" value={hi} onChange={(ev) => setHi(ev.target.value)} />
+              <input type="number" min={0} value={hi} onChange={(ev) => setHi(ev.target.value)} />
             </label>
           </div>
+          {!rangeValid ? (
+            <div className="err">Enter a low and a high, with the high at least as big as the low.</div>
+          ) : preview ? (
+            <div className={`adjust-preview route-${preview.route}`}>
+              <b>With this range the rules say: {preview.routeLabel}.</b>{" "}
+              {previewCostReasons.length ? previewCostReasons.map((r) => `${r.reason} (rule ${r.id})`).join(" ") : `It stays under the ${usd(props.settings.fastPathLimitUsd)} fast-path limit.`}
+            </div>
+          ) : null}
           <label>
-            Reason (required, recorded as &quot;AI was off by&quot;)
+            Why (optional, saved as feedback on the AI&apos;s price)
             <textarea rows={2} value={reason} onChange={(ev) => setReason(ev.target.value)} placeholder="e.g. quarter panel needs replacing, not repair" />
           </label>
           <div className="composer-row">
@@ -576,25 +739,39 @@ function ActionBar(props: {
               Cancel
             </button>
             <button
-              className="btn btn-sm btn-primary"
-              disabled={!reason.trim() || !(Number(lo) >= 0) || !(Number(hi) >= Number(lo))}
-              onClick={() =>
-                done({
-                  action: "approved",
-                  route,
-                  summary: `Approved the photo estimate path with an adjusted range of ${usd(Number(lo))} to ${usd(Number(hi))} (AI said ${usd(e.lowUsd!)} to ${usd(e.highUsd!)}). Sent to estimating as the starting estimate.`,
-                  reason: reason.trim(),
-                  adjustedRange: { lowUsd: Number(lo), highUsd: Number(hi) },
-                })
-              }
+              className={`btn btn-sm ${preview?.route === "adjuster" ? "btn-danger" : "btn-primary"}`}
+              disabled={!preview}
+              onClick={() => {
+                if (!preview) return;
+                const range = `${usd(loN)} to ${usd(hiN)} (AI said ${usd(e.lowUsd!)} to ${usd(e.highUsd!)})`;
+                done(
+                  preview.route === "adjuster"
+                    ? {
+                        action: "assigned_adjuster",
+                        route: "adjuster",
+                        summary: `Adjusted the range to ${range}. That puts it on the ${preview.routeLabel} route, so it went to the ${names(previewTargets)}.`,
+                        reason: reason.trim() || undefined,
+                        adjustedRange: { lowUsd: loN, highUsd: hiN },
+                        sentTo: previewTargets,
+                      }
+                    : {
+                        action: "approved",
+                        route: preview.route,
+                        summary: `Approved the photo estimate path with an adjusted range of ${range}. Sent to the estimating team as the starting estimate.`,
+                        reason: reason.trim() || undefined,
+                        adjustedRange: { lowUsd: loN, highUsd: hiN },
+                        sentTo: previewTargets,
+                      },
+                );
+              }}
             >
-              Approve adjusted range
+              {preview?.route === "adjuster" ? `Send to ${names(previewTargets)}` : "Approve adjusted range"}
             </button>
           </div>
         </div>
       )}
 
-      {route === "photo_estimate" && e && (
+      {!formOpen && route === "photo_estimate" && e && e.lowUsd !== null && (
         <div className="actionbar-row">
           <button
             className="btn btn-primary"
@@ -602,18 +779,19 @@ function ActionBar(props: {
               done({
                 action: "approved",
                 route,
-                summary: `Approved the photo estimate path and the ${usd(e.lowUsd!)} to ${usd(e.highUsd!)} range as the starting estimate. Sent to estimating.`,
+                summary: `Approved the photo estimate path and the ${usd(e.lowUsd!)} to ${usd(e.highUsd!)} range as the starting estimate. Sent to the estimating team.`,
+                sentTo: ["estimating"],
               })
             }
           >
             Approve route and estimate range
           </button>
-          <button className="btn" onClick={() => setMode(mode === "adjust" ? null : "adjust")}>
+          <button className="btn" onClick={() => open("adjust")}>
             Adjust range
           </button>
         </div>
       )}
-      {route === "more_evidence" && (
+      {!formOpen && route === "more_evidence" && (
         <div className="actionbar-row">
           <button
             className="btn btn-warn"
@@ -622,7 +800,7 @@ function ActionBar(props: {
                 action: "message_sent",
                 route,
                 summary: `Sent the customer a request for ${d?.retakes.length ?? 1} photo${(d?.retakes.length ?? 1) === 1 ? "" : "s"}. Waiting on their reply.`,
-                reason: undefined,
+                sentTo: [],
               })
             }
             disabled={!props.message.trim()}
@@ -631,26 +809,34 @@ function ActionBar(props: {
           </button>
         </div>
       )}
-      {route === "adjuster" && (
+      {!formOpen && route === "adjuster" && (
         <div className="actionbar-row">
-          <button className="btn btn-danger" onClick={() => done({ action: "assigned_adjuster", route, summary: `Assigned to an adjuster${d?.siuReferral ? " and referred to SIU" : ""}.` })}>
-            Assign to adjuster{d?.siuReferral ? " and refer to SIU" : ""}
+          <button
+            className="btn btn-danger"
+            onClick={() =>
+              done({
+                action: "assigned_adjuster",
+                route,
+                summary: `Sent to the ${names(adjusterTargets)}${d?.siuReferral ? " for review before any payment" : ""}.`,
+                sentTo: adjusterTargets,
+              })
+            }
+          >
+            Send to {names(adjusterTargets)}
           </button>
         </div>
       )}
-      {route === "manual_triage" && (
+      {!formOpen && route === "manual_triage" && (
         <div className="actionbar-row">
-          <button className="btn btn-primary" onClick={() => done({ action: "assigned_manual", route, summary: "Sent to manual review (the existing process)." })}>
-            Assign to manual review
+          <button className="btn btn-primary" onClick={() => done({ action: "assigned_manual", route, summary: "Sent to the manual triage queue (the existing process).", sentTo: ["manual"] })}>
+            Send to manual triage
           </button>
           <button className="btn" onClick={() => props.onReassess(item.id)}>
             Retry assessment
           </button>
         </div>
       )}
-      <div className="actionbar-row">{route === "manual_triage" ? (
-        <button className="btn btn-sm" onClick={() => setMode(mode === "comment" ? null : "comment")}>Comment</button>
-      ) : extras}</div>
+      <div className="actionbar-row">{extras}</div>
     </div>
   );
 }

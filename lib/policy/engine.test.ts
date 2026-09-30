@@ -362,6 +362,62 @@ test("possible older damage is flagged", () => {
   assert.deepEqual(firedIds(run(x)), ["R4"]);
 });
 
+// --- Traceability ---------------------------------------------------------------------
+
+test("every reason cites where its facts came from and which rule applied", () => {
+  const d = run(civicA(), claim({ vehicleValueUsd: 2500 }));
+  const c2 = d.reasons.find((r) => r.id === "C2")!;
+  const text = c2.citations!.map((c) => `${c.source}: ${c.text}`).join(" | ");
+  assert.match(text, /Policy record: Vehicle value: \$2,500/);
+  assert.match(text, /Estimate: Range/);
+  assert.match(text, /Protocol: Setting "Total-loss line": 60% of vehicle value/);
+  assert.match(text, /Protocol: Routing protocol v0\.1, rule C2 \(configurable\)/);
+});
+
+test("policy checks compare the policy with the photos even when nothing fires", () => {
+  const d = run(civicA());
+  const byLabel = Object.fromEntries(d.policyChecks.map((p) => [p.label, p]));
+  assert.equal(byLabel["Insured vehicle"].status, "match");
+  assert.equal(byLabel["Colour"].status, "match");
+  assert.equal(byLabel["Point of impact"].status, "match");
+  assert.match(byLabel["Coverage and deductible"].onFile, /Not checked/);
+  const wrong = run(civicA(), claim({ reportedImpactArea: "front" }));
+  assert.equal(wrong.policyChecks.find((p) => p.label === "Point of impact")!.status, "mismatch");
+  const closeup = run(closeupB(), claim(DEMO_CLAIMS.B));
+  assert.equal(closeup.policyChecks.find((p) => p.label === "Insured vehicle")!.status, "not_compared");
+});
+
+test("policy checks don't quote an estimate that was withheld", () => {
+  const d = run(closeupB(), claim(DEMO_CLAIMS.B));
+  assert.equal(d.requiredOutputs.estimate.status, "withheld");
+  const value = d.policyChecks.find((p) => p.label === "Vehicle value")!;
+  assert.doesNotMatch(value.observed, /estimate/);
+});
+
+test("a reviewer's adjusted range goes back through the rules", () => {
+  const x = civicA();
+  const c = claim();
+  assert.equal(decide(x, c, [goodPhoto()], DEFAULT_SETTINGS).route, "photo_estimate");
+
+  // Straddling the limit keeps the fast path but flags a price check.
+  const straddle = decide(x, c, [goodPhoto()], DEFAULT_SETTINGS, { reviewerRange: { lowUsd: 1800, highUsd: 3000 } });
+  assert.equal(straddle.route, "photo_estimate");
+  assert.ok(firedIds(straddle).includes("C3"));
+  assert.equal(straddle.requiredOutputs.estimate.highUsd, 3000);
+  assert.match(straddle.requiredOutputs.estimate.drivers[0].label, /Reviewer/);
+
+  // Entirely over the limit goes to an adjuster, and the citation says whose range it was.
+  const over = decide(x, c, [goodPhoto()], DEFAULT_SETTINGS, { reviewerRange: { lowUsd: 2800, highUsd: 3400 } });
+  assert.equal(over.route, "adjuster");
+  const c1 = over.ruleResults.find((r) => r.id === "C1")!;
+  assert.ok(c1.fired);
+  assert.match(c1.citations!.map((t) => t.text).join(" "), /reviewer's adjusted range/);
+});
+
+test("every rule says which facts it checks", () => {
+  for (const r of RULES) assert.ok(r.uses.length > 0, r.id);
+});
+
 // --- Protocol hygiene ------------------------------------------------------------------
 
 test("settings are always kept inside their bounds", () => {

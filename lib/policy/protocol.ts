@@ -236,6 +236,26 @@ export interface RuleHit {
   referToSiu?: boolean;
 }
 
+/**
+ * The facts a rule can check, and where each comes from. Every reason shown to
+ * the reviewer cites these, so it's clear what was checked against what.
+ */
+export type SourceKey =
+  | "policy.vehicle"
+  | "policy.value"
+  | "policy.powertrain"
+  | "claim.injury"
+  | "claim.drivable"
+  | "claim.impact"
+  | "claim.requests"
+  | "ai.vehicle"
+  | "ai.damage"
+  | "ai.evidence"
+  | "ai.risk"
+  | "photo.checks"
+  | "photo.pastClaims"
+  | "estimate";
+
 export interface Rule {
   id: string;
   group: RuleGroup;
@@ -245,6 +265,8 @@ export interface Rule {
   /** The rule in plain language, as it appears in the protocol document. */
   when: string;
   settings?: (keyof Settings)[];
+  /** Where the facts this rule checks come from. Shown on every reason it gives. */
+  uses: SourceKey[];
   check: (ctx: RuleContext) => RuleHit | null;
 }
 
@@ -265,6 +287,7 @@ export const RULES: Rule[] = [
   // --- Safety: always a person ------------------------------------------------
   {
     id: "S1",
+    uses: ["claim.injury"],
     group: "safety",
     tier: "locked",
     effect: "adjuster",
@@ -274,6 +297,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "S2",
+    uses: ["claim.drivable"],
     group: "safety",
     tier: "locked",
     effect: "adjuster",
@@ -284,6 +308,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "S3",
+    uses: ["ai.risk"],
     group: "safety",
     tier: "locked",
     effect: "adjuster",
@@ -296,6 +321,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "S4",
+    uses: ["ai.risk", "ai.damage"],
     group: "safety",
     tier: "locked",
     effect: "adjuster",
@@ -315,6 +341,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "S5",
+    uses: ["ai.risk"],
     group: "safety",
     tier: "locked",
     effect: "adjuster",
@@ -330,6 +357,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "S6",
+    uses: ["policy.powertrain", "ai.vehicle", "ai.damage"],
     group: "safety",
     tier: "locked",
     effect: "adjuster",
@@ -358,6 +386,7 @@ export const RULES: Rule[] = [
   // --- Scope: vehicles the photo path doesn't cover ----------------------------
   {
     id: "P1",
+    uses: ["ai.vehicle"],
     group: "scope",
     tier: "locked",
     effect: "adjuster",
@@ -373,6 +402,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "P2",
+    uses: ["ai.vehicle"],
     group: "scope",
     tier: "locked",
     effect: "adjuster",
@@ -387,6 +417,7 @@ export const RULES: Rule[] = [
   // --- Integrity: possible reuse or tampering ----------------------------------
   {
     id: "I1",
+    uses: ["photo.pastClaims"],
     group: "integrity",
     tier: "locked",
     effect: "adjuster",
@@ -405,6 +436,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "I2",
+    uses: ["ai.vehicle"],
     group: "integrity",
     tier: "locked",
     effect: "adjuster",
@@ -420,6 +452,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "I3",
+    uses: ["ai.risk"],
     group: "integrity",
     tier: "locked",
     effect: "adjuster",
@@ -438,6 +471,7 @@ export const RULES: Rule[] = [
   // --- Evidence: ask the customer for better photos ----------------------------
   {
     id: "E1",
+    uses: ["ai.vehicle"],
     group: "evidence",
     tier: "locked",
     effect: "more_evidence",
@@ -453,6 +487,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "E2",
+    uses: ["ai.vehicle"],
     group: "evidence",
     tier: "locked",
     effect: "more_evidence",
@@ -474,6 +509,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "E3",
+    uses: ["ai.evidence"],
     group: "evidence",
     tier: "locked",
     effect: "more_evidence",
@@ -497,6 +533,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "E4",
+    uses: ["photo.checks", "ai.evidence"],
     group: "evidence",
     tier: "locked",
     effect: "more_evidence",
@@ -541,6 +578,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "E5",
+    uses: ["ai.damage"],
     group: "evidence",
     tier: "locked",
     effect: "more_evidence",
@@ -556,6 +594,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "E6",
+    uses: ["ai.vehicle"],
     group: "evidence",
     tier: "locked",
     effect: "more_evidence",
@@ -571,6 +610,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "E7",
+    uses: ["claim.requests"],
     group: "evidence",
     tier: "configurable",
     effect: "adjuster",
@@ -588,6 +628,7 @@ export const RULES: Rule[] = [
   // --- Cost: where the range sits against the limits ---------------------------
   {
     id: "C1",
+    uses: ["estimate"],
     group: "cost",
     tier: "configurable",
     effect: "adjuster",
@@ -604,6 +645,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "C2",
+    uses: ["estimate", "policy.value"],
     group: "cost",
     tier: "configurable",
     effect: "adjuster",
@@ -624,6 +666,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "C3",
+    uses: ["estimate"],
     group: "cost",
     tier: "configurable",
     effect: "review",
@@ -642,6 +685,7 @@ export const RULES: Rule[] = [
   // --- Review flags: stays on its route, but a person checks -------------------
   {
     id: "R1",
+    uses: ["ai.risk"],
     group: "review",
     tier: "configurable",
     effect: "review",
@@ -659,6 +703,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "R2",
+    uses: ["policy.vehicle", "ai.vehicle"],
     group: "review",
     tier: "locked",
     effect: "review",
@@ -680,6 +725,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "R3",
+    uses: ["claim.impact", "ai.damage"],
     group: "review",
     tier: "locked",
     effect: "review",
@@ -697,6 +743,7 @@ export const RULES: Rule[] = [
   },
   {
     id: "R4",
+    uses: ["ai.risk"],
     group: "review",
     tier: "locked",
     effect: "review",
@@ -720,7 +767,7 @@ export function usd(n: number) {
   return "$" + Math.round(n).toLocaleString("en-US");
 }
 
-function zonesFor(item: DamageItem): string[] {
+export function zonesFor(item: DamageItem): string[] {
   const zones: string[] = [];
   if (item.area.startsWith("front") || ["grille", "hood", "headlight", "windscreen"].includes(item.area)) zones.push("front");
   if (item.area.startsWith("rear") && item.area !== "rear_door") zones.push("rear");
@@ -741,7 +788,7 @@ function sideLabel(items: DamageItem[]): string {
   return "damaged side";
 }
 
-function sameMake(a: string, b: string) {
+export function sameMake(a: string, b: string) {
   const n = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
   return n(a).includes(n(b)) || n(b).includes(n(a));
 }
@@ -758,7 +805,7 @@ const COLOUR_FAMILIES = [
   ["yellow"],
 ];
 
-function sameColour(a: string, b: string) {
+export function sameColour(a: string, b: string) {
   const fam = (s: string) => {
     const l = s.toLowerCase();
     return COLOUR_FAMILIES.findIndex((f) => f.some((c) => l.includes(c)));
