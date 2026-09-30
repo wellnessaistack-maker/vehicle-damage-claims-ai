@@ -19,6 +19,7 @@ import {
   type ThreadEntry,
 } from "@/lib/client/cases.ts";
 import { loadDemoPhoto, type CasePhoto } from "@/lib/client/intake.ts";
+import { reportClientError } from "@/lib/client/report.ts";
 import type { Assessment } from "@/lib/pipeline.ts";
 import { DEFAULT_SETTINGS, type Settings } from "@/lib/policy/protocol.ts";
 
@@ -68,6 +69,17 @@ export function Workspace() {
   simulateRef.current = simulate;
 
   useEffect(() => {
+    const onError = (e: ErrorEvent) => reportClientError("window", e.error ?? e.message);
+    const onRejection = (e: PromiseRejectionEvent) => reportClientError("promise", e.reason);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
+
+  useEffect(() => {
     fetch("/api/health")
       .then((r) => r.json())
       .then(setHealth)
@@ -105,14 +117,16 @@ export function Workspace() {
             fetched?.[i] ? { ...p, base64: fetched[i], dataUrl: `data:image/jpeg;base64,${fetched[i]}` } : p,
           );
           x = { ...x, photos };
-          const d = currentDecision({ ...x, assessment }, settingsRef.current);
-          const note: ThreadEntry = {
-            id: uid("t"),
-            kind: "note",
-            author: "First review",
-            text: d ? firstReviewNote(d) : failureNote({ ...x, assessment }),
-            at: now(),
-          };
+          // Writing the note must never take the page down; the panel shows any problem itself.
+          let text: string;
+          try {
+            const d = currentDecision({ ...x, assessment }, settingsRef.current);
+            text = d ? firstReviewNote(d) : failureNote({ ...x, assessment });
+          } catch (err) {
+            reportClientError("first review note", err, x.claim.claimId);
+            text = "The first-review note couldn't be written for this claim.";
+          }
+          const note: ThreadEntry = { id: uid("t"), kind: "note", author: "First review", text, at: now() };
           return { ...x, status: "ready", assessment, thread: [...x.thread, note] };
         });
       } catch (e) {
@@ -287,6 +301,7 @@ export function Workspace() {
       </header>
 
       <div className="workspace">
+        <ErrorBoundary label="Worklist" className="col worklist">
         <Worklist
           cases={cases}
           settings={settings}
@@ -297,7 +312,8 @@ export function Workspace() {
           loadingDemo={loadingDemo}
           openCount={openCases.length}
         />
-        <ErrorBoundary key={selected?.id ?? "none"} label="Assessment">
+        </ErrorBoundary>
+        <ErrorBoundary key={`a-${selected?.id ?? "none"}`} label="Assessment" className="col assess">
         <AssessmentPanel
           key={selected?.id ?? "none"}
           item={selected}
@@ -312,7 +328,9 @@ export function Workspace() {
         />
         </ErrorBoundary>
         {/* Claim details and photos are reference material, so they sit on the right. */}
-        <Viewer item={selected} settings={settings} onUpdateClaim={updateClaim} onReassess={reassess} />
+        <ErrorBoundary key={`v-${selected?.id ?? "none"}`} label="Photos and claim details" className="col viewer">
+          <Viewer item={selected} settings={settings} onUpdateClaim={updateClaim} onReassess={reassess} />
+        </ErrorBoundary>
       </div>
 
       {toast && (

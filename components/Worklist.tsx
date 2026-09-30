@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { currentDecision, recipient, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
+import { recipient, safeDecision, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
 import { ROUTE_LABELS, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
 const LANES: Route[] = ["adjuster", "more_evidence", "photo_estimate", "manual_triage"];
@@ -51,7 +51,7 @@ export function Worklist(props: {
   const pct = total ? Math.round((done.length / total) * 100) : 0;
 
   const item = (c: CaseItem, route: Route | null) => {
-    const d = currentDecision(c, settings);
+    const d = safeDecision(c, settings);
     const top = d?.reasons[0];
     const reason =
       c.status === "processing" || c.status === "queued"
