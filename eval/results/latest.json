@@ -363,7 +363,7 @@
           ],
           "claim": {
             "claimId": "EVAL-C_f1",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
@@ -1794,7 +1794,7 @@
           ],
           "claim": {
             "claimId": "EVAL-10_race_debris_crop",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
@@ -1903,7 +1903,7 @@
           ],
           "claim": {
             "claimId": "EVAL-11_race_greyscale",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
@@ -3697,7 +3697,7 @@
           ],
           "claim": {
             "claimId": "EVAL-C_f1",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
@@ -5239,7 +5239,7 @@
           ],
           "claim": {
             "claimId": "EVAL-10_race_debris_crop",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
@@ -5359,7 +5359,7 @@
           ],
           "claim": {
             "claimId": "EVAL-11_race_greyscale",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
@@ -7185,7 +7185,7 @@
           ],
           "claim": {
             "claimId": "EVAL-C_f1",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
@@ -8640,7 +8640,7 @@
           ],
           "claim": {
             "claimId": "EVAL-10_race_debris_crop",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
@@ -8758,7 +8758,7 @@
           ],
           "claim": {
             "claimId": "EVAL-11_race_greyscale",
-            "policyholder": "Charles the Clerk",
+            "policyholder": "Charles Leclerc",
             "policyVehicle": {
               "year": null,
               "make": null,
