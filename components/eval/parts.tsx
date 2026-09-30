@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import results from "@/eval/results/latest.json";
 import { loadDemoPhoto } from "@/lib/client/intake.ts";
 import { DEFAULT_MODEL, MODELS, modelInfo } from "@/lib/extraction/models.ts";
-import { plausibleLow, scoreCase, summarise, type EvalCaseResult, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
+import { scoreCase, summarise, type EvalCaseResult, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
 import type { Assessment } from "@/lib/pipeline.ts";
 import { DEFAULT_SETTINGS, PROTOCOL_VERSION, ROUTE_LABELS, usd, type Route } from "@/lib/policy/protocol.ts";
 
@@ -152,90 +152,6 @@ async function runOne(c: LiveCase, model: string): Promise<{ result: EvalCaseRes
 }
 
 export const publicPath = (p: string) => "/" + p.replace(/^demo-images\//, "demo/");
-
-export function Headline({ s }: { s: Summary }) {
-  return (
-    <>
-      <div className="section-label" style={{ marginBottom: -6 }}>
-        The deck&apos;s quality guardrails
-      </div>
-      <div className="stats">
-        <div className="stat">
-          <div className="l">Complex-case escalation recall</div>
-          <div className="v">
-            {s.escalation.caught} of {s.escalation.of}
-          </div>
-          <Plausible k={s.escalation.caught} n={s.escalation.of} />
-          <div className="d">
-            Of the cases an expert would send to an adjuster, how many we escalated too.
-            {s.escalation.missedIds.length > 0 && <> Missed: {s.escalation.missedIds.join(", ")}.</>}
-            {s.escalation.viaFailure > 0 && (
-              <b style={{ color: "var(--adjuster)" }}> {s.escalation.viaFailure} of these reached a person only because the AI failed.</b>
-            )}
-          </div>
-        </div>
-        <div className="stat">
-          <div className="l">Routing agreement with expert labels</div>
-          <div className="v">
-            {s.agreement.exact} of {s.agreement.of}
-          </div>
-          <Plausible k={s.agreement.exact} n={s.agreement.of} />
-          <div className="d">
-            Exact match. {s.agreement.acceptable} of {s.agreement.of} counting routes the label marks as also acceptable. Expert-to-expert agreement is the realistic ceiling; we don&apos;t have it yet.
-          </div>
-        </div>
-        <div className="stat" style={{ borderColor: "var(--evidence-line)", background: "var(--evidence-soft)" }}>
-          <div className="l">Repair-range coverage</div>
-          <div className="v">Not measured</div>
-          <div className="d" style={{ color: "var(--evidence)" }}>
-            The main test for the estimate is whether your final paid cost falls inside our range (and how wide the range is). That needs your paid-claims data, which we&apos;d use in phase 2.
-          </div>
-        </div>
-      </div>
-      <div className="section-label" style={{ marginBottom: -6 }}>
-        Also watched
-      </div>
-      <div className="stats">
-        <Stat label="Escalated when not needed" value={`${s.overEscalated.count} of ${s.overEscalated.of}`} note={s.overEscalated.ids.length ? `Cases: ${s.overEscalated.ids.join(", ")}` : "Too much caution eats the time savings."} />
-        <Stat label="Didn't guess when it couldn't tell" value={`${s.abstention.correct} of ${s.abstention.of}`} note="Make, model or colour left blank where the label says it can't be known from the photo." />
-        <Stat label="Make / model / colour" value={`${s.vehicle.make.right}/${s.vehicle.make.of} · ${s.vehicle.model.right}/${s.vehicle.model.of} · ${s.vehicle.colour.right}/${s.vehicle.colour.of}`} note="Correct, or correctly 'can't tell'." />
-        <Stat label="Expected review flags raised" value={`${s.flags.caught} of ${s.flags.of}`} note="Rules like 'damage doesn't match the description' firing where they should." />
-        <Stat
-          label="Same route on every run"
-          value={s.stability ? `${s.stability.stable} of ${s.stability.of}` : "Not measured"}
-          note={s.stability ? "Each case run four times. Instability shows up where the range sits right at a limit." : "The AI can give slightly different answers each time. Run with --repeat 3 to measure."}
-        />
-        <Stat
-          label="Time and estimated cost per case"
-          value={s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s · $${s.cost.mean.toFixed(3)}` : "n/a"}
-          note={s.latency ? `Median time; slowest 5% ${(s.latency.p95 / 1000).toFixed(1)} s. ${s.failures} AI failure${s.failures === 1 ? "" : "s"}. Cost is estimated from token counts and list prices; actual billed spend has run higher, so the Anthropic console is the source of truth.` : ""}
-        />
-      </div>
-    </>
-  );
-}
-
-export function Plausible({ k, n }: { k: number; n: number }) {
-  const low = plausibleLow(k, n);
-  if (low === null) return null;
-  return (
-    <div className="hint" style={{ marginBottom: 4 }}>
-      With only {n} cases, the true rate could be as low as about {Math.round(low * 100)}%.
-    </div>
-  );
-}
-
-export function Stat({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <div className="stat">
-      <div className="l">{label}</div>
-      <div className="v" style={{ fontSize: 18 }}>
-        {value}
-      </div>
-      <div className="d">{note}</div>
-    </div>
-  );
-}
 
 export function ModelComparison({ runs, title, sub }: { runs: { run: EvalRun; summary: Summary }[]; title?: string; sub?: string }) {
   const label = (r: EvalRun) => `${modelInfo(r.model).label}, ${r.promptVersion}`;
@@ -407,38 +323,3 @@ export function CaseTable({ scored }: { scored: ScoredCase[] }) {
   );
 }
 
-export function Writeup() {
-  return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Evaluation approach</h3>
-        <a className="sub" href={`${REPO}/blob/main/eval/README.md`}>
-          How the set is labelled
-        </a>
-      </div>
-      <div className="card-body">
-        <p style={{ marginTop: 0 }}>
-          <b>What matters most.</b> The mistakes don&apos;t cost the same. A complex claim slipping onto the fast path is the expensive one, so escalation recall comes first. Then routing agreement with your experts, while watching that we don&apos;t escalate
-          so much that the time savings disappear. Then the brief&apos;s outputs: is make, model and colour right or correctly left blank, and does the damage summary name the right area without missing or inventing damage.
-        </p>
-        <p>
-          <b>Where it fails.</b> A complex claim on the fast path (rare, expensive). Confidently naming the wrong car. Missing or inventing damage. Escalating too much. Reused or edited photos. Known weak spots today: a sideways photo isn&apos;t
-          recognised, pixel checks can&apos;t tell motion blur from a smooth close-up, glare is only caught by the AI, and the reused-photo check misses rotated copies.
-        </p>
-        <p>
-          <b>The repair estimate.</b> We&apos;d score past claims and compare our range with what you finally paid: how often it contains the paid cost, and how wide it is. The mistake that matters is a range on the wrong side of the fast-path
-          limit or the total-loss line. When it&apos;s too low, the shop files a supplement, as today; near a limit it gets flagged or goes to an adjuster; it is never the amount paid. Reviewers&apos; range adjustments are captured as &quot;AI was off by X&quot;.
-        </p>
-        <p>
-          <b>What we need from you.</b> A few hundred past claims with photos, the route each took, the final paid cost and any supplements. Time from two estimating experts to label them. How today&apos;s triage performs (late escalations,
-          supplement rate) so there&apos;s a baseline to beat. Your eligibility rules, labour rates and vehicle values.
-        </p>
-        <p style={{ marginBottom: 0 }}>
-          <b>How not to fool ourselves.</b> Prompt v2 was written after looking at v1&apos;s mistakes on these same cases, so its improvement is flattering. With your data we&apos;d keep a locked test set nobody tunes against. This set is also
-          escalation-heavy (11 of 26 must escalate), unlike a real claims mix, so real results would be reported by segment and weighted to your actual mix. After the historical test, the system would run silently alongside your adjusters
-          before routing anything, and in production we&apos;d watch reviewer overrides, supplements on fast-path claims, and drift.
-        </p>
-      </div>
-    </div>
-  );
-}
