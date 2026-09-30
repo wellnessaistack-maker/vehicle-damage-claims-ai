@@ -132,6 +132,8 @@ export async function extract(
 }
 
 function toExtractionError(err: unknown): ExtractionError {
+  // Server-side log for troubleshooting; never includes the key or the photos.
+  console.error("[extract] AI call failed:", err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : String(err));
   if (err instanceof Anthropic.APIConnectionTimeoutError) {
     return new ExtractionError("timeout", "The AI service didn't respond in time.");
   }
