@@ -217,7 +217,7 @@ The AI prices each damage item from its general knowledge of US repair costs; th
 
 The range's real job is showing which side of a limit a claim falls on: low end above the fast-path limit goes to an adjuster; a range that crosses it slightly stays on the fast path with a price-check flag; a range that runs far past it (by default, a high end more than 50% above the limit) goes to an adjuster, because it's too uncertain; and a high end past the total-loss line goes to adjuster / total loss. It is never a payable amount; the reviewer approves it as a starting estimate or adjusts it, and the adjustment is recorded.
 
-**Every photo with visible damage gets a figure.** When the claim can't be priced safely yet (the photos we asked for haven't arrived, it isn't a road car, or the photos show different cars), the range is still shown, marked **Provisional**: "based only on what the photos show so far." A provisional range never drives the route, is never sent to the customer, and isn't scored in the evaluation. Only a photo with no car or no visible damage has no estimate.
+**Every photo with visible damage gets a figure.** When the claim can't be priced safely yet (the photos we asked for haven't arrived, it isn't a road car, or the photos show different cars), the range is still shown, marked **Provisional**: "based only on what the photos show so far." A provisional range never drives the route, is never sent to the customer, and isn't scored in the evaluation. Only a photo with no car, no visible damage, or damage the AI couldn't put any price on has no estimate.
 
 ## Why these tools
 

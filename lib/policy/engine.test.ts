@@ -185,6 +185,14 @@ test("B: the customer's wider retake moves the claim to the photo estimate path"
   assert.equal(d.route, "photo_estimate");
 });
 
+test("damage the AI couldn't price shows no estimate rather than $0", () => {
+  const x = raceC();
+  x.damage.items = x.damage.items.map((i) => ({ ...i, cost_low_usd: 0, cost_high_usd: 0 }));
+  const e = run(x, claim(DEMO_CLAIMS.C)).requiredOutputs.estimate;
+  assert.equal(e.status, "withheld");
+  assert.equal(e.lowUsd, null);
+});
+
 test("C: race car goes to an adjuster, with only a provisional estimate", () => {
   const d = run(raceC(), claim(DEMO_CLAIMS.C));
   assert.equal(d.route, "adjuster");

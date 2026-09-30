@@ -228,6 +228,7 @@ function estimateOutput(
   if (!x.vehicle.vehicle_present) return withheld("No vehicle in the photos, so there's nothing to estimate.");
   if (x.damage.no_visible_damage || x.damage.items.length === 0) return withheld("No damage visible, so there's nothing to estimate.");
   if (!cost) return withheld("No damage items to price.");
+  if (cost.highUsd === 0) return withheld("The AI couldn't put a price on the damage in these photos.");
   // Still give a figure from what can be seen, clearly marked as provisional.
   const provisional = (note: string): EstimateOutput => ({ ...base, status: "provisional", lowUsd: cost.lowUsd, highUsd: cost.highUsd, drivers: cost.drivers, note });
   if (firedIds.includes("P1")) return provisional("Not a normal road car, so our repair pricing doesn't really apply. A rough guide only; an adjuster will assess it.");
