@@ -54,7 +54,7 @@ npm run eval -- --repeat 3     # also measures whether routes stay the same on r
 
 ### Deploying to Vercel
 
-Import the repo into Vercel and add `ANTHROPIC_API_KEY` as an environment variable. Optionally set `CLAUDE_MODEL` (`claude-opus-5-5` by default, or `claude-sonnet-5-5`) and `EVAL_TOKEN` to enable the server-side evaluation runner at `/api/eval-run/<EVAL_TOKEN>/<model>/all/1`. Keys are only read on the server.
+Import the repo into Vercel and add `ANTHROPIC_API_KEY` as an environment variable. If the key is an organisation-level key not tied to a workspace, also set `ANTHROPIC_WORKSPACE_ID`. Optionally set `CLAUDE_MODEL` (`claude-opus-5-5` by default, or `claude-sonnet-5-5`) and `EVAL_TOKEN` to enable the server-side evaluation runner at `/api/eval-run/<EVAL_TOKEN>/<model>/all/1`. Keys are only read on the server.
 
 ## Architecture and data flow
 

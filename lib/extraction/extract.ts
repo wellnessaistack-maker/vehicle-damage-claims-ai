@@ -6,6 +6,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 
+import { makeClient } from "./client.ts";
 import { costUsd, modelFromEnv } from "./models.ts";
 import { PROMPT_VERSION, SYSTEM_PROMPT } from "./prompt.ts";
 import { extractionSchema, type Extraction } from "./schema.ts";
@@ -60,7 +61,7 @@ export async function extract(
     throw new ExtractionError("no_api_key", "The server has no ANTHROPIC_API_KEY configured.");
   }
 
-  const client = new Anthropic({ timeout: TIMEOUT_MS, maxRetries: 1 });
+  const client = makeClient({ timeout: TIMEOUT_MS });
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];
   photos.forEach((p, i) => {
     content.push({ type: "text", text: `Photo ${i + 1} of ${photos.length}: ${p.name}` });

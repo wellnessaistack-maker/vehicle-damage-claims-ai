@@ -4,6 +4,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 
+import { makeClient } from "./client.ts";
 import { modelFromEnv } from "./models.ts";
 
 export const ASK_PROMPT_VERSION = "ask-v1";
@@ -24,7 +25,7 @@ export async function ask(input: {
   reasons: string[];
   history: { question: string; answer: string }[];
 }): Promise<{ answer: string; model: string }> {
-  const client = new Anthropic({ timeout: 30_000, maxRetries: 1 });
+  const client = makeClient({ timeout: TIMEOUT_MS });
   const model = modelFromEnv();
   const context: Anthropic.ContentBlockParam[] = [];
   input.photos.forEach((p, i) => {
