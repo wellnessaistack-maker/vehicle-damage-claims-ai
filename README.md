@@ -54,7 +54,7 @@ npm run eval -- --repeat 3     # also measures whether routes stay the same on r
 
 ### Deploying to Vercel
 
-Import the repo into Vercel and add `ANTHROPIC_API_KEY` as an environment variable. Optionally set `CLAUDE_MODEL` (`claude-opus-5-5` by default, or `claude-sonnet-5-5`). The key is only read on the server.
+Import the repo into Vercel and add `ANTHROPIC_API_KEY` as an environment variable. Optionally set `CLAUDE_MODEL` (`claude-opus-5-5` by default, or `claude-sonnet-5-5`) and `EVAL_TOKEN` to enable the server-side evaluation runner at `/api/eval-run/<EVAL_TOKEN>/<model>/all/1`. Keys are only read on the server.
 
 ## Architecture and data flow
 
@@ -136,7 +136,7 @@ Around the model:
 - **Accepted formats:** JPEG, PNG and WebP, up to 8 photos per claim. iPhone HEIC and video get a clear message instead.
 - **Vercel limits:** requests over 4.5 MB are rejected by the platform, so photos are shrunk in the browser. The function time limit is set to 60 seconds; the AI call gives up at 45 seconds and the claim goes to manual triage.
 - **Links are fetched safely:** https only, no internal, private or cloud-metadata addresses (checked when connecting and on every redirect), JPEG, PNG or WebP only, 10 MB and 8 seconds at most.
-- **The public link can spend API credits.** Anyone with it can run assessments, so the key should have a spend limit. The evaluation runner is switched off on the public production deployment.
+- **The public link can spend API credits.** Anyone with it can run assessments, so the key should have a spend limit. The evaluation runner on Vercel needs a secret `EVAL_TOKEN` in the URL and is off if that isn't set.
 
 ## Evaluation
 

@@ -44,7 +44,7 @@ export default function EvaluationPage() {
         {!current ? (
           <div className="card">
             <div className="card-body">
-              No evaluation run has been saved yet. Run <code>npm run eval</code> with an API key, or call <code>/api/eval-run</code> on a preview deployment, then commit <code>eval/results/latest.json</code>.
+              No evaluation run has been saved yet. Run <code>npm run eval</code> with an API key, then commit <code>eval/results/latest.json</code>.
             </div>
           </div>
         ) : (
