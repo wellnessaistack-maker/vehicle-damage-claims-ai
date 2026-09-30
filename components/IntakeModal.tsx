@@ -66,10 +66,10 @@ export function IntakeModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c
 
   return (
     <div className="modal-wrap" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Add claims">
+      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Add photos">
         <div className="drawer-head">
-          <h2>Add claims</h2>
-          <span className="sub">A folder is one claim. Photos are shrunk in your browser and never stored.</span>
+          <h2>Add photos</h2>
+          <span className="sub">No claim form needed. Photos are shrunk in your browser and never stored.</span>
           <span style={{ flex: 1 }} />
           <button className="btn btn-sm btn-ghost" onClick={onClose}>
             Close

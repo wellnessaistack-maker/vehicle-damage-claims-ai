@@ -26,7 +26,7 @@ export function Viewer(props: {
         <div className="viewer-empty">
           <div>
             <h2>No claim selected</h2>
-            <p>Add claims or load the demo queue to start. Each claim is assessed as soon as it arrives.</p>
+            <p>Add photos or load the demo queue to start. Each claim is assessed as soon as its photos arrive.</p>
           </div>
         </div>
       </section>

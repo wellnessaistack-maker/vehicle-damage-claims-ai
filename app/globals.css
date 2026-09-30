@@ -394,3 +394,4 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .linkish { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12.5px; text-decoration: underline; }
 .actionbar { max-height: 60vh; overflow-y: auto; }
 .picker { display: inline-flex; align-items: center; gap: 8px; }
+.modal h2 { white-space: nowrap; }
