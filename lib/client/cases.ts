@@ -47,9 +47,15 @@ export const ROUTE_OWNER: Record<Route, string> = {
   manual_triage: "manual",
 };
 
+/** How the reviewer's decision compares with the recommendation. See review-log.ts. */
+export type Agreement = "kept" | "adjusted_range" | "changed_route";
+
 export interface CaseOutcome {
   action: OutcomeAction;
   route: Route;
+  /** The route the AI and rules recommended before the reviewer acted. */
+  recommendedRoute?: Route;
+  agreement?: Agreement;
   summary: string;
   reason?: string;
   adjustedRange?: { lowUsd: number; highUsd: number };
@@ -125,7 +131,8 @@ export function firstReviewNote(d: Decision): string {
   const top = d.reasons.filter((r) => r.effect !== "review")[0];
   const e = d.requiredOutputs.estimate;
   const parts = [`${d.requiredOutputs.damageSummary}.`.replace(/\.\.$/, ".")];
-  if (e.status !== "withheld" && e.lowUsd !== null) parts.push(`Rough repair estimate ${usd(e.lowUsd)} to ${usd(e.highUsd!)}.`);
+  if (e.status === "provisional" && e.lowUsd !== null) parts.push(`Provisional estimate from what's visible: ${usd(e.lowUsd)} to ${usd(e.highUsd!)}, not reliable yet.`);
+  else if (e.status !== "withheld" && e.lowUsd !== null) parts.push(`Rough repair estimate ${usd(e.lowUsd)} to ${usd(e.highUsd!)}.`);
   parts.push(
     top
       ? `Recommended route: ${d.routeLabel}, because ${lowerFirst(top.reason ?? top.title)}`

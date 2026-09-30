@@ -229,7 +229,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
   if (e.status === "withheld") {
     return (
       <div className="est-row">
-        <span className="field-value unknown">Withheld</span>
+        <span className="field-value unknown">No estimate</span>
         <span className="note">{e.note}</span>
       </div>
     );
@@ -242,12 +242,13 @@ function Estimate({ e }: { e: EstimateOutput }) {
   return (
     <>
       <div className="est-row">
-        <div className="range" style={{ opacity: e.status === "reference_only" ? 0.7 : 1 }}>
+        <div className="range" style={{ opacity: e.status === "reference_only" || e.status === "provisional" ? 0.7 : 1 }}>
           {usd(lo)} to {usd(hi)}
+          {e.status === "provisional" && <span className="chip chip-warn est-chip">Provisional</span>}
         </div>
         <div className="rangebar est-bar" aria-label="Estimate range compared with the fast-path limit and total-loss line">
           <div className="rangebar-track" />
-          <div className="rangebar-fill" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: e.status === "reference_only" ? "var(--text-3)" : undefined }} />
+          <div className="rangebar-fill" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: e.status === "reference_only" || e.status === "provisional" ? "var(--text-3)" : undefined }} />
           <div className="rangebar-mark" style={{ left: pos(e.fastPathLimitUsd) }}>
             <span>Limit {usd(e.fastPathLimitUsd)}</span>
           </div>
@@ -259,7 +260,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
         </div>
       </div>
       <div className="hint">
-        {e.status === "reference_only" ? "For the adjuster's reference only." : "A range, never a payable amount."} {e.accuracyNote}
+        {e.status === "provisional" ? e.note : e.status === "reference_only" ? "For the adjuster's reference only." : "A range, never a payable amount."} {e.accuracyNote}
       </div>
       <details className="fold">
         <summary>Cost drivers ({e.drivers.length})</summary>
@@ -277,7 +278,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
             </li>
           ))}
         </ul>
-        <div className="note">{e.note}</div>
+        {e.status !== "provisional" && <div className="note">{e.note}</div>}
       </details>
     </>
   );

@@ -40,6 +40,7 @@ A few things the screen does that matter to a claims team:
 - **Every reason cites what it checked:** the policy record, the claim form, what the AI saw, the code's photo checks, and the rule and setting that applied. A **Checks** card compares what's on file with what the photos show and lists any photo problems, with the full tables one click away. It says plainly that coverage and deductibles are not checked here.
 - **Every claim ends with a named owner.** The reviewer approves, adjusts the range, changes the route, or hands the claim to a person or team with a note. They can ask a colleague for a second opinion without letting go of it.
 - **Corrections go back through the rules.** Raising a $2,100 estimate to $2,800 moves the claim to an adjuster instead of quietly approving it on the fast path.
+- **Every disagreement with the recommendation is tracked.** Each decision is logged with the route the tool recommended, the route the reviewer chose, and why (a changed route can't be saved without a reason). **Completed** shows how often the reviewer kept the recommendation, flags each claim where they didn't, and downloads the full review log as a CSV. Any single correction also downloads as a labelled test case for the evaluation set. See [Tracking overrides](#tracking-overrides).
 - **The customer hears from us at every step.** Each claim shows the customer's phone, email and preferred channel. The reviewer can text or email a ready-made update with the decision (neutral on the adjuster route: it never mentions a total loss or a fraud review), log a call, and chase a photo request with a reminder by its follow-up date. Everything sent is recorded in the case thread.
 - **The inbox only holds work still to do.** Finished claims move to **Completed**, photo requests to **Waiting**.
 
@@ -216,6 +217,8 @@ The AI prices each damage item from its general knowledge of US repair costs; th
 
 The range's real job is showing which side of a limit a claim falls on: low end above the fast-path limit goes to an adjuster; a range that crosses it slightly stays on the fast path with a price-check flag; a range that runs far past it (by default, a high end more than 50% above the limit) goes to an adjuster, because it's too uncertain; and a high end past the total-loss line goes to adjuster / total loss. It is never a payable amount; the reviewer approves it as a starting estimate or adjusts it, and the adjustment is recorded.
 
+**Every photo with visible damage gets a figure.** When the claim can't be priced safely yet (the photos we asked for haven't arrived, it isn't a road car, or the photos show different cars), the range is still shown, marked **Provisional**: "based only on what the photos show so far." A provisional range never drives the route, is never sent to the customer, and isn't scored in the evaluation. Only a photo with no car or no visible damage has no estimate.
+
 ## Why these tools
 
 | Option | Good at | Why we didn't start there |
@@ -331,11 +334,28 @@ These stages follow the proposal's phases. They pick up after scope and baseline
 - **Routing agreement** at least as good as two experts manage with each other.
 - **Stable over time:** the same answers on re-runs, holding across several months, not one test set.
 - **Range coverage** at an agreed rate, and no more supplements on automated claims than on staff-handled ones.
-- **Reviewer overrides** rare and falling. The prototype already records them: an adjusted range or changed route downloads as a labelled test case.
+- **Reviewer overrides** rare and falling, per segment and per reviewer. The prototype already tracks them (see [Tracking overrides](#tracking-overrides)).
 
 **Checks that stay on:** a random sample of automated claims still goes to a person (teams often start around 5 to 10%); one switch sends everything back to human review; every prompt, model and rule version is recorded so a bad change can be rolled back; anything unusual goes to a person, never the automatic path; and monitoring watches for claims bunching just under the limit, reused or AI-edited photos, and drift in overrides and supplements.
 
 For scale, published figures come from vendors and would need checking against the carrier's own data: Tractable reported 90% of Admiral Seguros' photo estimates in 2021 were produced without a human appraiser, and CCC puts photo-based estimates at about a quarter of repairable US claims in 2025.
+
+### Tracking overrides
+
+How often a reviewer disagrees with the recommendation is the most direct live measure of accuracy, so every decision is recorded the same way:
+
+| Recorded | Where it comes from |
+|---|---|
+| Recommended route | The AI and rules before the reviewer acts |
+| Reviewer's route | What they approved, changed to, or handed off with |
+| Agreement | **Kept**, **range adjusted** (new range, same route) or **route changed** (including a new range that moves the route) |
+| AI range and reviewer's range | Both kept, so estimate error can be measured |
+| Reason | Required for a route change, optional for a range |
+| Rules that fired | So disagreements can be traced to a rule or to the AI |
+
+In the prototype this lives in the browser session: **Completed** shows "Kept the recommendation on X of Y decisions", each overridden claim is flagged, the **Download review log (CSV)** button exports every decision, and the claim's decision record shows recommended against chosen, with the correction as a test case. Earlier decisions stay in the log when a claim is re-assessed after a retake.
+
+In production the same record goes to the audit log, and it drives three things: an override-rate dashboard by segment, rule and reviewer (a rising rate is the earliest warning of drift); a weekly review of changed routes, where each one is either a bug to fix or a labelled case added to the evaluation set; and the stage gates above, since "sampled reviews keep agreeing" is this number.
 
 ## Key assumptions and trade-offs
 
@@ -378,6 +398,6 @@ lib/policy/           Routing protocol, citations, cost range and rule engine, w
 lib/image/            Photo quality checks and reused-photo fingerprint
 lib/net/              Safe URL fetching, with tests
 lib/eval/             Evaluation runner and scoring
-lib/client/           Browser-side intake, worklist and error reporting
+lib/client/           Browser-side intake, worklist, customer contact, review log and error reporting
 scripts/              Evaluation command and public-folder copy
 ```

@@ -456,3 +456,12 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .thumb-x { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgb(15 23 42 / 0.7); color: #fff; font-size: 14px; line-height: 20px; padding: 0; cursor: pointer; }
 .intake-links { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.est-chip { margin-left: 8px; font-size: 11px; vertical-align: middle; }
+.wl-override { margin-right: 6px; font-size: 10px; padding: 1px 6px; }
+.wl-agree { margin: 8px 12px 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.wl-agree-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.wl-agree-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--line); }
+.wl-agree-bar .k { background: var(--ok); }
+.wl-agree-bar .a { background: var(--evidence); }
+.wl-agree-bar .c { background: var(--adjuster); }
+.wl-agree .btn { align-self: flex-start; }

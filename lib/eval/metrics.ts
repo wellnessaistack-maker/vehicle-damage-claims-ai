@@ -93,8 +93,10 @@ export function scoreCase(r: EvalCaseResult, settings: Settings): ScoredCase {
   const fired = new Set(decision?.reasons.map((x) => x.id) ?? []);
   const v = decision?.requiredOutputs.vehicle;
   const e = decision?.requiredOutputs.estimate;
-  const low = e && e.status !== "withheld" ? e.lowUsd : null;
-  const high = e && e.status !== "withheld" ? e.highUsd : null;
+  // Only ranges the rules can act on are scored; provisional ones are for display.
+  const usable = e && (e.status === "shown" || e.status === "reference_only");
+  const low = usable ? e.lowUsd : null;
+  const high = usable ? e.highUsd : null;
   return {
     result: r,
     decision,

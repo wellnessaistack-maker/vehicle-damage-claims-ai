@@ -50,7 +50,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ args?: string[
     route: d.routeLabel,
     vehicle: { make: d.requiredOutputs.vehicle.make.value, model: d.requiredOutputs.vehicle.model.value, colour: d.requiredOutputs.vehicle.colour.value, how: a.extraction.vehicle.identification_evidence },
     damage: d.requiredOutputs.damageSummary,
-    estimate: e.status === "withheld" ? `withheld: ${e.note}` : `${e.lowUsd} to ${e.highUsd} (${e.status})`,
+    estimate: e.status === "withheld" ? `withheld: ${e.note}` : `${e.lowUsd} to ${e.highUsd} (${e.status})${e.status === "provisional" ? `: ${e.note}` : ""}`,
     reasons: d.reasons.map((r) => `${r.id} ${r.title}`),
     seconds: a.timings.totalMs / 1000,
     costUsd: a.meta.costUsd,
