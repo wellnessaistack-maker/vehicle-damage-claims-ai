@@ -4,12 +4,15 @@ import { useMemo, useState } from "react";
 
 import results from "@/eval/results/latest.json";
 import { loadDemoPhoto } from "@/lib/client/intake.ts";
-import { MODELS, modelInfo } from "@/lib/extraction/models.ts";
+import { DEFAULT_MODEL, MODELS, modelInfo } from "@/lib/extraction/models.ts";
 import { scoreCase, summarise, type EvalCaseResult, type EvalRun, type FieldScore, type ScoredCase, type Summary } from "@/lib/eval/metrics.ts";
 import type { Assessment } from "@/lib/pipeline.ts";
 import { DEFAULT_SETTINGS, PROTOCOL_VERSION, ROUTE_LABELS, usd, type Route } from "@/lib/policy/protocol.ts";
 
-const RUNS = (results as { runs: EvalRun[] }).runs;
+// Newest prompt first, and the default model first within a prompt version.
+const RUNS = [...(results as { runs: EvalRun[] }).runs].sort(
+  (a, b) => b.promptVersion.localeCompare(a.promptVersion) || Number(b.model === DEFAULT_MODEL) - Number(a.model === DEFAULT_MODEL),
+);
 const ROUTES: Route[] = ["photo_estimate", "more_evidence", "adjuster", "manual_triage"];
 const REPO = "https://github.com/wellnessaistack-maker/vehicle-damage-claims-ai";
 

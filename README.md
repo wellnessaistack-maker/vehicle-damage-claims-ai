@@ -4,7 +4,7 @@ A prototype first-review tool for an auto insurer's claims team. A reviewer drop
 
 **The AI reads the photo, written rules decide the route, and a person sees why.**
 
-- Live prototype: see the link shared with this repo (Vercel)
+- Live prototype: https://vehicle-damage-claims-ai.vercel.app
 - Evaluation: the **Evaluation** page in the app, and [`eval/README.md`](eval/README.md)
 
 ## What the brief asks for, and where it is
@@ -139,7 +139,7 @@ It is never a payable amount. On the photo estimate path the reviewer approves i
 | A custom-trained vision model | Pinpointing damage, cheaply | Needs lots of labelled photos and an ML team, and doesn't give make, model or price on its own |
 | Open-source models on your servers | Photos never leave your environment | Less accurate today, and more to run |
 
-The fixed output format is the contract and the labelled set is the referee, so the model can be swapped without touching the rules or the screen. The default is Claude Opus 5.5 at low effort; the Evaluation page compares it with Claude Sonnet 5.5 on the same cases.
+The fixed output format is the contract and the labelled set is the referee, so the model can be swapped without touching the rules or the screen. The default is Claude Opus 5.5 at low effort; the Evaluation page compares it with Claude Sonnet 5.5 on the same cases (see [Latest results](#evaluation)).
 
 Around the model:
 
@@ -170,6 +170,20 @@ Around the model:
 **The repair estimate.** The real test is scoring past claims and comparing our range with the final paid cost: how often it contains the paid cost, and how wide it is, since a wide enough range always looks accurate. We can't measure that without the carrier's paid-claims data, and the app says so on every estimate. The mistake that matters most is a range on the wrong side of the fast-path limit or the total-loss line. When the estimate is too low, the shop files a supplement, as it does today; when it's near a limit, the claim gets flagged or goes to an adjuster; it is never the amount paid.
 
 **What we need from the customer.** A few hundred past claims with photos, the route each took, the final paid cost and any supplements; time from two estimating experts to label them; today's baseline for late escalations, supplements and reviewer minutes; and their eligibility rules, labour rates and vehicle values. (More detail in [Customer data and expertise needed](#customer-data-and-expertise-needed).)
+
+**Latest results** (26 cases, draft labels, September 2026). The first run on prompt v1 surfaced four problems: a customer's wider retake was judged on the close-up, a sideways photo wasn't recognised, a crumpled bumper was called structural, and a door dent got a hidden-damage allowance that pushed it over the limit. Prompt v2 and a narrower allowance fixed three of the four; the sideways photo is still missed.
+
+| | Opus 5.5, prompt v1 | Opus 5.5, prompt v2 | Sonnet 5.5, prompt v2 |
+|---|---|---|---|
+| Complex-case escalation recall | 11 of 11 | 11 of 11 | 11 of 11 |
+| Routing agreement, exact (acceptable) | 22 (23) of 26 | 23 (25) of 26 | 24 (25) of 26 |
+| Escalated when not needed | 1 of 15 | 0 of 15 | 0 of 15 |
+| Didn't guess when it couldn't tell | 17 of 17 | 17 of 17 | 16 of 17 |
+| Median time per case | 9.6 s | 9.7 s | 7.0 s |
+| Cost per case | $0.038 | $0.039 | $0.019 |
+| Repair-range coverage | not measurable without paid-claims data | | |
+
+On this set the two models route equally well, and Sonnet is faster and half the price. The prototype keeps Opus as the default because it was more careful about not guessing and kept the demo's clean claim under the fast-path limit, but 26 cases can't separate them with any confidence. At a million claims a year the difference is roughly $20,000 either way, small next to the business case, so the choice should come from the customer's own labelled claims.
 
 **Showing it in the demo.** The **Evaluation** page shows the saved run and the model comparison, and **Run the labelled set now** re-runs all 26 cases live through the same route the worklist uses, with the measures updating as results arrive. In the routing protocol panel, **Test against labelled cases** shows what a rule change would do to escalation recall before it's published.
 
