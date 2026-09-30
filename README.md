@@ -37,7 +37,7 @@ If the AI fails, the claim shows **Not assessed: manual triage**, which is today
 
 A few things the screen does that matter to a claims team:
 
-- **Every reason cites what it checked:** the policy record, the claim form, what the AI saw, the code's photo checks, and the rule and setting that applied. A policy checks table compares what's on file with what the photos show, and says plainly that coverage and deductibles are not checked here.
+- **Every reason cites what it checked:** the policy record, the claim form, what the AI saw, the code's photo checks, and the rule and setting that applied. A **Checks** card compares what's on file with what the photos show and lists any photo problems, with the full tables one click away. It says plainly that coverage and deductibles are not checked here.
 - **Every claim ends with a named owner.** The reviewer approves, adjusts the range, changes the route, or hands the claim to a person or team with a note. They can ask a colleague for a second opinion without letting go of it.
 - **Corrections go back through the rules.** Raising a $2,100 estimate to $2,800 moves the claim to an adjuster instead of quietly approving it on the fast path.
 - **The customer hears from us at every step.** Each claim shows the customer's phone, email and preferred channel. The reviewer can text or email a ready-made update with the decision (neutral on the adjuster route: it never mentions a total loss or a fraud review), log a call, and chase a photo request with a reminder by its follow-up date. Everything sent is recorded in the case thread.

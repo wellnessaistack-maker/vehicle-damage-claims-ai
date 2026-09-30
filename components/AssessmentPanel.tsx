@@ -70,12 +70,18 @@ export function AssessmentPanel(props: {
           <div className="banner-top">
             <span className="banner-label">Recommended route</span>
             <div className="banner-links">
+              {a.ok && (
+                <button className="btn btn-sm btn-ghost" onClick={props.onOpenProtocol}>
+                  Routing protocol v{d!.protocolVersion}
+                </button>
+              )}
               <button className="btn btn-sm btn-ghost" onClick={props.onOpenRecord}>
                 Decision record
               </button>
             </div>
           </div>
           <h2>{ROUTE_LABELS[route]}</h2>
+          {a.ok && <div className="banner-why">{whyLine(d!)}</div>}
           <div className="banner-flags">
             {a.ok && d!.humanReview.required && route !== "adjuster" && <span className="chip" style={{ borderColor: "#c4b5fd", color: "#6d28d9", background: "#f5f3ff" }}>Human review flagged</span>}
             {a.ok && !d!.humanReview.required && route === "photo_estimate" && <span className="chip chip-ok">No review flags</span>}
@@ -101,9 +107,8 @@ export function AssessmentPanel(props: {
         ) : (
           <>
             <RequiredOutputs d={d!} />
-            <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />
-            <PolicyChecks d={d!} />
-            <Checklist d={d!} />
+            {d!.reasons.length > 0 && <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />}
+            <Checks d={d!} />
           </>
         )}
 
@@ -164,43 +169,56 @@ function Assessing({ started }: { started: string }) {
   );
 }
 
+/** One sentence for the banner: the main reasons, most serious first. */
+function whyLine(d: Decision): string {
+  const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+  const routing = d.reasons.filter((r) => r.effect !== "review");
+  const flags = d.reasons.filter((r) => r.effect === "review");
+  if (routing.length === 0) {
+    return flags.length
+      ? `No rule stopped the fast path, but a person should check: ${flags.map((r) => lower(r.title)).join("; ")}.`
+      : "No rule stopped the fast path: the whole car and damage are visible, nothing looks serious, and the estimate is under the limit.";
+  }
+  const shown = routing.slice(0, 2).map((r) => lower(r.title));
+  const more = routing.length - shown.length;
+  return `Because: ${shown.join("; ")}${more > 0 ? `; and ${more} more below` : ""}.`;
+}
+
 function RequiredOutputs({ d }: { d: Decision }) {
   const v = d.requiredOutputs.vehicle;
-  const field = (label: string, f: { value: string | null; note?: string }) => (
-    <div>
-      <div className="section-label">{label}</div>
-      <div className={`field-value ${f.value ? "" : "unknown"}`}>{f.value ?? "Not determinable"}</div>
-      {f.note && <div className="field-note">{f.value ? f.note : f.note === "Not determinable from these photos" ? "Not guessed from these photos" : f.note}</div>}
+  const identified = !!(v.make.value || v.model.value);
+  const basis = [v.make.value ? v.make.note : null, v.yearRange ? `likely ${v.yearRange}` : null, v.vehicleClass !== "passenger_car" && v.vehicleClass !== "none" ? v.vehicleClass.replace(/_/g, " ") : null]
+    .filter(Boolean)
+    .join(" · ");
+  const cell = (label: string, f: { value: string | null }) => (
+    <div className="kv-cell">
+      <span className="kv-l">{label}</span>
+      <span className={f.value ? "kv-v" : "kv-v unknown"}>{f.value ?? "Not determinable"}</span>
     </div>
   );
   return (
     <div className="card">
       <div className="card-head">
-        <h3>First review</h3>
-        <span className="sub">Pre-filled for the reviewer</span>
+        <h3>What the AI found</h3>
+        <span className="sub">The three outputs you asked for, pre-filled for the reviewer</span>
       </div>
-      <div className="card-body">
-        <div className="section-label" style={{ marginBottom: 8 }}>
-          Vehicle metadata
-        </div>
-        <div className="fields">
-          {field("Make", v.make)}
-          {field("Model", v.model)}
-          {field("Colour", v.colour)}
-        </div>
-        {(v.yearRange || (v.vehicleClass !== "passenger_car" && v.vehicleClass !== "none")) && (
-          <div className="field-note" style={{ marginTop: 6 }}>
-            {v.yearRange && <>Likely years {v.yearRange}. </>}
-            {v.vehicleClass !== "passenger_car" && v.vehicleClass !== "none" && <>Vehicle type: {v.vehicleClass.replace(/_/g, " ")}.</>}
+      <div className="card-body outputs">
+        <div className="out-vehicle">
+          <div className="section-label">Vehicle</div>
+          <div className="kv-grid">
+            {cell("Make", v.make)}
+            {cell("Model", v.model)}
+            {cell("Colour", v.colour)}
           </div>
-        )}
+          <div className="field-note">{identified ? basis : basis ? `Not guessed from these photos · ${basis}` : "Not guessed from these photos"}</div>
+        </div>
+        <div className="out-damage">
+          <div className="section-label">Damage</div>
+          <div className="summary">{d.requiredOutputs.damageSummary}</div>
+        </div>
       </div>
       <div className="card-body">
-        <div className="section-label">Damage summary</div>
-        <div className="summary">{d.requiredOutputs.damageSummary}</div>
-      </div>
-      <div className="card-body">
-        <div className="section-label">Estimated repair cost (rough AI estimate)</div>
+        <div className="section-label">Rough repair estimate</div>
         <Estimate e={d.requiredOutputs.estimate} />
       </div>
     </div>
@@ -210,12 +228,10 @@ function RequiredOutputs({ d }: { d: Decision }) {
 function Estimate({ e }: { e: EstimateOutput }) {
   if (e.status === "withheld") {
     return (
-      <>
-        <div className="field-value unknown">Withheld</div>
-        <div className="note" style={{ marginTop: 2 }}>
-          {e.note}
-        </div>
-      </>
+      <div className="est-row">
+        <span className="field-value unknown">Withheld</span>
+        <span className="note">{e.note}</span>
+      </div>
     );
   }
   const lo = e.lowUsd!;
@@ -225,52 +241,61 @@ function Estimate({ e }: { e: EstimateOutput }) {
   const showTl = e.totalLossLineUsd !== null && e.totalLossLineUsd <= max;
   return (
     <>
-      <div className="range" style={{ opacity: e.status === "reference_only" ? 0.7 : 1 }}>
-        {usd(lo)} to {usd(hi)}
-        <small>{e.status === "reference_only" ? "adjuster reference only" : "range, not a payable amount"}</small>
-      </div>
-      <div className="rangebar" aria-label="Estimate range compared with the fast-path limit and total-loss line">
-        <div className="rangebar-track" />
-        <div className="rangebar-fill" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: e.status === "reference_only" ? "var(--text-3)" : undefined }} />
-        <div className="rangebar-mark" style={{ left: pos(e.fastPathLimitUsd) }}>
-          <span>Fast-path limit {usd(e.fastPathLimitUsd)}</span>
+      <div className="est-row">
+        <div className="range" style={{ opacity: e.status === "reference_only" ? 0.7 : 1 }}>
+          {usd(lo)} to {usd(hi)}
         </div>
-        {showTl && (
-          <div className="rangebar-mark tl" style={{ left: pos(e.totalLossLineUsd!) }}>
-            <span>Total-loss line {usd(e.totalLossLineUsd!)}</span>
+        <div className="rangebar est-bar" aria-label="Estimate range compared with the fast-path limit and total-loss line">
+          <div className="rangebar-track" />
+          <div className="rangebar-fill" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: e.status === "reference_only" ? "var(--text-3)" : undefined }} />
+          <div className="rangebar-mark" style={{ left: pos(e.fastPathLimitUsd) }}>
+            <span>Limit {usd(e.fastPathLimitUsd)}</span>
           </div>
-        )}
+          {showTl && (
+            <div className="rangebar-mark tl" style={{ left: pos(e.totalLossLineUsd!) }}>
+              <span>Total loss {usd(e.totalLossLineUsd!)}</span>
+            </div>
+          )}
+        </div>
       </div>
-      <div className="section-label" style={{ marginTop: 14 }}>
-        Main drivers
+      <div className="hint">
+        {e.status === "reference_only" ? "For the adjuster's reference only." : "A range, never a payable amount."} {e.accuracyNote}
       </div>
-      <ul className="drivers">
-        {e.drivers.map((dr) => (
-          <li key={dr.label}>
-            <span>
-              {dr.label}
-              <span className={`chip src ${dr.source === "ai_estimate" ? "chip-info" : ""}`}>{dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}</span>
-            </span>
-            <span style={{ whiteSpace: "nowrap" }}>
-              {dr.lowUsd === 0 ? "up to " : `${usd(dr.lowUsd)} to `}
-              {usd(dr.highUsd)}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="note">{e.note}</div>
-      <div className="note-strong">{e.accuracyNote}</div>
+      <details className="fold">
+        <summary>Cost drivers ({e.drivers.length})</summary>
+        <ul className="drivers">
+          {e.drivers.map((dr) => (
+            <li key={dr.label}>
+              <span>
+                {dr.label}
+                <span className={`chip src ${dr.source === "ai_estimate" ? "chip-info" : ""}`}>{dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}</span>
+              </span>
+              <span style={{ whiteSpace: "nowrap" }}>
+                {dr.lowUsd === 0 ? "up to " : `${usd(dr.lowUsd)} to `}
+                {usd(dr.highUsd)}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="note">{e.note}</div>
+      </details>
     </>
   );
 }
+
+const GROUPS: { effect: "adjuster" | "more_evidence" | "review"; label: string }[] = [
+  { effect: "adjuster", label: "Sends it to an adjuster" },
+  { effect: "more_evidence", label: "Asks for more photos" },
+  { effect: "review", label: "Flags it for a person to check" },
+];
 
 function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => void }) {
   return (
     <div className="card">
       <div className="card-head">
         <h3>Why this route</h3>
-        <button className="btn btn-sm btn-ghost" onClick={onOpenProtocol}>
-          Routing protocol v{d.protocolVersion}
+        <button className="btn btn-sm btn-ghost" onClick={onOpenProtocol} title="Open the routing protocol">
+          {d.reasons.length} rule{d.reasons.length === 1 ? "" : "s"} fired
         </button>
       </div>
       <div className="card-body">
@@ -279,97 +304,125 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
             No rule stopped this claim from taking the photo estimate path. The photos show the vehicle and the whole damaged area, nothing suggests hidden or serious damage, and the estimate is under the fast-path limit.
           </div>
         ) : (
-          <ul className="reasons">
-            {d.reasons.map((r) => (
-              <li key={r.id} className={`reason effect-${r.effect}`}>
-                <span className="dot" />
-                <div>
-                  <div className="reason-title">
-                    {r.title}
-                    <span className="rid">{r.id}</span>
-                    <span className="chip" style={{ marginLeft: 6 }}>
-                      {r.effect === "adjuster" ? "Sends to adjuster" : r.effect === "more_evidence" ? "Asks for photos" : "Flags for review"}
-                    </span>
-                  </div>
-                  <div className="reason-text">{r.reason}</div>
-                  {r.evidence && <div className="reason-evidence">Seen: {r.evidence}</div>}
-                  {r.citations && (
-                    <details className="cites">
-                      <summary>Checked against</summary>
-                      <ul>
-                        {r.citations.map((c, i) => (
-                          <li key={i}>
-                            <span className={`src src-${c.source.split(" ")[0].toLowerCase()}`}>{c.source}</span> {c.text}
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
+          GROUPS.map((g) => {
+            const rs = d.reasons.filter((r) => r.effect === g.effect);
+            if (!rs.length) return null;
+            return (
+              <div key={g.effect} className={`reason-group effect-${g.effect}`}>
+                <div className="reason-group-head">
+                  <span className="dot" /> {g.label} <span className="n">{rs.length}</span>
                 </div>
-              </li>
-            ))}
-          </ul>
+                <ul className="reasons compact">
+                  {rs.map((r) => (
+                    <li key={r.id} className={`reason effect-${r.effect}`}>
+                      <div>
+                        <span className="reason-title">{r.title}</span>
+                        <span className="rid">{r.id}</span>
+                        <span className="reason-text"> {r.reason}</span>
+                        {(r.evidence || r.citations) && (
+                          <details className="cites">
+                            <summary>What it saw and checked</summary>
+                            {r.evidence && <div className="reason-evidence">Seen: {r.evidence}</div>}
+                            {r.citations && (
+                              <ul>
+                                {r.citations.map((c, k) => (
+                                  <li key={k}>
+                                    <span className={`src src-${c.source.split(" ")[0].toLowerCase()}`}>{c.source}</span> {c.text}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </details>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
   );
 }
 
-function PolicyChecks({ d }: { d: Decision }) {
+/** Policy checks and photo evidence in one card: exceptions up front, the full tables one click away. */
+function Checks({ d }: { d: Decision }) {
   const icon = { match: "✓", mismatch: "✕", not_compared: "?", info: "i" } as const;
+  const compared = d.policyChecks.filter((p) => p.status !== "info");
+  const mismatch = compared.some((p) => p.status === "mismatch");
+  const failed = d.evidenceChecklist.filter((c) => !c.ok);
+  const passed = d.evidenceChecklist.length - failed.length;
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Policy and claim checks</h3>
-        <span className="sub">What&apos;s on file compared with what the photos show. Nothing here decides coverage.</span>
+        <h3>Checks</h3>
+        <span className="sub">Policy on file vs. the photos, and whether the photos are good enough. Nothing here decides coverage.</span>
       </div>
-      <div className="card-body">
-        <table className="t">
-          <thead>
-            <tr>
-              <th />
-              <th>Check</th>
-              <th>On file</th>
-              <th>From the photos and rules</th>
-            </tr>
-          </thead>
-          <tbody>
-            {d.policyChecks.map((p) => (
-              <tr key={p.label}>
-                <td className={`pc pc-${p.status}`}>{icon[p.status]}</td>
-                <td>
-                  <b>{p.label}</b>
-                </td>
-                <td>{p.onFile}</td>
-                <td>
-                  {p.observed}
-                  {p.note && <div className="hint">{p.note}</div>}
-                </td>
-              </tr>
+      <div className="card-body checks">
+        <div className="check-row">
+          <span className="check-label">Policy and claim</span>
+          <span className="check-chips">
+            {compared.map((p) => (
+              <span key={p.label} className={`pchip pchip-${p.status}`} title={`On file: ${p.onFile}. From the photos: ${p.observed}`}>
+                {icon[p.status]} {p.label}
+              </span>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function Checklist({ d }: { d: Decision }) {
-  return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Evidence checklist</h3>
-        <span className="sub">Checked by code and the AI&apos;s observations, not its confidence</span>
-      </div>
-      <div className="card-body">
-        <ul className="checklist">
-          {d.evidenceChecklist.map((c) => (
-            <li key={c.label} title={c.detail}>
-              <span className={c.ok ? "tick" : "cross"}>{c.ok ? "✓" : "✕"}</span>
-              <span>{c.label}</span>
-            </li>
-          ))}
-        </ul>
+            <span className="pchip pchip-info" title="This tool compares facts to route the claim. It never decides what the policy covers or pays.">
+              i Coverage checked in the claims system
+            </span>
+          </span>
+        </div>
+        <div className="check-row">
+          <span className="check-label">Photo evidence</span>
+          <span className="check-chips">
+            <span className={`pchip ${failed.length ? "pchip-neutral" : "pchip-match"}`}>
+              {failed.length ? `${passed} of ${d.evidenceChecklist.length} passed` : `✓ All ${d.evidenceChecklist.length} passed`}
+            </span>
+            {failed.map((c) => (
+              <span key={c.label} className="pchip pchip-mismatch" title={c.detail}>
+                ✕ {c.label}
+              </span>
+            ))}
+          </span>
+        </div>
+        <details className="fold" open={mismatch}>
+          <summary>All checks, with what's on file</summary>
+          <table className="t">
+            <thead>
+              <tr>
+                <th />
+                <th>Check</th>
+                <th>On file</th>
+                <th>From the photos and rules</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.policyChecks.map((p) => (
+                <tr key={p.label}>
+                  <td className={`pc pc-${p.status}`}>{icon[p.status]}</td>
+                  <td>
+                    <b>{p.label}</b>
+                  </td>
+                  <td>{p.onFile}</td>
+                  <td>
+                    {p.observed}
+                    {p.note && <div className="hint">{p.note}</div>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <ul className="checklist" style={{ marginTop: 10 }}>
+            {d.evidenceChecklist.map((c) => (
+              <li key={c.label} title={c.detail}>
+                <span className={c.ok ? "tick" : "cross"}>{c.ok ? "✓" : "✕"}</span>
+                <span>{c.label}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
     </div>
   );
