@@ -1,8 +1,8 @@
 # Vehicle damage claims AI
 
-A prototype first-review tool for an auto insurer's claims team. A reviewer drops in photos of a damaged vehicle and gets the make, model and colour, a short damage summary and a rough repair-cost range. The tool then recommends where the claim goes next, the **photo estimate path**, a **request for more evidence**, or an **adjuster / total loss** review, and explains why in plain language.
+A customer takes a photo of their damaged car. AI reads it in seconds and returns what you asked for: the make, model and colour, a short damage summary and a rough repair-cost range. The tool then uses those answers to support your reviewer's next decision: **approve the photo estimate** as a starting point, **ask the customer for the right photos**, or **send the claim to an adjuster**, with the reasons in plain language.
 
-**The AI reads the photo, written rules decide the route, and a person sees why.**
+**The AI reads the photo, written rules check it, and a person approves or routes the claim.**
 
 - Live prototype: https://vehicle-damage-claims-ai.vercel.app
 - Evaluation: the **Evaluation** page in the app, and [`eval/README.md`](eval/README.md)
@@ -23,7 +23,9 @@ A prototype first-review tool for an auto insurer's claims team. A reviewer drop
 
 ## The product idea
 
-Before AI prices a claim, it should decide where the claim goes. That first routing decision is where most of the value is: simple claims move faster, customers are asked for the right photos once, and complex claims reach a person before anyone writes an estimate.
+You asked whether AI can read a customer's photo and help your team handle the claim. It can, and the most useful place to put those answers is the first decision a reviewer makes: can this claim be approved on the photo estimate path, or does it need something else first? Getting that decision right is where most of the value is: simple claims move faster, customers are asked for the right photos once, and complex claims reach a person before anyone writes an estimate.
+
+"Approve" here always means approving the route and the estimate range as a starting point for the estimating team. The tool never approves a payment.
 
 | Route | What happens |
 |---|---|

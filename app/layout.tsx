@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Claims first review",
-  description: "Prototype: AI reads vehicle damage photos, written rules decide where the claim goes, and a person sees why.",
+  description: "Prototype: a customer's photo in, AI reads the car and the damage, and your reviewer approves or routes the claim with the reasons in view.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
