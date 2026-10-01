@@ -57,6 +57,7 @@ export interface EstimateOutput {
   /** The most likely cost, and the cautious figure once possible extras are added. */
   likelyUsd?: number;
   ceilingUsd?: number;
+  workings?: string[];
 }
 
 export interface ChecklistItem {
@@ -183,6 +184,7 @@ function reviewerCost(ai: CostRange, r: { lowUsd: number; highUsd: number }): Co
     // The reviewer's range is their judgment of the full cost, extras included.
     possibleExtraUsd: 0,
     ceilingUsd: r.highUsd,
+    workings: [`The reviewer set the range to ${usd(r.lowUsd)} to ${usd(r.highUsd)}.`],
     drivers: [
       { label: "Reviewer's adjusted range", lowUsd: r.lowUsd, highUsd: r.highUsd, source: "rule_adjustment", note: `Replaces the estimated range of ${usd(ai.lowUsd)} to ${usd(ai.highUsd)}` },
     ],
@@ -235,7 +237,7 @@ function estimateOutput(
     accuracyNote: ACCURACY_NOTE,
   };
   const withheld = (note: string): EstimateOutput => ({ ...base, status: "withheld", lowUsd: null, highUsd: null, drivers: [], note });
-  const priced = cost ? { pricing: cost.pricing, aiItemsUsd: cost.aiItemsUsd, likelyUsd: cost.likelyUsd, ceilingUsd: cost.ceilingUsd } : {};
+  const priced = cost ? { pricing: cost.pricing, aiItemsUsd: cost.aiItemsUsd, likelyUsd: cost.likelyUsd, ceilingUsd: cost.ceilingUsd, workings: cost.workings } : {};
 
   if (!x.vehicle.vehicle_present) return withheld("No vehicle in the photos, so there's nothing to estimate.");
   if (x.damage.no_visible_damage || x.damage.items.length === 0) return withheld("No damage visible, so there's nothing to estimate.");

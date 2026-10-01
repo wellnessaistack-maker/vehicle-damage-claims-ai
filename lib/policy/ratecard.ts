@@ -75,69 +75,115 @@ export interface Rates {
   tier: PartsTier;
 }
 
+export interface PriceOption {
+  label: "Repair" | "Replace" | "Refinish";
+  usd: number;
+  /** "4.5 h body x $65 + 3.5 h paint x $110 = $678" */
+  math: string;
+  chosen: boolean;
+}
+
 export interface PricedItem {
-  /** The cost of the repair as described. */
+  /** The cost of the repair as priced. */
   likelyUsd: number;
   /** What replacing it would add, when the AI could only flag it for inspection. */
   possibleExtraUsd: number;
-  /** "3.5 h body, 3.5 h paint" */
+  possibleExtraMath?: string;
+  /** "4.5 h body, 3.5 h paint" */
   breakdown: string;
+  /** The working for the chosen option. */
+  math: string;
+  /** Repair against replace, when both are possible for this part. */
+  options: PriceOption[];
+  /** Why the chosen option, when it differs from the AI's call. */
+  decision?: string;
 }
 
 /** Price one damage item from the rate card, or null if the card has no line for it. */
 export function priceItem(item: DamageItem, r: Rates): PricedItem | null {
   const card = RATE_CARD[item.area];
   if (!card) return null;
-  const parts = PARTS_TIER_FACTOR[r.tier];
+  const partsFactor = PARTS_TIER_FACTOR[r.tier];
   const paintRate = r.labourRateUsd + r.paintMaterialsUsd;
-  let body = 0;
-  let paint = 0;
-  let part = 0;
+  const work = (body: number, paint: number, part: number) => job(body + (paint > 0 ? SETUP_HOURS : 0), paint, part, r.labourRateUsd, paintRate);
 
-  switch (item.likely_repair) {
-    case "refinish_only":
-      // The whole panel is refinished whatever the size of the scuff.
-      paint = card.paintHours ?? 0;
-      break;
-    case "repair_and_refinish":
-      body = (card.repairHours ?? card.replaceHours ?? 0) * SEVERITY_FACTOR[item.severity];
-      paint = card.paintHours ?? 0;
-      break;
-    case "replace":
-      body = card.replaceHours ?? 0;
-      part = (card.partUsd ?? 0) * parts;
-      break;
-    case "replace_and_refinish":
-      body = card.replaceHours ?? 0;
-      part = (card.partUsd ?? 0) * parts;
-      paint = card.paintHours ?? 0;
-      break;
-    case "calibrate":
-      body = CALIBRATE.hours;
-      part = CALIBRATE.usd;
-      break;
-    case "inspect": {
-      // We can't see behind the panel yet: price the inspection, and show the replacement as a possible extra.
-      const hrs = card.replaceHours ?? card.repairHours ?? 0;
-      const partCost = (card.partUsd ?? 0) * parts;
-      return {
-        likelyUsd: INSPECT_HOURS * r.labourRateUsd,
-        possibleExtraUsd: hrs * r.labourRateUsd + partCost,
-        breakdown: `${fmt(INSPECT_HOURS)} h to look behind it; replacing it would add ${fmt(hrs)} h body${partCost ? ` and a ${money(partCost)} part` : ""}`,
-      };
-    }
+  if (item.likely_repair === "inspect") {
+    // We can't see behind the panel yet: price the inspection, and show the replacement as a possible extra.
+    const hrs = card.replaceHours ?? card.repairHours ?? 0;
+    const partCost = (card.partUsd ?? 0) * partsFactor;
+    const look = job(INSPECT_HOURS, 0, 0, r.labourRateUsd, paintRate);
+    const replace = job(hrs, 0, partCost, r.labourRateUsd, paintRate);
+    return {
+      likelyUsd: look.usd,
+      possibleExtraUsd: replace.usd,
+      possibleExtraMath: replace.math,
+      breakdown: `${fmt(INSPECT_HOURS)} h to look behind it`,
+      math: look.math,
+      options: [],
+    };
+  }
+  if (item.likely_repair === "calibrate") {
+    const c = job(CALIBRATE.hours, 0, CALIBRATE.usd, r.labourRateUsd, paintRate, "scan");
+    return { likelyUsd: c.usd, possibleExtraUsd: 0, breakdown: c.parts, math: c.math, options: [] };
   }
 
-  // Each painted panel also needs trim off and back on, and masking.
-  if (paint > 0) body += SETUP_HOURS;
-  const likelyUsd = body * r.labourRateUsd + paint * paintRate + part;
-  if (likelyUsd <= 0) return null;
+  const part = (card.partUsd ?? 0) * partsFactor;
+  const repair = card.repairHours !== undefined ? work(card.repairHours * SEVERITY_FACTOR[item.severity], card.paintHours ?? 0, 0) : null;
+  const replace = card.replaceHours !== undefined ? work(card.replaceHours, card.paintHours ?? 0, part) : null;
 
+  let chosen: { kind: PriceOption["label"]; j: Job } | null = null;
+  let decision: string | undefined;
+  if (item.likely_repair === "refinish_only") {
+    // The whole panel is refinished whatever the size of the scuff.
+    if (card.paintHours) chosen = { kind: "Refinish", j: work(0, card.paintHours, 0) };
+  } else if (item.likely_repair === "repair_and_refinish") {
+    if (repair) chosen = { kind: "Repair", j: repair };
+    // An estimator replaces a part when repairing it would cost more.
+    if (repair && replace && replace.usd < repair.usd) {
+      chosen = { kind: "Replace", j: replace };
+      decision = "Repairing would cost more than replacing, so it's priced as a replacement.";
+    }
+    if (!chosen && replace) chosen = { kind: "Replace", j: replace };
+  } else {
+    // The AI judged it needs replacing (torn, missing or crushed), so repair isn't an option.
+    if (replace) chosen = { kind: "Replace", j: replace };
+  }
+  if (!chosen || chosen.j.usd <= 0) return null;
+
+  const options: PriceOption[] = [];
+  if (chosen.kind === "Refinish") options.push({ label: "Refinish", usd: chosen.j.usd, math: chosen.j.math, chosen: true });
+  if (repair && chosen.kind !== "Refinish") options.push({ label: "Repair", usd: repair.usd, math: repair.math, chosen: chosen.kind === "Repair" });
+  if (replace && chosen.kind !== "Refinish") options.push({ label: "Replace", usd: replace.usd, math: replace.math, chosen: chosen.kind === "Replace" });
+  if (!decision && chosen.kind === "Replace" && repair && (item.likely_repair === "replace" || item.likely_repair === "replace_and_refinish")) {
+    decision = "The AI judged this part needs replacing, not repairing.";
+  }
+  return { likelyUsd: chosen.j.usd, possibleExtraUsd: 0, breakdown: chosen.j.parts, math: chosen.j.math, options, decision };
+}
+
+interface Job {
+  usd: number;
+  math: string;
+  parts: string;
+}
+
+/** Labour, paint and a part, with the working shown. */
+function job(body: number, paint: number, part: number, rate: number, paintRate: number, partWord = "part"): Job {
+  const terms: string[] = [];
   const bits: string[] = [];
-  if (body > 0) bits.push(`${fmt(body)} h body`);
-  if (paint > 0) bits.push(`${fmt(paint)} h paint`);
-  if (part > 0) bits.push(item.likely_repair === "calibrate" ? `scan ${money(part)}` : `part ${money(part)}`);
-  return { likelyUsd, possibleExtraUsd: 0, breakdown: bits.join(", ") };
+  if (body > 0) {
+    terms.push(`${fmt(body)} h body x ${money(rate)}`);
+    bits.push(`${fmt(body)} h body`);
+  }
+  if (paint > 0) {
+    terms.push(`${fmt(paint)} h paint x ${money(paintRate)}`);
+    bits.push(`${fmt(paint)} h paint`);
+  }
+  if (part > 0) {
+    terms.push(`${money(part)} ${partWord}`);
+    bits.push(`${partWord} ${money(part)}`);
+  }
+  const usd = body * rate + paint * paintRate + part;
+  return { usd, math: `${terms.join(" + ")} = ${money(usd)}`, parts: bits.join(", ") };
 }
 
 const fmt = (n: number) => (Math.round(n * 10) / 10).toString();
