@@ -106,6 +106,7 @@ Colour key: green is plain code, orange is the AI, purple is people.
 
 **The repair estimate.** The AI describes each repair; the carrier's rate card prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, priced at the carrier's rates ($65/h labour and $45 per paint hour by default), with parts adjusted by the policy's vehicle value. The same photo now prices at $950 to $1,300 on every call.
 
+- **Each line shows its working:** what the AI saw in the photo, the hours and rates ("4.5 h body x $65 + 3.5 h paint x $110 = $678"), and the repair cost against the replacement cost, with the one priced marked. If repairing a part would cost more than replacing it, it's priced as a replacement.
 - **The range covers what the photos show,** 15% either side of the most likely cost (a setting).
 - **What the photos can't show is listed separately** as possible extras: damage behind the panels, parts the AI flagged for inspection, sensor recalibration. The routing rules use the cautious figure that includes them.
 - **The AI's own price is kept as a cross-check,** and used for parts the rate card doesn't cover and for vehicles that aren't road cars.

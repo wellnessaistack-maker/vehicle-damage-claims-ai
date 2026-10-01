@@ -266,7 +266,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
       </div>
       {e.likelyUsd !== undefined && (
         <div className="est-likely">
-          Most likely about <b>{usd(e.likelyUsd)}</b> for the damage the photos show.
+          Most likely <b>{usd(e.likelyUsd)}</b> for the damage the photos show.
           {ceil > hi && <> Could reach {usd(ceil)} if the possible extras below are found.</>}
         </div>
       )}
@@ -294,15 +294,30 @@ function Estimate({ e }: { e: EstimateOutput }) {
         </summary>
         <ul className="drivers">
           {visible.map((dr) => (
-            <li key={dr.label}>
-              <span>
-                {dr.label}
-                <span className={`chip src ${dr.source === "rule_adjustment" ? "" : "chip-info"}`}>
-                  {dr.source === "rate_card" ? "Rate card" : dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}
+            <li key={dr.label} className="rich">
+              <div className="drv-top">
+                <span>
+                  {dr.label}
+                  <span className={`chip src ${dr.source === "rule_adjustment" ? "" : "chip-info"}`}>
+                    {dr.source === "rate_card" ? "Rate card" : dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}
+                  </span>
                 </span>
-                {dr.note && <span className="driver-note">{dr.note}</span>}
-              </span>
-              <span style={{ whiteSpace: "nowrap" }}>{one(dr)}</span>
+                <span className="drv-amt">{one(dr)}</span>
+              </div>
+              {dr.evidence && <div className="driver-note">Seen in the photo: &ldquo;{dr.evidence}&rdquo;</div>}
+              {dr.options ? (
+                <div className="driver-options">
+                  {dr.options.map((o) => (
+                    <div key={o.label} className={o.chosen ? "chosen" : ""}>
+                      <b>{o.label}{o.chosen ? " (priced)" : ""}:</b> {o.math}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                dr.math && <div className="driver-math">{dr.math}</div>
+              )}
+              {dr.decision && <div className="driver-note">{dr.decision}</div>}
+              {dr.source !== "rate_card" && dr.note && <div className="driver-note">{dr.note}</div>}
             </li>
           ))}
         </ul>
@@ -311,16 +326,25 @@ function Estimate({ e }: { e: EstimateOutput }) {
             <div className="drivers-head">Possible extras, not in the likely range</div>
             <ul className="drivers possible">
               {possible.map((dr) => (
-                <li key={dr.label}>
-                  <span>
-                    {dr.label}
-                    {dr.note && <span className="driver-note">{dr.note}</span>}
-                  </span>
-                  <span style={{ whiteSpace: "nowrap" }}>{one(dr)}</span>
+                <li key={dr.label} className="rich">
+                  <div className="drv-top">
+                    <span>{dr.label}</span>
+                    <span className="drv-amt">{one(dr)}</span>
+                  </div>
+                  {dr.note && <div className="driver-note">{dr.note}</div>}
+                  {dr.math && <div className="driver-math">{dr.math}</div>}
                 </li>
               ))}
             </ul>
           </>
+        )}
+        {e.workings && e.workings.length > 0 && (
+          <div className="workings">
+            <div className="drivers-head">The math</div>
+            {e.workings.map((w) => (
+              <div key={w}>{w}</div>
+            ))}
+          </div>
         )}
         {e.status !== "provisional" && <div className="note">{e.note}</div>}
       </details>

@@ -171,6 +171,16 @@ test("the rate card prices the described repair, so different AI prices for the 
   assert.notEqual(run(a, claim(), [goodPhoto()], aiOnly).requiredOutputs.estimate.highUsd, run(b, claim(), [goodPhoto()], aiOnly).requiredOutputs.estimate.highUsd);
 });
 
+test("each priced line shows what the AI saw, the math, and repair against replace", () => {
+  const e = run(civicA()).requiredOutputs.estimate;
+  const door = e.drivers[0];
+  assert.match(door.evidence!, /Crease/);
+  assert.deepEqual(door.options!.map((o) => [o.label, o.chosen]), [["Repair", true], ["Replace", false]]);
+  assert.match(door.options![0].math, /h body x \$65 .* h paint x \$110 = \$/);
+  assert.ok(door.options![1].usd > door.options![0].usd, "replacing the door costs more than repairing it");
+  assert.match(e.workings!.join(" "), /Repairs add up to .* less and plus 15%/);
+});
+
 test("the carrier's labour rate changes the estimate", () => {
   const base = run(civicA()).requiredOutputs.estimate;
   const dearer = run(civicA(), claim(), [goodPhoto()], clampSettings({ labourRateUsd: 95 })).requiredOutputs.estimate;

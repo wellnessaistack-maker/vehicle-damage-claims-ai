@@ -15,8 +15,8 @@
 // The range is never a payable amount.
 
 import type { Area, DamageItem, Extraction } from "../extraction/schema.ts";
-import type { Settings } from "./protocol.ts";
-import { partsTier, priceItem, type PartsTier } from "./ratecard.ts";
+import { usd, type Settings } from "./protocol.ts";
+import { partsTier, priceItem, type PartsTier, type PriceOption } from "./ratecard.ts";
 
 export interface CostDriver {
   label: string;
@@ -26,6 +26,14 @@ export interface CostDriver {
   note?: string;
   /** "possible": not in the likely range; could be added if hidden damage is confirmed. */
   kind?: "visible" | "possible";
+  /** What in the photo shows this, in the AI's words. */
+  evidence?: string;
+  /** The working: "4.5 h body x $65 + 3.5 h paint x $110 = $678". */
+  math?: string;
+  /** Repair against replace, when both are possible. */
+  options?: PriceOption[];
+  /** Why the chosen option, when it isn't simply the AI's call. */
+  decision?: string;
 }
 
 export interface CostRange {
@@ -42,6 +50,8 @@ export interface CostRange {
   pricing: { source: "rate_card" | "ai"; tier: PartsTier; labourRateUsd: number; bandPct: number };
   /** The AI's own total for the same items, before extras. A cross-check on the rate card. */
   aiItemsUsd: { lowUsd: number; highUsd: number };
+  /** How the range and the cautious figure were worked out, step by step. */
+  workings: string[];
 }
 
 const ROUND_TO = 50;
@@ -67,7 +77,18 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
     aiHigh += high;
     const card = onCard ? priceItem(item, rates) : null;
     if (card) {
-      visible.push({ label: describeItem(item), lowUsd: card.likelyUsd, highUsd: card.likelyUsd, source: "rate_card", note: card.breakdown, kind: "visible" });
+      visible.push({
+        label: describeItem(item),
+        lowUsd: card.likelyUsd,
+        highUsd: card.likelyUsd,
+        source: "rate_card",
+        note: card.breakdown,
+        kind: "visible",
+        evidence: item.visible_evidence,
+        math: card.math,
+        options: card.options.length > 1 ? card.options : undefined,
+        decision: card.decision,
+      });
       if (card.possibleExtraUsd > 0) {
         possible.push({
           label: `If the ${partName(item)} needs replacing`,
@@ -76,6 +97,7 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
           source: "rate_card",
           note: "The AI flagged it for inspection: damage behind it can't be seen yet",
           kind: "possible",
+          math: card.possibleExtraMath,
         });
       }
     } else {
@@ -86,6 +108,8 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
         source: "ai_estimate",
         note: s.pricing !== "rate_card" ? undefined : onCard ? "Not on the rate card, so the AI's own price" : "Rate card covers road cars only, so the AI's own price",
         kind: "visible",
+        evidence: item.visible_evidence,
+        math: `The AI's own estimate: ${usd(low)} to ${usd(high)}`,
       });
     }
   }
@@ -109,6 +133,7 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
       source: "rule_adjustment",
       note: "Damage is near driver-assistance sensors. Placeholder amount",
       kind: "possible",
+      math: `Protocol setting: ${usd(s.sensorCalibrationLowUsd)} to ${usd(s.sensorCalibrationHighUsd)}`,
     });
   }
 
@@ -126,6 +151,7 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
       source: "rule_adjustment",
       note: `Front or rear impact, or severe damage: up to ${s.hiddenDamageAllowancePct}% more. Placeholder`,
       kind: "possible",
+      math: `${s.hiddenDamageAllowancePct}% x ${usd(base)} = ${usd(base * (s.hiddenDamageAllowancePct / 100))}`,
     });
   }
 
@@ -139,19 +165,30 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
       source: "rule_adjustment",
       note: `The photos don't show all of it: up to ${s.partialViewWideningPct}% more. Placeholder`,
       kind: "possible",
+      math: `${s.partialViewWideningPct}% x ${usd(base)} = ${usd(base * (s.partialViewWideningPct / 100))}`,
     });
   }
 
   const extra = sum(possible.map((d) => d.highUsd));
-  const r10 = (n: number) => Math.round(n / 10) * 10;
+  // Line amounts stay exact so they match the math shown; only the range is rounded out.
+  const r10 = (n: number) => Math.round(n);
   const lowR = roundDown(Math.max(0, low));
   const highR = roundUp(Math.max(low, high));
+  const ceilR = roundUp(highR + extra);
+  const workings = allCard
+    ? [
+        `Repairs add up to ${usd(likely)}.`,
+        `Range: ${usd(likely)} less and plus ${s.estimateBandPct}% is ${usd(low)} to ${usd(high)}, rounded out to ${usd(lowR)} to ${usd(highR)}.`,
+      ]
+    : [`The AI's own prices add up to ${usd(visLow)} to ${usd(visHigh)}, rounded out to ${usd(lowR)} to ${usd(highR)}.`];
+  if (extra > 0) workings.push(`Cautious figure for routing: ${usd(highR)} + ${usd(extra)} of possible extras = ${usd(ceilR)}.`);
   return {
     lowUsd: lowR,
     highUsd: highR,
     likelyUsd: r10(likely),
     possibleExtraUsd: r10(extra),
-    ceilingUsd: roundUp(highR + extra),
+    ceilingUsd: ceilR,
+    workings,
     drivers: [...visible, ...possible].map((d) => ({ ...d, lowUsd: r10(d.lowUsd), highUsd: r10(d.highUsd) })),
     pricing: { source: onCard ? "rate_card" : "ai", tier, labourRateUsd: s.labourRateUsd, bandPct: s.estimateBandPct },
     aiItemsUsd: { lowUsd: Math.round(aiLow), highUsd: Math.round(aiHigh) },
