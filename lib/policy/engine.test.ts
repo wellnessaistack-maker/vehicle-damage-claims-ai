@@ -152,8 +152,50 @@ test("A: clear photo of the Civic goes to the photo estimate path with every req
 
 test("A: the range shows its drivers, and a door dent gets no hidden-damage allowance", () => {
   const e = run(civicA()).requiredOutputs.estimate;
-  assert.ok(e.drivers.every((d) => d.source === "ai_estimate"));
+  assert.ok(e.drivers.every((d) => d.source === "rate_card"));
+  assert.match(e.drivers[0].note!, /h body, .* h paint/);
   assert.match(e.accuracyNote, /final paid costs/);
+});
+
+// --- Rate card ---------------------------------------------------------------------
+
+test("the rate card prices the described repair, so different AI prices for the same damage give the same estimate", () => {
+  const a = civicA();
+  const b = civicA();
+  b.damage.items[0] = { ...b.damage.items[0], cost_low_usd: 1300, cost_high_usd: 2900 };
+  const ea = run(a).requiredOutputs.estimate;
+  const eb = run(b).requiredOutputs.estimate;
+  assert.equal(ea.lowUsd, eb.lowUsd);
+  assert.equal(ea.highUsd, eb.highUsd);
+  const aiOnly = clampSettings({ pricing: "ai" });
+  assert.notEqual(run(a, claim(), [goodPhoto()], aiOnly).requiredOutputs.estimate.highUsd, run(b, claim(), [goodPhoto()], aiOnly).requiredOutputs.estimate.highUsd);
+});
+
+test("the carrier's labour rate changes the estimate", () => {
+  const base = run(civicA()).requiredOutputs.estimate;
+  const dearer = run(civicA(), claim(), [goodPhoto()], clampSettings({ labourRateUsd: 95 })).requiredOutputs.estimate;
+  assert.ok(dearer.highUsd! > base.highUsd!);
+});
+
+test("replacement parts cost more on a more valuable car", () => {
+  const x = civicA();
+  x.damage.items = [{ ...x.damage.items[0], area: "headlight", likely_repair: "replace" }];
+  const cheap = run(x, claim({ vehicleValueUsd: 8000 })).requiredOutputs.estimate;
+  const dear = run(x, claim({ vehicleValueUsd: 60000 })).requiredOutputs.estimate;
+  assert.ok(dear.highUsd! > cheap.highUsd!);
+});
+
+test("a part the rate card doesn't cover keeps the AI's own price, labelled", () => {
+  const x = civicA();
+  x.damage.items[0] = { ...x.damage.items[0], area: "other" };
+  const d = run(x).requiredOutputs.estimate.drivers[0];
+  assert.equal(d.source, "ai_estimate");
+  assert.match(d.note!, /Not on the rate card/);
+});
+
+test("vehicles that aren't road cars keep the AI's own price", () => {
+  const d = run(raceC(), claim(DEMO_CLAIMS.C)).requiredOutputs.estimate.drivers[0];
+  assert.equal(d.source, "ai_estimate");
 });
 
 test("moderate damage to a bumper adds a labelled hidden-damage allowance", () => {
@@ -311,11 +353,14 @@ test("after the maximum number of photo requests, a person takes over", () => {
 
 // --- Cost ----------------------------------------------------------------------------
 
+// These tests set the price directly, so they price from the AI's numbers.
+const AI_PRICING = clampSettings({ pricing: "ai" });
+
 test("a range straddling the fast-path limit stays on the fast path with a review flag", () => {
   const x = civicA();
   x.damage.items[0].cost_low_usd = 1500;
   x.damage.items[0].cost_high_usd = 2400;
-  const d = run(x);
+  const d = run(x, claim(), [goodPhoto()], AI_PRICING);
   assert.equal(d.route, "photo_estimate");
   assert.equal(d.humanReview.required, true);
   assert.deepEqual(firedIds(d), ["C3"]);
@@ -325,11 +370,11 @@ test("a range entirely above the fast-path limit goes to an adjuster", () => {
   const x = civicA();
   x.damage.items[0].cost_low_usd = 2600;
   x.damage.items[0].cost_high_usd = 3400;
-  assert.ok(firedIds(run(x)).includes("C1"));
+  assert.ok(firedIds(run(x, claim(), [goodPhoto()], AI_PRICING)).includes("C1"));
 });
 
 test("the same damage on a cheap old car reaches the total-loss line", () => {
-  const d = run(civicA(), claim({ vehicleValueUsd: 3000 }));
+  const d = run(civicA(), claim({ vehicleValueUsd: 2000 }));
   assert.equal(d.route, "adjuster");
   assert.ok(firedIds(d).includes("C2"));
 });
@@ -338,8 +383,8 @@ test("raising the fast-path limit changes the route without touching the AI outp
   const x = civicA();
   x.damage.items[0].cost_low_usd = 2600;
   x.damage.items[0].cost_high_usd = 3400;
-  assert.equal(run(x).route, "adjuster");
-  const relaxed = clampSettings({ fastPathLimitUsd: 5000 });
+  assert.equal(run(x, claim(), [goodPhoto()], AI_PRICING).route, "adjuster");
+  const relaxed = clampSettings({ fastPathLimitUsd: 5000, pricing: "ai" });
   assert.equal(run(x, claim(), [goodPhoto()], relaxed).route, "photo_estimate");
 });
 
@@ -378,10 +423,10 @@ test("possible older damage is flagged", () => {
 // --- Traceability ---------------------------------------------------------------------
 
 test("every reason cites where its facts came from and which rule applied", () => {
-  const d = run(civicA(), claim({ vehicleValueUsd: 2500 }));
+  const d = run(civicA(), claim({ vehicleValueUsd: 2000 }));
   const c2 = d.reasons.find((r) => r.id === "C2")!;
   const text = c2.citations!.map((c) => `${c.source}: ${c.text}`).join(" | ");
-  assert.match(text, /Policy record: Vehicle value: \$2,500/);
+  assert.match(text, /Policy record: Vehicle value: \$2,000/);
   assert.match(text, /Estimate: Range/);
   assert.match(text, /Protocol: Setting "Total-loss line": 60% of vehicle value/);
   assert.match(text, /Protocol: Routing protocol v0\.1, rule C2 \(configurable\)/);

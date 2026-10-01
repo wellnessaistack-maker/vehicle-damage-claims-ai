@@ -132,7 +132,8 @@ export function firstReviewNote(d: Decision): string {
   const e = d.requiredOutputs.estimate;
   const parts = [`${d.requiredOutputs.damageSummary}.`.replace(/\.\.$/, ".")];
   if (e.status === "provisional" && e.lowUsd !== null) parts.push(`Provisional estimate from what's visible: ${usd(e.lowUsd)} to ${usd(e.highUsd!)}, not reliable yet.`);
-  else if (e.status !== "withheld" && e.lowUsd !== null) parts.push(`Rough repair estimate ${usd(e.lowUsd)} to ${usd(e.highUsd!)}.`);
+  else if (e.status !== "withheld" && e.lowUsd !== null)
+    parts.push(`Rough repair estimate ${usd(e.lowUsd)} to ${usd(e.highUsd!)}${e.ceilingUsd && e.ceilingUsd > e.highUsd! ? `, up to ${usd(e.ceilingUsd)} if hidden damage is found` : ""}.`);
   parts.push(
     top
       ? `Recommended route: ${d.routeLabel}, because ${lowerFirst(top.reason ?? top.title)}`

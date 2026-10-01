@@ -12,7 +12,7 @@ A customer takes a photo of their damaged car. The AI reads the make, model, col
 | Accept a photo by upload or URL | **+ Add photos**: a photo, a folder per claim, or a link |
 | Make, model and colour | Top of the assessment card. If it can't tell, it says so instead of guessing |
 | Damage summary | Assessment card, e.g. "Left rear door dent with scraping" |
-| A rough repair estimate | Assessment card: a range with its main cost drivers |
+| A rough repair estimate | Assessment card: a likely range, the hours and parts behind it, and possible extras listed separately |
 | Setup, architecture, tools, next steps | [Setup](#setup), [Architecture](#architecture-and-data-flow), [Why these tools](#why-these-tools), [Next steps](#what-wed-do-next) |
 | Evaluation | [Evaluation](#evaluation) |
 
@@ -91,7 +91,7 @@ Colour key: green is plain code, orange is the AI, purple is people.
 
 1. **Prepare photos.** Fix rotation and resize. Links are downloaded by a safe fetcher first.
 2. **Photo checks.** Plain code checks brightness, sharpness, black and white, and whether the photo matches one from a past claim.
-3. **AI extraction.** One Claude call per claim. It fills in a fixed form: the vehicle, damage items with rough costs, what the photos show, and any risk signs.
+3. **AI extraction.** One Claude call per claim. It fills in a fixed form: the vehicle, each damaged part with how bad it is and whether it needs repair or replacement, what the photos show, and any risk signs.
 4. **Routing rules.** Written rules pick the route from the AI's answers, the photo checks and the claim details.
 
 **Key design choices**
@@ -104,7 +104,14 @@ Colour key: green is plain code, orange is the AI, purple is people.
 
 **The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 fast-path limit and the total-loss line (60% of vehicle value). Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published.
 
-**The repair estimate.** The AI prices each damage item, and code adds them up with a few placeholder adjustments (hidden damage, sensor recalibration). The range is mainly used to see which side of the $2,500 limit a claim falls on. When a claim can't be priced reliably yet, the range is marked **Provisional** and doesn't affect the route.
+**The repair estimate.** The AI describes each repair; the carrier's rate card prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, priced at the carrier's rates ($65/h labour and $45 per paint hour by default), with parts adjusted by the policy's vehicle value. The same photo now prices at $950 to $1,300 on every call.
+
+- **The range covers what the photos show,** 15% either side of the most likely cost (a setting).
+- **What the photos can't show is listed separately** as possible extras: damage behind the panels, parts the AI flagged for inspection, sensor recalibration. The routing rules use the cautious figure that includes them.
+- **The AI's own price is kept as a cross-check,** and used for parts the rate card doesn't cover and for vehicles that aren't road cars.
+- **Every hour and rate is a placeholder.** In production the hours come from an estimating platform's labour times and the rates from the carrier, calibrated on their paid claims. The protocol owner can change the rates in the app, or switch back to the AI's own prices to compare.
+
+When a claim can't be priced reliably yet, the range is marked **Provisional** and doesn't affect the route.
 
 ### In production
 
@@ -216,7 +223,7 @@ We'd also track how consistent, fast and cheap it is. Once it's live, we keep me
 
 **Where does it fail?**
 
-We tested it on 26 claims. It caught all 11 complex ones, and where it disagreed with the expert, it was more cautious than needed rather than less. But 11 is a small sample. The real catch rate could be as low as 74%, so we'd need more cases to be confident.
+We tested it on 26 claims. It caught 10 of the 11 complex ones. The one it missed is a cheap car whose label assumed a higher repair price than the rate card gives, so it needs an estimator to settle (see below). Its other mistakes were more cautious than needed rather than less. 11 is a small sample: the real catch rate could be as low as 62%, so we'd need more cases to be confident.
 
 The mistakes we care most about:
 
@@ -238,7 +245,7 @@ Scale can do the expert labelling.
 
 **Is the repair estimate good enough?**
 
-We can't tell yet. That needs their paid claims, and the app says so on every estimate. Once we have them, we'd check how often the final paid amount falls inside our range, and how wide the range is. A very wide range will usually contain the paid amount, but it isn't much help.
+We can't tell yet. That needs their paid claims, and the app says so on every estimate. Once we have them, we'd check how often the final paid amount falls inside our range, and how wide the range is. A very wide range will usually contain the paid amount, but it isn't much help, so we keep the range to what the photos show and list the possible extras separately. The range width is a setting we'd calibrate on their paid claims.
 
 What matters most is which side of the $2,500 limit the estimate lands on. If it's close, the claim is flagged for a price check. If it's well over, it goes to an adjuster. If our estimate is too low, the body shop files a supplement, the same as today. It's a starting point, not the amount paid.
 
@@ -248,13 +255,14 @@ What matters most is which side of the $2,500 limit the estimate lands on. If it
 
 | | Opus 5.5, prompt v1 | Opus 5.5, prompt v2 | Sonnet 5.5, prompt v2 |
 |---|---|---|---|
-| Complex claims caught | 11 of 11 | 11 of 11 | 11 of 11 |
-| Matched the expert's route, exact (acceptable) | 21 (23) of 26 | 23 (25) of 26 | 23 (25) of 26 |
+| Complex claims caught | 10 of 11 | 10 of 11 | 10 of 11 |
+| Matched the expert's route, exact (acceptable) | 21 (22) of 26 | 22 (24) of 26 | 22 (24) of 26 |
 | Sent to a person when not needed | 1 of 15 | 0 of 15 | 0 of 15 |
 | Didn't guess when it couldn't tell | 17 of 17 | 17 of 17 | 16 of 17 |
-| Same route on all 4 runs | not measured | 25 of 26 | not measured |
+| Same route on all 4 runs | not measured | 25 of 26 (with AI pricing) | not measured |
 
 - **Prompt v1 to v2.** After the first run we changed four instructions based on the cases it got wrong. For example, a crumpled bumper no longer counts as "structural" damage. Since v2 was tuned on these same cases, its improvement probably looks better here than it would on new ones. With real data we'd keep a separate test set nobody tunes against.
+- **The rate card and the missed case.** All three columns are scored with today's rules and rate card, from the saved AI answers. Moving to the rate card changed one route: the Civic on a policy valuing the car at $2,500. The rate card prices the repair at about $1,130, which is 45% of the car's value and under the 60% total-loss line. With the AI's own price it crossed the line, which is what the draft label assumed. An estimator should decide which is right. If the carrier's threshold is lower, it's a setting.
 - **Opus or Sonnet.** They routed the same here, and Sonnet is faster and half the price. 26 cases aren't enough to tell them apart; the carrier's own claims should decide.
 - **The set's main gap.** Few cases should take the photo estimate path, so needless escalation is hard to measure for now. [`eval/README.md`](eval/README.md) lists what to add.
 
@@ -305,7 +313,7 @@ How often reviewers disagree with the recommendation is a direct way to measure 
 ## What we'd do next
 
 1. Run the evaluation on the carrier's past claims, with expert labels, and test the estimate against what was actually paid.
-2. Replace the placeholder cost adjustments with real labour-time data.
+2. Replace the placeholder rate card with an estimating platform's labour times and the carrier's own rates, and calibrate the range width on paid claims.
 3. Straighten photos in code, accept video and HEIC, and add a check for edited photos.
 
 ## Repository layout

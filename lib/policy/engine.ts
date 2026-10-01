@@ -51,6 +51,12 @@ export interface EstimateOutput {
   fastPathLimitUsd: number;
   totalLossLineUsd: number | null;
   accuracyNote: string;
+  /** How the items were priced, and the AI's own total for the same items as a cross-check. */
+  pricing?: CostRange["pricing"];
+  aiItemsUsd?: CostRange["aiItemsUsd"];
+  /** The most likely cost, and the cautious figure once possible extras are added. */
+  likelyUsd?: number;
+  ceilingUsd?: number;
 }
 
 export interface ChecklistItem {
@@ -98,7 +104,7 @@ export interface DecideOptions {
 }
 
 export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[], settings: Settings, opts: DecideOptions = {}): Decision {
-  const aiCost = buildCostRange(x, settings);
+  const aiCost = buildCostRange(x, settings, claim.vehicleValueUsd);
   const cost = aiCost && opts.reviewerRange ? reviewerCost(aiCost, opts.reviewerRange) : aiCost;
   const firedSoFar: string[] = [];
   const ruleResults: RuleResult[] = [];
@@ -170,10 +176,15 @@ export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[
 
 function reviewerCost(ai: CostRange, r: { lowUsd: number; highUsd: number }): CostRange {
   return {
+    ...ai,
     lowUsd: r.lowUsd,
     highUsd: r.highUsd,
+    likelyUsd: Math.round((r.lowUsd + r.highUsd) / 2),
+    // The reviewer's range is their judgment of the full cost, extras included.
+    possibleExtraUsd: 0,
+    ceilingUsd: r.highUsd,
     drivers: [
-      { label: "Reviewer's adjusted range", lowUsd: r.lowUsd, highUsd: r.highUsd, source: "rule_adjustment", note: `Replaces the AI range of ${usd(ai.lowUsd)} to ${usd(ai.highUsd)}` },
+      { label: "Reviewer's adjusted range", lowUsd: r.lowUsd, highUsd: r.highUsd, source: "rule_adjustment", note: `Replaces the estimated range of ${usd(ai.lowUsd)} to ${usd(ai.highUsd)}` },
     ],
   };
 }
@@ -224,13 +235,14 @@ function estimateOutput(
     accuracyNote: ACCURACY_NOTE,
   };
   const withheld = (note: string): EstimateOutput => ({ ...base, status: "withheld", lowUsd: null, highUsd: null, drivers: [], note });
+  const priced = cost ? { pricing: cost.pricing, aiItemsUsd: cost.aiItemsUsd, likelyUsd: cost.likelyUsd, ceilingUsd: cost.ceilingUsd } : {};
 
   if (!x.vehicle.vehicle_present) return withheld("No vehicle in the photos, so there's nothing to estimate.");
   if (x.damage.no_visible_damage || x.damage.items.length === 0) return withheld("No damage visible, so there's nothing to estimate.");
   if (!cost) return withheld("No damage items to price.");
-  if (cost.highUsd === 0) return withheld("The AI couldn't put a price on the damage in these photos.");
+  if (cost.ceilingUsd === 0) return withheld("The AI couldn't put a price on the damage in these photos.");
   // Still give a figure from what can be seen, clearly marked as provisional.
-  const provisional = (note: string): EstimateOutput => ({ ...base, status: "provisional", lowUsd: cost.lowUsd, highUsd: cost.highUsd, drivers: cost.drivers, note });
+  const provisional = (note: string): EstimateOutput => ({ ...base, ...priced, status: "provisional", lowUsd: cost.lowUsd, highUsd: cost.highUsd, drivers: cost.drivers, note });
   if (firedIds.includes("P1")) return provisional("Not a normal road car, so our repair pricing doesn't really apply. A rough guide only; an adjuster will assess it.");
   if (firedIds.includes("I2")) return provisional("The photos seem to show different cars, so this may mix them up. A rough guide only.");
   if (evidenceFired) return provisional("Based only on what the photos show so far. It will change once we have the photos we asked for.");
@@ -238,6 +250,7 @@ function estimateOutput(
   if (route === "adjuster") {
     return {
       ...base,
+      ...priced,
       status: "reference_only",
       lowUsd: cost.lowUsd,
       highUsd: cost.highUsd,
@@ -247,11 +260,12 @@ function estimateOutput(
   }
   return {
     ...base,
+    ...priced,
     status: "shown",
     lowUsd: cost.lowUsd,
     highUsd: cost.highUsd,
     drivers: cost.drivers,
-    note: "Rough AI estimate, not a payable amount. The final estimate is written in the estimating system.",
+    note: "Rough estimate, not a payable amount. The final estimate is written in the estimating system.",
   };
 }
 
