@@ -176,8 +176,8 @@ function whyLine(d: Decision): string {
   const flags = d.reasons.filter((r) => r.effect === "review");
   if (routing.length === 0) {
     return flags.length
-      ? `No rule stopped the fast path, but a person should check: ${flags.map((r) => lower(r.title)).join("; ")}.`
-      : "No rule stopped the fast path: the whole car and damage are visible, nothing looks serious, and the estimate is under the limit.";
+      ? `No concerns that stop it, but a person should check: ${flags.map((r) => lower(r.title)).join("; ")}.`
+      : "No concerns found: the whole car and damage are visible, nothing looks serious, and the estimate is under the limit.";
   }
   const shown = routing.slice(0, 2).map((r) => lower(r.title));
   const more = routing.length - shown.length;
@@ -370,7 +370,7 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
       <div className="card-body">
         {d.reasons.length === 0 ? (
           <div className="reason-text">
-            No rule stopped this claim from taking the photo estimate path. The photos show the vehicle and the whole damaged area, nothing suggests hidden or serious damage, and the estimate is under the fast-path limit.
+            No concerns found, so this claim can go straight to estimating. The photos show the vehicle and the whole damaged area, nothing suggests hidden or serious damage, and the estimate is under the limit.
           </div>
         ) : (
           GROUPS.map((g) => {
@@ -989,7 +989,7 @@ function ActionBar(props: {
                     : {
                         action: "approved",
                         route: preview.route,
-                        summary: `Approved the photo estimate path with an adjusted range of ${range}. Sent to the estimating team as the starting estimate.${update}`,
+                        summary: `Approved for estimating with an adjusted range of ${range}. Sent to the estimating team as the starting estimate.${update}`,
                         reason: reason.trim() || undefined,
                         adjustedRange: { lowUsd: loN, highUsd: hiN },
                         sentTo: previewTargets,
@@ -1011,7 +1011,7 @@ function ActionBar(props: {
               done({
                 action: "approved",
                 route,
-                summary: `Approved the photo estimate path and the ${usd(e.lowUsd!)} to ${usd(e.highUsd!)} range as the starting estimate. Sent to the estimating team.${withUpdate(props.message)}`,
+                summary: `Approved for estimating, with the ${usd(e.lowUsd!)} to ${usd(e.highUsd!)} range as the starting estimate. Sent to the estimating team.${withUpdate(props.message)}`,
                 sentTo: ["estimating"],
               })
             }

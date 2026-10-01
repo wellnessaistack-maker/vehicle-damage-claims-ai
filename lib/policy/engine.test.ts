@@ -136,7 +136,7 @@ const firedIds = (d: ReturnType<typeof run>) => d.reasons.map((r) => r.id);
 test("A: clear photo of the Civic goes to the photo estimate path with every required output", () => {
   const d = run(civicA());
   assert.equal(d.route, "photo_estimate");
-  assert.equal(d.routeLabel, "Photo estimate path");
+  assert.equal(d.routeLabel, "Ready for estimating");
   assert.equal(d.humanReview.required, false);
   assert.deepEqual(firedIds(d), []);
   const out = d.requiredOutputs;

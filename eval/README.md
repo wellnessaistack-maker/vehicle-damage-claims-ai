@@ -24,15 +24,15 @@ A small labelled set for checking that nothing broke, not a statistical proof. T
 
 Two people label each case on their own, then compare and settle disagreements. Keep a note of how often they disagreed at first: that's the realistic ceiling for how often the system can agree with an expert.
 
-1. **Route.** Would you let this go down the photo estimate path, ask the customer for more photos, or hand it to an adjuster? If two answers are both reasonable, put both in `acceptable_routes`.
-2. **Must escalate.** Would it be a costly mistake if this went down the fast path? Think structural damage, injury, total loss or possible fraud.
+1. **Route.** Would you send this straight to estimating from the photos, ask the customer for more photos, or hand it to an adjuster? If two answers are both reasonable, put both in `acceptable_routes`.
+2. **Must escalate.** Would it be a costly mistake if this went straight to estimating? Think structural damage, injury, total loss or possible fraud.
 3. **Vehicle.** Only fill in what you could defend from the photo. If you'd be guessing, write `CANT_TELL`.
 4. **Cost band.** A rough band is enough. Write `unsure` rather than guessing.
 5. **Flags.** Any review flags that should fire (see the routing protocol in the app).
 
 ## Still to add
 
-The set now has 26 cases, 11 of which must escalate. The main gap is the other direction: very few cases should take the photo estimate path, so over-escalation can't be measured well yet. Sourcing notes: record the licence and link for every image, and mark generated images as synthetic.
+The set now has 26 cases, 11 of which must escalate. The main gap is the other direction: very few cases should go straight to estimating, so over-escalation can't be measured well yet. Sourcing notes: record the licence and link for every image, and mark generated images as synthetic.
 
 | Case | Vehicle | Damage | Expected route |
 |---|---|---|---|

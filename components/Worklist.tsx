@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { recipient, safeDecision, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
 import { downloadFile, logCsv, summarize, type ReviewLogEntry } from "@/lib/client/review-log.ts";
-import { ROUTE_LABELS, type Route, type Settings } from "@/lib/policy/protocol.ts";
+import { ROUTE_LABELS, usd, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
 const LANES: Route[] = ["adjuster", "more_evidence", "photo_estimate", "manual_triage"];
 
@@ -65,7 +65,7 @@ export function Worklist(props: {
             : top
               ? top.title
               : d?.route === "photo_estimate"
-                ? "No rules stopped the fast path"
+                ? `No concerns found: clear photos, estimate under ${usd(settings.fastPathLimitUsd)}`
                 : "";
     return (
       <button key={c.id} className={`wl-item ${c.id === selectedId ? "active" : ""}`} onClick={() => onSelect(c.id)}>
