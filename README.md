@@ -244,7 +244,7 @@ What matters most is which side of the $2,500 limit the estimate lands on. If it
 
 ### Results
 
-26 labelled cases, 11 of which should go to an adjuster. The labels are my drafts and need an estimating expert's review.
+26 labelled cases, 11 of which should go to an adjuster. The labels are our drafts and need an estimating expert's review.
 
 | | Opus 5.5, prompt v1 | Opus 5.5, prompt v2 | Sonnet 5.5, prompt v2 |
 |---|---|---|---|
@@ -304,12 +304,9 @@ How often reviewers disagree with the recommendation is a direct way to measure 
 
 ## What we'd do next
 
-1. Add more test photos: more body types, damage levels and real road-car escalations.
-2. Have an estimating expert correct the labels, and add a second labeller to measure agreement.
-3. Replace the placeholder cost adjustments with real labour-time data, and test the estimate against paid claims.
-4. Straighten photos in code before the AI sees them.
-5. Accept video and HEIC.
-6. Catch rotated reused photos, and add a check for edited images.
+1. Run the evaluation on the carrier's past claims, with expert labels, and test the estimate against what was actually paid.
+2. Replace the placeholder cost adjustments with real labour-time data.
+3. Straighten photos in code, accept video and HEIC, and add a check for edited photos.
 
 ## Repository layout
 
