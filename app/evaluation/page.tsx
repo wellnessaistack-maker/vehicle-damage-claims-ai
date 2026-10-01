@@ -25,6 +25,11 @@ const NOTES: Record<string, { what: string; why: string; next: string }> = {
     why: "Over four runs it went to an adjuster once and the photo path three times. The expert label prefers the photo path but accepts an adjuster.",
     next: "Ranges that run far past the limit now go to an adjuster (rule C4), which should stop the flip. With your data we'd tune that setting on real paid costs.",
   },
+  V3_low_value: {
+    what: "The same Civic, on a policy that values the car at only $2,500.",
+    why: "The rate card prices the repair at about $1,130 ($950 to $1,300). That's 45% of the car's value, under the 60% total-loss line, so it stayed on the photo path. The label was written when the AI's own price ($850 to $2,100) crossed the line.",
+    next: "An estimator should confirm whether this repair makes the car a total loss. If the carrier's threshold is lower, it's a setting: at 45% this claim goes to an adjuster.",
+  },
   "03_compressed": {
     what: "A heavily compressed, forwarded copy of a photo.",
     why: "Asked the customer for a better photo. The label accepts this; an expert might have estimated from it.",
@@ -83,7 +88,11 @@ export default function EvaluationPage() {
             <div className="ev-v">
               {s.escalation.caught} of {s.escalation.of}
             </div>
-            <div className="ev-d">None of the claims an expert would send to an adjuster went down the fast path.</div>
+            <div className="ev-d">
+              {s.escalation.caught === s.escalation.of
+                ? "None of the claims an expert would send to an adjuster went down the fast path."
+                : `${s.escalation.of - s.escalation.caught} went down the fast path; see "Where it went wrong" below.`}
+            </div>
             {low !== null && <div className="ev-fine">With this few cases, the true rate could be as low as {Math.round(low * 100)}%.</div>}
           </div>
           <div className="ev-tile">
@@ -155,7 +164,7 @@ export default function EvaluationPage() {
                   <div>
                     <div className="ev-miss-head">
                       <span>{n?.what ?? m.result.labels.whatItTests}</span>
-                      <span className={`chip ${m.acceptable ? "chip-warn" : "chip-bad"}`}>{flipped ? "Unstable at the limit" : m.acceptable ? "Acceptable, not exact" : "Wrong route"}</span>
+                      <span className={`chip ${m.acceptable ? "chip-warn" : "chip-bad"}`}>{flipped ? "Unstable at the limit" : m.acceptable ? "Acceptable, not exact" : m.missedEscalation ? "Missed escalation" : "Wrong route"}</span>
                     </div>
                     <div className="ev-miss-routes">
                       Expert: <b>{ROUTE_LABELS[m.result.labels.expectedRoute]}</b> · Ours: <b>{ROUTE_LABELS[m.route as Route]}</b>{flipped ? " on the saved run" : ""}
