@@ -7,7 +7,7 @@ import { DEFAULT_MODEL } from "@/lib/extraction/models.ts";
 import { PROMPT_VERSION } from "@/lib/extraction/prompt.ts";
 import { currentDecision, type CaseItem } from "@/lib/client/cases.ts";
 import { scoreCase, summarise, type EvalRun } from "@/lib/eval/metrics.ts";
-import { RATE_CARD } from "@/lib/policy/ratecard.ts";
+import { HIGH_VOLTAGE_HOURS, MARKETS, RATE_CARD } from "@/lib/policy/ratecard.ts";
 import {
   clampSettings,
   DEFAULT_SETTINGS,
@@ -168,7 +168,7 @@ export function ProtocolDrawer(props: {
             </div>
           </div>
 
-          <RateCard />
+          <RateCard baseRate={settings.labourRateUsd} />
 
           {GROUPS.map((g) => (
             <div className="rules-group" key={g.id}>
@@ -278,7 +278,7 @@ function ProtocolTest({ comparison }: { comparison: Comparison }) {
 }
 
 /** The carrier's rate card, read only. In production it comes from an estimating platform and the carrier's own rates. */
-function RateCard() {
+function RateCard({ baseRate }: { baseRate: number }) {
   const h = (n?: number) => (n === undefined ? "" : String(n));
   const d = (n?: number) => (n === undefined ? "" : usd(n));
   return (
@@ -290,7 +290,7 @@ function RateCard() {
       <div className="card-body">
         <div className="help">
           The AI says which part is damaged, how badly, and whether it would be repaired, replaced or refinished. This card turns that into hours and parts, priced at the labour and paint rates above. Repair hours are for moderate damage (half for minor, 1.6x for severe), and each painted panel adds 1 h to remove trim and mask.
-          Parts cost 0.8x on cars worth under $10,000 and 1.5x over $40,000, using the policy&apos;s vehicle value. Every figure is an illustrative placeholder: in production the hours come from an
+          Parts cost 0.8x on cars worth under $10,000, and 1.5x on cars worth over $40,000 or a luxury make. Electric and hybrid cars add {HIGH_VOLTAGE_HOURS} h to make the high-voltage system safe. The base labour rate is scaled by the market the claim&apos;s ZIP code falls in. Every figure is an illustrative placeholder: in production the hours come from an
           estimating platform&apos;s labour times and the rates and parts pricing from the carrier, checked against their paid claims.
         </div>
         <details className="fold">
@@ -315,6 +315,35 @@ function RateCard() {
                   <td>{d(c?.partUsd)}</td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </details>
+        <details className="fold">
+          <summary>Labour markets by ZIP code ({MARKETS.length})</summary>
+          <table className="ratecard-table">
+            <thead>
+              <tr>
+                <th>Market</th>
+                <th>ZIP codes starting</th>
+                <th>Multiplier</th>
+                <th>Labour rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {MARKETS.map((m) => (
+                <tr key={m.name}>
+                  <td>{m.name}</td>
+                  <td>{m.zip3.map(([lo, hi]) => `${String(lo).padStart(3, "0")} to ${String(hi).padStart(3, "0")}`).join(", ")}</td>
+                  <td>x{m.factor}</td>
+                  <td>{usd(Math.round(baseRate * m.factor))}/h</td>
+                </tr>
+              ))}
+              <tr>
+                <td>Anywhere else</td>
+                <td></td>
+                <td>x1</td>
+                <td>{usd(baseRate)}/h</td>
+              </tr>
             </tbody>
           </table>
         </details>

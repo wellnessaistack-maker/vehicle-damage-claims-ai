@@ -61,13 +61,62 @@ const CALIBRATE = { hours: 1.5, usd: 200 };
 export type PartsTier = "economy" | "standard" | "premium";
 export const PARTS_TIER_FACTOR: Record<PartsTier, number> = { economy: 0.8, standard: 1, premium: 1.5 };
 
-/** Parts cost more on a more valuable car. Uses the policy's vehicle value; unknown means standard. */
-export function partsTier(vehicleValueUsd: number | null | undefined): PartsTier {
-  if (!vehicleValueUsd) return "standard";
-  if (vehicleValueUsd < 10000) return "economy";
-  if (vehicleValueUsd > 40000) return "premium";
-  return "standard";
+/** Makes whose parts are priced at the premium tier whatever the car's value. */
+export const PREMIUM_MAKES = [
+  "Acura", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "Cadillac", "Ferrari", "Genesis", "Infiniti", "Jaguar",
+  "Lamborghini", "Land Rover", "Range Rover", "Lexus", "Lincoln", "Maserati", "McLaren", "Mercedes-Benz", "Mercedes", "Porsche",
+  "Rolls-Royce", "Tesla", "Volvo",
+];
+
+/** Parts cost more on a luxury make or a valuable car, less on a cheap one. Unknown means standard. */
+export function partsTierFor(vehicleValueUsd: number | null | undefined, make: string | null | undefined): { tier: PartsTier; why: string } {
+  const m = make?.trim().toLowerCase();
+  const premiumMake = m ? PREMIUM_MAKES.find((p) => m === p.toLowerCase() || m.startsWith(p.toLowerCase() + " ")) : undefined;
+  if (premiumMake) return { tier: "premium", why: `${premiumMake} parts` };
+  if (vehicleValueUsd && vehicleValueUsd > 40000) return { tier: "premium", why: "car worth over $40,000" };
+  if (vehicleValueUsd && vehicleValueUsd < 10000) return { tier: "economy", why: "car worth under $10,000" };
+  return { tier: "standard", why: vehicleValueUsd ? "mid-range car" : "car value not on file" };
 }
+
+/**
+ * Labour rates vary a lot by market. A claim's ZIP picks a market, and the market scales the
+ * carrier's base labour rate. Placeholder markets and multipliers: in production these come
+ * from the carrier's own market rates and its agreements with partner shops.
+ */
+export interface Market {
+  name: string;
+  factor: number;
+  /** Ranges of the first three digits of the ZIP code. */
+  zip3: [number, number][];
+}
+
+export const MARKETS: Market[] = [
+  { name: "San Francisco Bay Area", factor: 1.25, zip3: [[940, 951]] },
+  { name: "New York City", factor: 1.22, zip3: [[100, 104], [110, 114]] },
+  { name: "Los Angeles", factor: 1.15, zip3: [[900, 918]] },
+  { name: "Boston", factor: 1.15, zip3: [[21, 24]] },
+  { name: "Seattle", factor: 1.12, zip3: [[980, 981]] },
+  { name: "Chicago", factor: 1.05, zip3: [[606, 608]] },
+  { name: "Denver", factor: 1.03, zip3: [[800, 802]] },
+  { name: "Columbus, Ohio", factor: 1.0, zip3: [[430, 432]] },
+  { name: "Atlanta", factor: 0.98, zip3: [[300, 303]] },
+  { name: "Dallas-Fort Worth", factor: 0.95, zip3: [[750, 753], [760, 762]] },
+  { name: "Phoenix", factor: 0.95, zip3: [[850, 853]] },
+  { name: "Iowa", factor: 0.82, zip3: [[500, 528]] },
+  { name: "Mississippi", factor: 0.8, zip3: [[386, 397]] },
+];
+
+export const NATIONAL_AVERAGE: Market = { name: "National average", factor: 1, zip3: [] };
+
+export function marketFor(zip: string | null | undefined): Market {
+  const digits = zip?.replace(/\D/g, "") ?? "";
+  if (digits.length < 3) return NATIONAL_AVERAGE;
+  const z3 = Number(digits.slice(0, 3));
+  return MARKETS.find((m) => m.zip3.some(([lo, hi]) => z3 >= lo && z3 <= hi)) ?? NATIONAL_AVERAGE;
+}
+
+/** Disconnecting and checking the high-voltage system before body work on an electric or hybrid car. */
+export const HIGH_VOLTAGE_HOURS = 1.5;
 
 export interface Rates {
   labourRateUsd: number;

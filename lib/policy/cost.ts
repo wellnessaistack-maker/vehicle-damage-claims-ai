@@ -16,7 +16,8 @@
 
 import type { Area, DamageItem, Extraction } from "../extraction/schema.ts";
 import { usd, type Settings } from "./protocol.ts";
-import { partsTier, priceItem, type PartsTier, type PriceOption } from "./ratecard.ts";
+import type { ClaimContext } from "../claims/types.ts";
+import { HIGH_VOLTAGE_HOURS, marketFor, partsTierFor, priceItem, type PartsTier, type PriceOption } from "./ratecard.ts";
 
 export interface CostDriver {
   label: string;
@@ -47,7 +48,17 @@ export interface CostRange {
   ceilingUsd: number;
   drivers: CostDriver[];
   /** How the items were priced, for the reviewer. */
-  pricing: { source: "rate_card" | "ai"; tier: PartsTier; labourRateUsd: number; bandPct: number };
+  pricing: {
+    source: "rate_card" | "ai";
+    tier: PartsTier;
+    /** Why that parts tier: "BMW parts", "car worth under $10,000". */
+    tierWhy: string;
+    /** The labour rate actually used: the base rate scaled by the market. */
+    labourRateUsd: number;
+    baseLabourRateUsd: number;
+    market: { name: string; factor: number; zip: string | null };
+    bandPct: number;
+  };
   /** The AI's own total for the same items, before extras. A cross-check on the rate card. */
   aiItemsUsd: { lowUsd: number; highUsd: number };
   /** How the range and the cautious figure were worked out, step by step. */
@@ -59,11 +70,17 @@ const ROAD_CARS: string[] = ["passenger_car", "suv", "pickup", "van"];
 
 const HIDDEN_DAMAGE_AREAS: Area[] = ["front_bumper", "grille", "hood", "headlight", "front_fender", "rear_bumper", "boot_or_tailgate", "tail_light", "rear_quarter_panel", "wheel_or_tyre", "underbody"];
 
-export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: number | null): CostRange | null {
+/** The claim facts that change the price: where the car is repaired, what it is, and what it's worth. */
+export type PricingClaim = Partial<Pick<ClaimContext, "zip" | "vehicleValueUsd" | "policyVehicle">>;
+
+export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim = {}): CostRange | null {
   if (!x.vehicle.vehicle_present || x.damage.items.length === 0) return null;
 
-  const tier = partsTier(vehicleValueUsd);
-  const rates = { labourRateUsd: s.labourRateUsd, paintMaterialsUsd: s.paintMaterialsUsd, tier };
+  // Where: the claim's ZIP picks a labour market. What: the make and value set the parts tier.
+  const market = marketFor(claim.zip);
+  const labourRateUsd = Math.round(s.labourRateUsd * market.factor);
+  const { tier, why: tierWhy } = partsTierFor(claim.vehicleValueUsd, claim.policyVehicle?.make ?? x.vehicle.make);
+  const rates = { labourRateUsd, paintMaterialsUsd: s.paintMaterialsUsd, tier };
   // The rate card covers ordinary road cars. Anything else keeps the AI's own price.
   const onCard = s.pricing === "rate_card" && ROAD_CARS.includes(x.vehicle.vehicle_class);
   let aiLow = 0;
@@ -112,6 +129,22 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
         math: `The AI's own estimate: ${usd(low)} to ${usd(high)}`,
       });
     }
+  }
+
+  // Electric and hybrid cars need the high-voltage system made safe before body work.
+  const electrified =
+    claim.policyVehicle?.powertrain === "electric" || claim.policyVehicle?.powertrain === "hybrid" || x.vehicle.powertrain_hint === "likely_ev_or_hybrid";
+  if (onCard && electrified) {
+    const hv = HIGH_VOLTAGE_HOURS * labourRateUsd;
+    visible.push({
+      label: "High-voltage safety procedure",
+      lowUsd: hv,
+      highUsd: hv,
+      source: "rate_card",
+      note: "Electric or hybrid car",
+      kind: "visible",
+      math: `${HIGH_VOLTAGE_HOURS} h x $${labourRateUsd} = $${Math.round(hv)}`,
+    });
   }
 
   // The likely range for what the photos show. Rate-card prices are one figure per job,
@@ -175,8 +208,13 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
   const lowR = roundDown(Math.max(0, low));
   const highR = roundUp(Math.max(low, high));
   const ceilR = roundUp(highR + extra);
+  const rateLine =
+    market.factor === 1
+      ? `Labour: ${usd(labourRateUsd)}/h (${market.name.toLowerCase() === "national average" ? "national average" : `${market.name} market`}). Parts: ${tier} (${tierWhy}).`
+      : `Labour: ${usd(s.labourRateUsd)} base x ${market.factor} for the ${market.name} market = ${usd(labourRateUsd)}/h. Parts: ${tier} (${tierWhy}).`;
   const workings = allCard
     ? [
+        rateLine,
         `Repairs add up to ${usd(likely)}.`,
         `Range: ${usd(likely)} less and plus ${s.estimateBandPct}% is ${usd(low)} to ${usd(high)}, rounded out to ${usd(lowR)} to ${usd(highR)}.`,
       ]
@@ -190,7 +228,15 @@ export function buildCostRange(x: Extraction, s: Settings, vehicleValueUsd?: num
     ceilingUsd: ceilR,
     workings,
     drivers: [...visible, ...possible].map((d) => ({ ...d, lowUsd: r10(d.lowUsd), highUsd: r10(d.highUsd) })),
-    pricing: { source: onCard ? "rate_card" : "ai", tier, labourRateUsd: s.labourRateUsd, bandPct: s.estimateBandPct },
+    pricing: {
+      source: onCard ? "rate_card" : "ai",
+      tier,
+      tierWhy,
+      labourRateUsd,
+      baseLabourRateUsd: s.labourRateUsd,
+      market: { name: market.name, factor: market.factor, zip: claim.zip?.trim() || null },
+      bandPct: s.estimateBandPct,
+    },
     aiItemsUsd: { lowUsd: Math.round(aiLow), highUsd: Math.round(aiHigh) },
   };
 }

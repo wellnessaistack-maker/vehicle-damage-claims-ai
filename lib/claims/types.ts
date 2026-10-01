@@ -13,6 +13,8 @@ export interface ClaimContext {
     colour: string | null;
     powertrain: "combustion" | "hybrid" | "electric" | "unknown";
   };
+  /** Where the car is garaged or repaired. Sets the labour market for the estimate. */
+  zip?: string | null;
   /** Mock actual cash value. Illustrative only. */
   vehicleValueUsd: number | null;
   lossDate: string;

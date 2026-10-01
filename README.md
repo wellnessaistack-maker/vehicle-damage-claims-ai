@@ -104,13 +104,23 @@ Colour key: green is plain code, orange is the AI, purple is people.
 
 **The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 fast-path limit and the total-loss line (60% of vehicle value). Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published.
 
-**The repair estimate.** The AI describes each repair; the carrier's rate card prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, priced at the carrier's rates ($65/h labour and $45 per paint hour by default), with parts adjusted by the policy's vehicle value. The same photo now prices at $950 to $1,300 on every call.
+**The repair estimate.** The AI describes each repair; the carrier's rate card prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, then prices them for this car and this place:
+
+- **Where:** the claim's ZIP code picks a labour market that scales the carrier's base rate ($65/h). Maria's Columbus claim is $65/h; the same damage in San Francisco is $81/h, and in Iowa $53/h.
+- **What car:** parts cost more on a luxury make or a car worth over $40,000, and less on one worth under $10,000. Electric and hybrid cars add a high-voltage safety step.
+
+The same photo now prices at $950 to $1,300 (Columbus) on every call.
 
 - **Each line shows its working:** what the AI saw in the photo, the hours and rates ("4.5 h body x $65 + 3.5 h paint x $110 = $678"), and the repair cost against the replacement cost, with the one priced marked. If repairing a part would cost more than replacing it, it's priced as a replacement.
 - **The range covers what the photos show,** 15% either side of the most likely cost (a setting).
 - **What the photos can't show is listed separately** as possible extras: damage behind the panels, parts the AI flagged for inspection, sensor recalibration. The routing rules use the cautious figure that includes them.
 - **The AI's own price is kept as a cross-check,** and used for parts the rate card doesn't cover and for vehicles that aren't road cars.
-- **Every hour and rate is a placeholder.** In production the hours come from an estimating platform's labour times and the rates from the carrier, calibrated on their paid claims. The protocol owner can change the rates in the app, or switch back to the AI's own prices to compare.
+- **Every hour, rate and market is a placeholder.** In production:
+    - **Third-party data** gives the hours and parts: an estimating platform's labour times (CCC, Mitchell or Audatex), and parts priced for the exact car from its VIN.
+    - **The carrier's data** gives the rates: labour rates by market and the deals with its partner shops.
+    - **Historical paid claims** calibrate it: compare our estimates with what was finally paid, by region, vehicle and damage type, correct where we're consistently off, and set the range width so an agreed share of final costs land inside it.
+
+  The protocol owner can change the base rates in the app, and **Edit details** can change a claim's ZIP to see the price move.
 
 When a claim can't be priced reliably yet, the range is marked **Provisional** and doesn't affect the route.
 
