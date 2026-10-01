@@ -191,7 +191,7 @@ export default function EvaluationPage() {
         <section className="card">
           <div className="card-head">
             <h3>What it takes to trust it on your claims</h3>
-            <a className="sub" href={`${REPO}#customer-data-and-expertise-needed`}>
+            <a className="sub" href={`${REPO}#evaluation`}>
               Detail in the README
             </a>
           </div>

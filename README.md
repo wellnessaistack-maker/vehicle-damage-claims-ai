@@ -1,8 +1,6 @@
 # Vehicle damage claims AI
 
-A customer takes a photo of their damaged car. AI reads it in seconds and returns what you asked for: the make, model and colour, a short damage summary and a rough repair-cost range. The tool then uses those answers to support your reviewer's next decision: **approve the photo estimate** as a starting point, **ask the customer for the right photos**, or **send the claim to an adjuster**, with the reasons in plain language.
-
-**The AI reads the photo, written rules check it, and a person approves or routes the claim.**
+A customer takes a photo of their damaged car. The AI reads the make, model, colour and damage, and gives a rough repair-cost range. Written rules then recommend the next step, and a reviewer makes the call: approve the photo estimate, ask the customer for better photos, or send the claim to an adjuster.
 
 - Live prototype: https://vehicle-damage-claims-ai.vercel.app
 - Evaluation: the **Evaluation** page in the app, and [`eval/README.md`](eval/README.md)
@@ -11,42 +9,32 @@ A customer takes a photo of their damaged car. AI reads it in seconds and return
 
 | You asked for | Where to find it |
 |---|---|
-| Accept a photo by upload or URL | **+ Add photos**: a single photo, a folder per claim, or pasted links. No claim form needed; details can be added later |
-| Make, model and colour | Top of the assessment card, with how each was identified, or "not determinable" rather than a guess |
-| Damage summary | Assessment card, one line, e.g. "Left rear door dent with scraping" |
-| A rough AI-generated repair estimate | Assessment card: a range with its main drivers, never a single payable number |
-| How to run it | [Setup](#setup) |
-| Architecture and data flow | [Architecture](#architecture-and-data-flow): the prototype today, and in production |
-| Why these tools | [Why these tools](#why-these-tools), and [speed, cost and model behaviour](#speed-cost-and-model-behaviour) |
-| How we know it works | [Evaluation](#evaluation), the **Evaluation** page, and [when fewer claims need a person](#when-fewer-claims-need-a-person) |
-| What we'd do next | [Next steps](#what-wed-do-next) |
+| Accept a photo by upload or URL | **+ Add photos**: a photo, a folder per claim, or a link |
+| Make, model and colour | Top of the assessment card. If it can't tell, it says so instead of guessing |
+| Damage summary | Assessment card, e.g. "Left rear door dent with scraping" |
+| A rough repair estimate | Assessment card: a range with its main cost drivers |
+| Setup, architecture, tools, next steps | [Setup](#setup), [Architecture](#architecture-and-data-flow), [Why these tools](#why-these-tools), [Next steps](#what-wed-do-next) |
+| Evaluation | [Evaluation](#evaluation) |
 
-## The product idea
+## How it works for a claims team
 
-You asked whether AI can read a customer's photo and help your team handle the claim. It can, and the most useful place to put those answers is the first decision a reviewer makes: can this claim be approved on the photo estimate path, or does it need something else first? Getting that decision right is where most of the value is: simple claims move faster, customers are asked for the right photos once, and complex claims reach a person before anyone writes an estimate.
-
-"Approve" here always means approving the route and the estimate range as a starting point for the estimating team. The tool never approves a payment.
+The tool supports the first decision a reviewer makes on a claim. Getting that right means simple claims move faster, customers are asked for the right photos the first time, and complex claims reach a person earlier.
 
 | Route | What happens |
 |---|---|
-| Photo estimate path | The reviewer approves the route and estimate range, and the claim goes to the estimating team as a starting point |
-| Request more evidence | The reviewer texts or emails a ready-made message saying exactly which photos to retake and why, with an upload link. The claim waits with a follow-up date, then comes back when the customer replies |
-| Adjuster / total loss | The claim goes to the field adjuster queue, or the total loss unit when repair may cost more than the car is worth, plus the fraud team (SIU) when a photo matches a past claim |
+| Photo estimate path | The reviewer approves the route and range, and the claim goes to the estimating team as a starting point |
+| Request more evidence | The reviewer texts or emails the customer which photos to retake, with an upload link. The claim waits until they reply |
+| Adjuster / total loss | The claim goes to a field adjuster or the total loss unit, plus the fraud team (SIU) if a photo matches a past claim |
 
-If the AI fails, the claim shows **Not assessed: manual triage**, which is today's normal process. It never guesses.
-
-A few things the screen does that matter to a claims team:
-
-- **Every reason cites what it checked:** the policy record, the claim form, what the AI saw, the code's photo checks, and the rule and setting that applied. A **Checks** card compares what's on file with what the photos show and lists any photo problems, with the full tables one click away. It says plainly that coverage and deductibles are not checked here.
-- **Every claim ends with a named owner.** The reviewer approves, adjusts the range, changes the route, or hands the claim to a person or team with a note. They can ask a colleague for a second opinion without letting go of it.
-- **Corrections go back through the rules.** Raising a $2,100 estimate to $2,800 moves the claim to an adjuster instead of quietly approving it on the fast path.
-- **Every disagreement with the recommendation is tracked.** Each decision is logged with the route the tool recommended, the route the reviewer chose, and why (a changed route can't be saved without a reason). **Completed** shows how often the reviewer kept the recommendation, flags each claim where they didn't, and downloads the full review log as a CSV. Any single correction also downloads as a labelled test case for the evaluation set. See [Tracking overrides](#tracking-overrides).
-- **The customer hears from us at every step.** Each claim shows the customer's phone, email and preferred channel. The reviewer can text or email a ready-made update with the decision (neutral on the adjuster route: it never mentions a total loss or a fraud review), log a call, and chase a photo request with a reminder by its follow-up date. Everything sent is recorded in the case thread.
-- **The inbox only holds work still to do.** Finished claims move to **Completed**, photo requests to **Waiting**.
+- "Approve" means approving the route and range as a starting point. The tool doesn't approve payments.
+- If the AI call fails, the claim goes to **manual triage**, which is today's normal process.
+- Each reason shows where it came from: the policy, the claim form, the AI, the photo checks, or a rule.
+- The reviewer can adjust the range or change the route. Changes go back through the rules, and a route change needs a reason.
+- Each decision is logged with the recommended route and the reviewer's route, so you can see how often they agree ([more](#tracking-overrides)).
 
 ## Setup
 
-The prototype is live at https://vehicle-damage-claims-ai.vercel.app, so there's nothing to install to try it. Click **Load demo queue**, or drag in the `demo-images/` folder (each subfolder is one claim).
+The prototype is live at https://vehicle-damage-claims-ai.vercel.app. Click **Load demo queue**, or drag in the `demo-images/` folder (each subfolder is one claim).
 
 To run it locally (Node 22 or later):
 
@@ -58,7 +46,7 @@ npm test                       # routing rules and URL safety; no API key needed
 npm run eval                   # re-run the labelled set; needs a key and costs money
 ```
 
-To deploy your own copy, import the repo into Vercel and add `ANTHROPIC_API_KEY`, plus `ANTHROPIC_WORKSPACE_ID` if the key isn't tied to a workspace. Optional settings are in `.env.example`.
+To deploy your own copy, import the repo into Vercel and add `ANTHROPIC_API_KEY`. Optional settings are in `.env.example`.
 
 ## Architecture and data flow
 
@@ -101,22 +89,26 @@ flowchart LR
 
 Colour key: green is plain code, orange is the AI, purple is people.
 
-1. **Prepare photos.** Fix rotation, resize and re-encode. Pasted links are fetched by a safe fetcher first.
-2. **Photo checks.** Brightness, sharpness, size, black and white, and a match against past-claim photos. Plain code.
-3. **AI extraction.** One Claude call per claim with all its photos, returning a fixed format: vehicle, damage items with rough costs, what the photos show, and risk signs.
-4. **Routing protocol.** Written rules decide the route from the AI's facts, the photo checks and the claim details, which the AI never sees.
+1. **Prepare photos.** Fix rotation and resize. Links are downloaded by a safe fetcher first.
+2. **Photo checks.** Plain code checks brightness, sharpness, black and white, and whether the photo matches one from a past claim.
+3. **AI extraction.** One Claude call per claim. It fills in a fixed form: the vehicle, damage items with rough costs, what the photos show, and any risk signs.
+4. **Routing rules.** Written rules pick the route from the AI's answers, the photo checks and the claim details.
 
-The design choices behind it:
+**Key design choices**
 
-- **The AI describes, the code decides.** The AI returns facts a reviewer could check by looking at the photo (is the badge visible, is this a close-up, are the airbags out). It never returns a route. The rules in [`lib/policy/protocol.ts`](lib/policy/protocol.ts) decide, and every rule has a test.
-- **No reliance on the AI's confidence score.** Self-reported confidence is poorly calibrated and can't be audited. Instead the rules use pixel checks, plain-fact observations and cross-checks between them. For example, if no badge is visible, the make is blanked even if the AI named one.
-- **The most cautious route wins.** Adjuster, then more evidence, then the photo estimate path. A claim that's already clearly serious isn't sent back for more photos.
-- **Route and review flag are separate.** Some rules keep the route but flag the claim for a person: damage in a sensor area, a range straddling the limit, a car that doesn't match the policy.
-- **One source of truth.** The protocol panel in the app is generated from the same file the engine runs, so what an estimating expert signs off can't drift from the code.
+- **The AI describes, the code decides.** The AI reports facts a reviewer could check in the photo, like whether the badge is visible or the airbags are out. The rules in [`lib/policy/protocol.ts`](lib/policy/protocol.ts) pick the route, and each rule has a test.
+- **The AI only sees the photos.** Policy and claim details go to the rules. If the AI were told "the policy says Honda Civic", it would likely lean that way, which would weaken the check that the car matches the policy. It also keeps customer-written text away from the AI.
+- **One AI call, not an agent.** The steps are known up front, so letting the model choose them would add time, cost and unpredictability. One call is also easy to measure, retry and fall back from.
+- **No confidence scores.** Models aren't reliable judges of their own confidence, so the rules use facts instead. For example, if no badge is visible, the make is left blank.
+- **The most cautious route wins.** If any rule says adjuster, the claim goes to an adjuster.
+
+**The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 fast-path limit and the total-loss line (60% of vehicle value). Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published.
+
+**The repair estimate.** The AI prices each damage item, and code adds them up with a few placeholder adjustments (hidden damage, sensor recalibration). The range is mainly used to see which side of the $2,500 limit a claim falls on. When a claim can't be priced reliably yet, the range is marked **Provisional** and doesn't affect the route.
 
 ### In production
 
-The same steps, inside the carrier's own cloud account and wired to their claims system. The shape is the same on AWS, Google Cloud or Azure, and Claude runs on AWS (Bedrock) and Google Cloud (Vertex AI), so photos don't have to leave the carrier's account.
+The same steps, inside the carrier's own cloud account and connected to their claims system. Claude runs on AWS (Bedrock) and Google Cloud (Vertex AI), so photos can stay in the carrier's account.
 
 ```mermaid
 flowchart TB
@@ -167,97 +159,46 @@ Colour key: green is plain code, orange is the AI, blue is stored data, purple i
 
 | Prototype | Production |
 |---|---|
-| No database; worklist lives in the browser | Integrated with the claims system (for example Guidewire), hand-offs written back to the claim file |
-| No image storage | Photos in the carrier's storage, with retention rules and location data stripped |
-| One request per claim, waiting for its answer | A queue and workers with retries and rate limits, so a hailstorm doesn't time out |
-| Decision record you can download | Every decision kept in an audit log, with monitoring on latency, cost, failures and overrides |
-| Versions shown on each result | Every prompt, model or rule change scored against the labelled set before release |
-| Mock roles and a mock list of teams | Single sign-on, role-based access, two-person approval for protocol changes |
-| Customer messages and calls recorded in the case thread | Sent through the carrier's own texting, email and telephony systems, with consent and contact preferences from the policy record |
-| Every claim approved by a person | Staged automation for narrow, low-harm cases (see [below](#when-fewer-claims-need-a-person)) |
-| One demo past-claim photo | Near-duplicate search across all photos, plus a specialist check for edited or generated images |
-| The AI's general price knowledge | Estimating-platform labour times and the carrier's paid-claims history |
-| Single photo or folder upload | Guided capture of the required views, possibly walk-around video |
-
-### What the AI sees, and why
-
-The deck's flow is "photo plus claim context in, route out", and that holds for the system as a whole. The question is which part gets the claim context:
-
-| Input | Goes to | Why |
-|---|---|---|
-| Photos | The AI | Reading photos is the one thing that needs AI |
-| Policy vehicle (year, make, model, colour, powertrain) | The rules | The AI identifies the car blind, then the rules compare. Told "the policy says Honda Civic", it would lean towards Civic, and the mismatch check, the "don't guess" behaviour on close-ups and a basic fraud signal would quietly stop working |
-| Customer's description of the loss | The rules, as the reported impact area | An independent check that the damage is where the customer said. It also keeps customer-written text away from the AI, closing a way to slip instructions in |
-| Vehicle value, injury, drivable, photo requests so far | The rules | Facts, not things to interpret. Code handles them exactly, every time |
-
-The trade-off is that the AI prices the car it *sees*, not the exact trim on the policy. In production the fix is deterministic too: decode the VIN for the exact year, trim and driver-assistance equipment, and feed that into pricing and rules.
-
-### Why one structured AI call, not tool calls or an agent
-
-The AI makes exactly one call per claim and returns a fixed-format answer (Claude's structured outputs, checked again in code). No tool calls, no agent loop, on purpose:
-
-- **The steps are known in advance.** Check photos, read photos, apply rules. Letting the model decide what to do next would add latency, cost and unpredictability for no gain.
-- **Every lookup and decision stays in code,** so it's auditable, testable, and the same input takes the same path every time.
-- **One call is easy to measure and to fail safely:** one latency, one cost, one retry, then manual triage.
-
-In production, lookups like the VIN, policy, labour rates or a vendor's price would still be called by our code in a fixed order. The one place a model-driven loop might earn its keep is the reviewer's "Ask" box, and even there it could only explain, never change the route.
-
-### The routing protocol
-
-- **Locked guardrails:** injury reported, car can't be driven, airbags deployed, structural damage, fire or flood, electric or hybrid with damage near the battery, not a road car, motorcycle or commercial vehicle, a photo matching a past claim, photos of different cars, a photo of a screen, no vehicle, car can't be identified, damage not fully in frame, poor photo quality, no visible damage, more than one car in frame.
-- **Configurable settings,** within safe bounds: fast-path limit ($2,500), total-loss line (60% of vehicle value), how far past the limit a range can run before it goes to an adjuster (50%), whether sensor-area damage flags or escalates, how strict the photo checks are, how many photo requests before escalating, and the illustrative cost adjustments.
-
-Switch the role to **Protocol owner (mock)** to change settings. The worklist re-routes instantly because only the rules re-run, not the AI. **Test against labelled cases** replays saved AI answers under the draft settings and shows which cases change route and what happens to escalation recall.
-
-**Protocol and policy are different things.** The policy is the customer's contract: vehicle, coverage, deductible. The protocol is the carrier's claims-handling guideline: when a claim can take the fast path, when it's likely a total loss, which photos are enough. The rules read facts from the policy record but never interpret policy wording, and coverage stays in the claims system. A carrier would run a small set of protocols, picked by a plain lookup on the policy's state (total-loss thresholds are set by state law), product and vehicle type. AI could help draft a protocol from a written guideline, but a person approves it and it's scored against the labelled set before it goes live.
-
-### The repair-cost range
-
-The AI prices each damage item from its general knowledge of US repair costs; that's the "rough AI-generated estimate" you asked for. Code adds the items up and applies a few visible adjustments: an allowance for damage hidden behind panels, a sensor recalibration line, and a wider range when the photos show only part of the damage. Every adjustment amount is an **illustrative placeholder**.
-
-The range's real job is showing which side of a limit a claim falls on: low end above the fast-path limit goes to an adjuster; a range that crosses it slightly stays on the fast path with a price-check flag; a range that runs far past it (by default, a high end more than 50% above the limit) goes to an adjuster, because it's too uncertain; and a high end past the total-loss line goes to adjuster / total loss. It is never a payable amount; the reviewer approves it as a starting estimate or adjusts it, and the adjustment is recorded.
-
-**Every photo with visible damage gets a figure.** When the claim can't be priced safely yet (the photos we asked for haven't arrived, it isn't a road car, or the photos show different cars), the range is still shown, marked **Provisional**: "based only on what the photos show so far." A provisional range never drives the route, is never sent to the customer, and isn't scored in the evaluation. Only a photo with no car, no visible damage, or damage the AI couldn't put any price on has no estimate.
+| Worklist lives in the browser | Connected to the claims system (for example Guidewire), with decisions written back to the claim file |
+| No image storage | Photos in the carrier's storage, with retention rules |
+| One request per claim | A queue with retries and rate limits, so a spike in claims doesn't cause timeouts |
+| Decision record you can download | An audit log of every decision, with monitoring on speed, cost, failures and overrides |
+| Versions shown on each result | Each prompt, model or rule change tested against the labelled set before release |
+| Mock roles | Single sign-on, role-based access, two-person approval for rule changes |
+| Checks against one demo past-claim photo | Duplicate search across all past photos, plus a check for edited images |
+| The AI's general price knowledge | Labour times from an estimating platform and the carrier's paid-claims history |
+| A person approves each claim | Gradual automation for narrow, low-risk cases (see [Path to production](#path-to-production)) |
 
 ## Why these tools
 
 | Option | Good at | Why we didn't start there |
 |---|---|---|
-| **Claude (what we used)** | Reads photos well, returns answers in a fixed format, runs on AWS and Google Cloud | Still has to be tested on your claims |
-| GPT or Gemini | Similar capability | Untested here. Switching is a settings change |
-| Estimating vendors (Tractable, CCC, Mitchell) | Pricing, from millions of paid claims | They don't show their reasoning. In production, our routing could use their price instead of ours |
-| A custom-trained vision model | Pinpointing damage, cheaply | Needs lots of labelled photos and an ML team, and gives no make, model or price on its own |
-| Open-source models on your servers | Photos never leave your environment | Less accurate today, and more to run |
+| **Claude (what we used)** | Reads photos well, fills in a fixed format reliably, runs on AWS and Google Cloud | Still needs testing on your claims |
+| GPT or Gemini | Similar capability | Not tested here. Switching would be a settings change plus a test run |
+| Estimating vendors (Tractable, CCC, Mitchell) | Pricing, based on large volumes of paid claims | Their reasoning isn't visible. Our routing could use their price in production |
+| A custom vision model | Locating damage, at low cost per photo | Needs many labelled photos and an ML team, and doesn't give make, model or price |
+| Open-source models | Photos stay in your environment | Generally less accurate today, and more to run |
 
-The fixed output format is the contract and the labelled set is the referee, so the model can be swapped without touching the rules or the screen.
+Because the output format is fixed and the labelled set checks the results, the model can be swapped without changing the rules or the screen.
 
-Around the model:
+- **Vercel, Next.js and TypeScript** gave us a working link quickly, with the screen and server in one codebase, so the rules shown on screen are the same code the server runs. A carrier would run the same code in their own cloud.
+- **Anthropic's SDK** makes the one Claude call per claim, with structured outputs.
+- **sharp** handles image prep and photo checks, **zod** validates requests and the AI's answer, and Node's test runner runs the rule tests.
 
-- **Vercel** hosts it: a public link with nothing to install, the API as serverless functions, and the API key in encrypted settings, never in the browser. For a carrier, the same code runs in their own cloud.
-- **Next.js, React and TypeScript** keep the screen and API in one codebase, so the rules the server runs are the same code the protocol screen shows.
-- **Anthropic's TypeScript SDK** makes the one AI call per claim, with structured outputs.
-- **sharp** does the image work: rotation, resizing, and the brightness, sharpness and reused-photo checks.
-- **zod** checks everything coming in from the browser, and checks the AI's answer against the same schema.
-- **Node's built-in test runner** runs the rule, URL-safety and scoring tests.
+## Speed and cost
 
-## Speed, cost and model behaviour
-
-Measured on the 26 labelled cases, end to end on the server (photo checks, AI call and rules):
+Measured on the 26 labelled cases, end to end:
 
 | | Opus 5.5 (default) | Sonnet 5.5 |
 |---|---|---|
 | Typical time per claim | 9.7 s | 7.0 s |
 | Slowest 1 in 10 | 13.0 s | 8.9 s |
-| Slowest seen | 14.5 s | 10.7 s |
 | Estimated cost per claim | $0.039 | $0.019 |
 | Failed calls | 0 of 26 | 0 of 26 |
 
-- **Almost all the time is the AI call.** Photo checks take a fraction of a second and the rules a few milliseconds; each claim's decision record shows the split. The levers are the model (Sonnet is about 30% faster), a shorter output format, and fewer photos per claim.
-- **Ten seconds is short next to today's wait.** The alternative is a claim sitting in a queue for a person. The worklist assesses three claims at a time in the background, so a reviewer rarely waits.
-- **Settings are chosen for a perception task.** Low effort, because the job is describing photos, not long reasoning. Photos are resized to 1,568 px on the long edge before the call, which keeps requests small. The call times out at 45 seconds, retries once, then goes to manual triage. If the requested model is overloaded, the API falls back to another, and the record says which model answered.
-- **It's consistent, not perfectly repeatable.** The same photo gave the same route in 25 of 26 cases over four runs. The one that flipped had a wide range crossing the $2,500 limit. The wide-range rule added since sends claims like it to an adjuster, which should remove that flip; it hasn't been re-measured yet.
-- **Cost at scale is small next to people.** At about 4 cents a claim, 100,000 claims a year is roughly $4,000 of model spend at list prices. Billed spend during this work ran above these estimates, so treat them as a floor. The real costs are integration and expert labelling.
-- **Throughput in production** comes from the queue and the provider's rate limits. Bulk jobs with no deadline, such as scoring a year of past claims, can use batch processing at a lower price.
+- Most of the time is the AI call. Claims are assessed in the background, three at a time, so a reviewer doesn't usually wait.
+- The call times out at 45 seconds, retries once, then goes to manual triage.
+- At about 4 cents a claim, 100,000 claims a year is roughly $4,000 at list prices. Our actual bill was higher than these estimates, so treat them as a lower bound. Integration and expert labelling cost more than the model.
 
 ## Evaluation
 
@@ -291,6 +232,7 @@ Poor or sideways photos are less of a concern, since the usual result is asking 
 - Two estimating experts to label them separately. How often they agree with each other is the bar to beat.
 - Today's numbers: how often claims are escalated late, how often shops file supplements, and how long reviewers spend on each claim.
 - Their own rules: limits, labour rates and vehicle values.
+- Security and compliance input on where photos can be processed and how long they're kept.
 
 Scale can do the expert labelling.
 
@@ -300,133 +242,86 @@ We can't tell yet. That needs their paid claims, and the app says so on every es
 
 What matters most is which side of the $2,500 limit the estimate lands on. If it's close, the claim is flagged for a price check. If it's well over, it goes to an adjuster. If our estimate is too low, the body shop files a supplement, the same as today. It's a starting point, not the amount paid.
 
-### The detail
+### Results
 
-**Latest results** (26 cases, 11 must escalate, draft labels, September 2026). "Prompt" means the written instructions the AI works from; v1 was the first version and v2 is today's (explained below).
+26 labelled cases, 11 of which should go to an adjuster. The labels are my drafts and need an estimating expert's review.
 
 | | Opus 5.5, prompt v1 | Opus 5.5, prompt v2 | Sonnet 5.5, prompt v2 |
 |---|---|---|---|
-| Complex-case escalation recall | 11 of 11 | 11 of 11 | 11 of 11 |
-| Routing agreement, exact (acceptable) | 21 (23) of 26 | 23 (25) of 26 | 23 (25) of 26 |
-| Escalated when not needed | 1 of 15 | 0 of 15 | 0 of 15 |
+| Complex claims caught | 11 of 11 | 11 of 11 | 11 of 11 |
+| Matched the expert's route, exact (acceptable) | 21 (23) of 26 | 23 (25) of 26 | 23 (25) of 26 |
+| Sent to a person when not needed | 1 of 15 | 0 of 15 | 0 of 15 |
 | Didn't guess when it couldn't tell | 17 of 17 | 17 of 17 | 16 of 17 |
-| Same route on every run (4 runs) | not measured | 25 of 26 | not measured |
-| Repair-range coverage | needs paid-claims data | | |
+| Same route on all 4 runs | not measured | 25 of 26 | not measured |
 
-**What changed from prompt v1 to v2.** After the first run we read every case the AI got wrong, changed four instructions in [`lib/extraction/prompt.ts`](lib/extraction/prompt.ts), and re-ran the same 26 cases. Both columns are scored with today's rules, so the difference between them comes from the prompt alone.
+- **Prompt v1 to v2.** After the first run we changed four instructions based on the cases it got wrong. For example, a crumpled bumper no longer counts as "structural" damage. Since v2 was tuned on these same cases, its improvement probably looks better here than it would on new ones. With real data we'd keep a separate test set nobody tunes against.
+- **Opus or Sonnet.** They routed the same here, and Sonnet is faster and half the price. 26 cases aren't enough to tell them apart; the carrier's own claims should decide.
+- **The set's main gap.** Few cases should take the photo estimate path, so needless escalation is hard to measure for now. [`eval/README.md`](eval/README.md) lists what to add.
 
-| Instruction added in v2 | What v1 got wrong | Result with v2 |
-|---|---|---|
-| Judge the evidence on the best photo in the set | The customer sent a wider photo after a close-up; v1 judged the claim on the close-up and asked for photos again | Fixed: goes to the photo estimate path |
-| "Structural" means the frame, pillars, roof or floor are visibly bent; a crumpled bumper or fender isn't | v1 called a crushed bumper corner structural and sent it to an adjuster | Fixed: asks for a wider photo, as the expert would |
-| A suspicion isn't evidence; report only risk signs you can see | Same case: v1 flagged "possible damage to underlying supports" | Fixed with the rule above |
-| Photos may be sideways; read them as if upright | A clean photo uploaded sideways wasn't read properly | Partly: v2 now sees the whole car, but still can't name it on its side, so it asks for another photo. The real fix is to straighten photos in code first |
-
-Net effect: needless escalations went from 1 to 0, exact matches from 21 to 23, and acceptable routes from 23 to 25 of 26. The Camry front corner isn't an exact match in either column: its range runs far past the $2,500 limit, so the wide-range rule sends it to an adjuster, while the draft label prefers the photo path (and accepts an adjuster). One more fix from that run was in code, not the prompt: the hidden-damage allowance no longer applies to side damage such as a door dent, which had pushed the demo's clean claim over the limit. It applies to both columns, so it doesn't show up as a difference between them.
-
-- **Read the numbers with care.** 11 of 11 is still consistent with a true recall as low as about 74%. v2 was written after seeing v1's mistakes on these same cases, so its gain is flattering; with real data we'd keep a locked test set nobody tunes against. And the set is escalation-heavy, unlike a real claims mix.
-- **Opus or Sonnet.** They route equally well here, and Sonnet is faster and half the price. Opus stays the default because it was more careful about not guessing, but 26 cases can't separate them. The choice should come from the carrier's own labelled claims.
-
-The **Evaluation** page shows these results and can re-run a quick set of six cases live (or all 26). In the protocol panel, **Test against labelled cases** shows what a rule change would do before it's published. How the set was built and labelled, and what to add next, is in [`eval/README.md`](eval/README.md). Its biggest gap: few cases should take the photo estimate path, so needless escalation is hard to measure yet.
-
-### Important failure modes
+### Failure modes
 
 | Failure | How likely | What the prototype does |
 |---|---|---|
-| Complex claim sent down the fast path | Low, high impact | Locked safety rules, most cautious route wins, escalation recall measured |
-| Wrong vehicle named confidently | Medium | Make and model blanked unless a badge or distinctive shape supports them; policy mismatch flagged |
-| Damage missed or invented | Medium | "No damage visible" asks for photos; the reviewer approves every estimate |
-| Estimate on the wrong side of a limit | Likely at the margins | Ranges that cross the limit are flagged, very wide ones go to an adjuster; reviewer adjustments recorded and re-routed |
-| AI error, timeout or bad output | Occasional | One retry, then manual triage with the reason |
-| Reused or edited photo | Rising | Mirrored-copy check against past claims, referred to SIU; edits not yet detected |
-| Instructions written into a photo | Rare | The AI never picks the route and the safety rules are fixed, so the worst case is a wrong fact the reviewer can see |
-| Same photo, different answer on re-run | Likely at the margins | Measured with repeat runs; borderline ranges flagged |
+| Complex claim sent down the fast path | Low, but high impact | Locked safety rules, most cautious route wins, measured in the evaluation |
+| Wrong vehicle named with confidence | Medium | Make and model left blank without a badge or distinctive shape; policy mismatch flagged |
+| Damage missed or made up | Medium | "No damage visible" asks for photos; the reviewer approves each estimate |
+| Estimate on the wrong side of a limit | Likely near the limit | Ranges close to the limit are flagged, very wide ones go to an adjuster |
+| AI error or timeout | Occasional | One retry, then manual triage |
+| Reused or edited photo | Becoming more common | Reused photos are caught and sent to SIU; edited photos aren't detected yet |
+| Instructions written into a photo | Rare | The AI doesn't pick the route, so the likely worst case is a wrong fact the reviewer can see |
 
-## When fewer claims need a person
+## Path to production
 
-Today every claim gets a person's approval. That's the right place to start, not the end state. Less review should be earned one narrow slice at a time, only for actions that can't hurt the customer, with evidence gathered first and checks kept running after.
-
-**What could be automated, and what never should be.** Only two low-harm actions are candidates: asking the customer for more photos, and sending a small photo estimate to estimating. Total loss, injury, fraud referrals, denials, reduced payments and anything the tool couldn't assess stay with a person. The protocol is already built this way: a claim that trips a locked rule can't reach the fast path. Regulation points the same way. The NAIC's model bulletin on insurers' use of AI (December 2023, adopted by roughly half of US states) expects controls that match the potential harm, Colorado's rules under SB21-169 now cover private passenger auto, and states are starting to target AI making adverse claim decisions on its own.
-
-These stages follow the proposal's phases. They pick up after scope and baseline, and after the historical evaluation (which the Evaluation page shows in miniature).
+A person approves each claim today. That's the right place to start. We'd reduce review gradually, one narrow, low-risk slice at a time, with evidence first and checks still running afterwards.
 
 | Stage | The AI | People | To move on |
 |---|---|---|---|
-| 1. Live comparison | Recommends routes on live claims in the background; nobody acts on them | Work claims as today | Its routes compared with adjusters' decisions for 4 to 6 weeks |
-| 2. Limited pilot (what this prototype shows) | Pre-fills the case and recommends a route for one agreed claim segment | Approve every route | The evidence below, on the carrier's own claims |
-| 3. Automatic for one narrow slice | Sends photo requests on its own first; later, sends small photo estimates to estimating without a reviewer, in one segment | Review a random sample, plus everything flagged | Sampled reviews keep agreeing; supplements and complaints don't rise |
-| 4. Expand | One more segment at a time | Sample and monitor | Each segment passes the same checks on its own |
+| 1. Live comparison | Recommends routes in the background; nobody acts on them | Work claims as today | Its routes compared with adjusters' decisions for 4 to 6 weeks |
+| 2. Limited pilot (this prototype) | Recommends a route for one claim segment | Approve every route | Agreed results on the carrier's own claims |
+| 3. One automatic slice | Sends photo requests, later small photo estimates, without a reviewer | Review a random sample and anything flagged | Sampled reviews keep agreeing; supplements and complaints don't rise |
+| 4. Expand | One more segment at a time | Sample and monitor | Each segment passes the same checks |
 
-**How we'd know a slice is ready.** No regulator sets these numbers, so the claims and risk owners agree them up front:
+**What stays with a person:** total loss, injury, fraud referrals, denials, reduced payments, and anything the tool couldn't assess. The rules already work this way, and it matches where regulation is heading (the NAIC's 2023 model bulletin on insurers' use of AI expects controls in proportion to the potential harm).
 
-- **Escalation recall, judged by its plausible low.** Zero misses only shows the true miss rate is below about 3 divided by the number of must-escalate claims. Showing under 1% takes around 300 such claims with no misses; under 0.1% takes around 3,000.
-- **Routing agreement** at least as good as two experts manage with each other.
-- **Stable over time:** the same answers on re-runs, holding across several months, not one test set.
-- **Range coverage** at an agreed rate, and no more supplements on automated claims than on staff-handled ones.
-- **Reviewer overrides** rare and falling, per segment and per reviewer. The prototype already tracks them (see [Tracking overrides](#tracking-overrides)).
+**How we'd know a slice is ready,** agreed with the claims and risk owners up front:
 
-**Checks that stay on:** a random sample of automated claims still goes to a person (teams often start around 5 to 10%); one switch sends everything back to human review; every prompt, model and rule version is recorded so a bad change can be rolled back; anything unusual goes to a person, never the automatic path; and monitoring watches for claims bunching just under the limit, reused or AI-edited photos, and drift in overrides and supplements.
-
-For scale, published figures come from vendors and would need checking against the carrier's own data: Tractable reported 90% of Admiral Seguros' photo estimates in 2021 were produced without a human appraiser, and CCC puts photo-based estimates at about a quarter of repairable US claims in 2025.
+- Complex claims caught, judged by the low end of the likely range. Showing a miss rate under 1% takes around 300 complex claims without a miss.
+- Route agreement at least as good as two experts get with each other.
+- Estimate ranges that contain the final paid cost at an agreed rate, and no rise in supplements.
+- Reviewer overrides low and trending down.
 
 ### Tracking overrides
 
-How often a reviewer disagrees with the recommendation is the most direct live measure of accuracy, so every decision is recorded the same way:
-
-| Recorded | Where it comes from |
-|---|---|
-| Recommended route | The AI and rules before the reviewer acts |
-| Reviewer's route | What they approved, changed to, or handed off with |
-| Agreement | **Kept**, **range adjusted** (new range, same route) or **route changed** (including a new range that moves the route) |
-| AI range and reviewer's range | Both kept, so estimate error can be measured |
-| Reason | Required for a route change, optional for a range |
-| Rules that fired | So disagreements can be traced to a rule or to the AI |
-
-In the prototype this lives in the browser session: **Completed** shows "Kept the recommendation on X of Y decisions", each overridden claim is flagged, the **Download review log (CSV)** button exports every decision, and the claim's decision record shows recommended against chosen, with the correction as a test case. Earlier decisions stay in the log when a claim is re-assessed after a retake.
-
-In production the same record goes to the audit log, and it drives three things: an override-rate dashboard by segment, rule and reviewer (a rising rate is the earliest warning of drift); a weekly review of changed routes, where each one is either a bug to fix or a labelled case added to the evaluation set; and the stage gates above, since "sampled reviews keep agreeing" is this number.
+How often reviewers disagree with the recommendation is a direct way to measure accuracy on live claims. Each decision records the recommended route, the reviewer's route, both estimate ranges, the reason, and the rules that fired. In the prototype, **Completed** shows "Kept the recommendation on X of Y decisions" and the log downloads as a CSV. In production it would feed an override dashboard, and each changed route would become a bug fix or a new test case.
 
 ## Key assumptions and trade-offs
 
-- **It remembers nothing.** No database, no image storage. The worklist lives in your browser tab and clears on refresh, and photos exist only in memory during an assessment. That's the simplest honest answer to "where do our customers' photos go?", at the cost of no history beyond the decision record you can download.
-- **Each claim is one request that waits for its answer.** Easy to follow and measure, but it doesn't absorb bursts, so production puts a queue in front.
-- **The claim details and dollar limits are made up.** Policyholders, vehicle values and claim IDs are mock data; the $2,500 limit, 60% total-loss line and cost adjustments are placeholders showing where the carrier's numbers plug in. Uploaded claims start blank; fill in details and the rules re-run instantly.
-- **The photo checks are rough.** Tuned on a handful of images. Sharpness can't tell a blurry photo from a sharp close-up of a smooth door, so it only catches very soft photos and relies on the AI for blur and glare. The reused-photo check catches a mirrored copy of one demo past claim, not a rotated one.
-- **Some inputs are turned away rather than half-handled.** JPEG, PNG and WebP, up to eight photos a claim. HEIC and video get a clear message saying what to send instead.
-- **Vercel's limits shaped a few choices.** Requests over 4.5 MB are rejected, so the browser shrinks each photo first, which also strips location data. Requests can run 60 seconds; the AI call gives up at 45 and the claim goes to manual triage.
-- **Pasted links are treated as untrusted.** The server follows only https links, refuses private and cloud-metadata addresses (checked again on every redirect), accepts only real image files, and stops at 10 MB or 8 seconds.
-- **The public link costs money to use,** so the API key has a monthly spend limit, and the bulk evaluation runner needs a secret token.
-
-## Customer data and expertise needed
-
-- **A few hundred past claims** with photos, the route each took, the final paid cost and any supplements.
-- **Two estimating experts' time** to label them independently. How often they disagree sets the realistic ceiling.
-- **Today's baseline:** late escalations, supplement rates, reviewer minutes per claim, repeat customer contacts.
-- **Their rules and numbers:** photo-estimate eligibility, fast-path limits, state total-loss thresholds, labour rates, vehicle values.
-- **Security and compliance input** on where photos may be processed, retention, and model data terms.
+- **It doesn't store anything.** The worklist lives in your browser tab and photos are only held in memory. That keeps the privacy answer simple, but there's no history.
+- **The claim details and dollar limits are made up.** The $2,500 limit, 60% total-loss line and cost adjustments are placeholders for the carrier's numbers.
+- **The photo checks are rough.** They were tuned on a handful of images, and the reused-photo check catches a mirrored copy but not a rotated one.
+- **Some inputs are turned away.** JPEG, PNG and WebP only, up to eight photos a claim. HEIC and video get a message saying what to send instead.
+- **Links are treated as untrusted.** The server only follows https links to public addresses and only accepts real image files.
 
 ## What we'd do next
 
-1. Add the ~15 photos listed in [`eval/README.md`](eval/README.md): more body types, damage levels and real road-car escalations.
-2. Have an estimating expert correct the draft labels, and add a second labeller to measure agreement.
-3. Replace the illustrative cost adjustments with real labour-time data and test range coverage against paid claims.
-4. Accept video (picking the sharpest frames) and HEIC.
-5. A rotation-proof reused-photo check, and an edited-image check from a specialist vendor.
-6. Tighten the prompt on the cases where the AI and labels disagree, and re-run the model comparison.
-7. Make routes more stable near the limits, using repeat runs to find the borderline cases.
+1. Add more test photos: more body types, damage levels and real road-car escalations.
+2. Have an estimating expert correct the labels, and add a second labeller to measure agreement.
+3. Replace the placeholder cost adjustments with real labour-time data, and test the estimate against paid claims.
+4. Straighten photos in code before the AI sees them.
+5. Accept video and HEIC.
+6. Catch rotated reused photos, and add a check for edited images.
 
 ## Repository layout
 
 ```
-app/                  Next.js pages and API routes (assess, ask, health, eval-cases, eval-run, spot-check, client-error)
-components/           Worklist, assessment panel, photo viewer, drawers, intake
-demo-images/          Demo claims, one folder per claim (A, B, C, D, E)
-eval/                 Labelled cases, claim details, test images, saved results
-lib/extraction/       The AI call, prompt, output format and model prices
-lib/policy/           Routing protocol, citations, cost range and rule engine, with tests
-lib/image/            Photo quality checks and reused-photo fingerprint
-lib/net/              Safe URL fetching, with tests
+app/                  Pages and API routes
+components/           Worklist, assessment panel, photo viewer, intake
+demo-images/          Demo claims, one folder per claim
+eval/                 Labelled cases, test images, saved results
+lib/extraction/       The Claude call, prompt and output format
+lib/policy/           Routing rules, estimate and rule engine, with tests
+lib/image/            Photo checks
+lib/net/              Safe link fetching, with tests
 lib/eval/             Evaluation runner and scoring
-lib/client/           Browser-side intake, worklist, customer contact, review log and error reporting
-scripts/              Evaluation command and public-folder copy
+lib/client/           Browser-side worklist, customer contact and review log
 ```
