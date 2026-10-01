@@ -263,19 +263,42 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 
 ### Summary
 
-**How would we know it's working?** Mistakes here don't cost the same, so overall accuracy is the wrong headline. In order, we measure:
+**How would we know it's working?**
 
-1. **Complex claims caught.** Of the claims an expert would send to an adjuster, how many we sent. Missing one is the costliest mistake.
-2. **Needless escalations.** Simple claims sent to a person anyway. Too many and the time savings disappear.
-3. **The three outputs.** The right make, model and colour (or correctly left blank), and damage in the right place, none missed or invented.
+Not every mistake costs the same here, so we don't focus on overall accuracy. We focus on three things:
 
-Then stability, speed and cost. After launch, reviewer overrides and a sampled review keep measuring the same things on live claims. Targets are agreed with the carrier, not set by us.
+1. **Did it catch the complex claims?** If an expert would send a claim to an adjuster, we should too. Missing one is the most expensive mistake.
+2. **Did it send simple claims to a person anyway?** A bit of caution is fine. Too much and nobody saves any time.
+3. **Did it get the basics right?** The right make, model and colour, or left blank when it can't tell. Damage in the right place, with nothing missed or made up.
 
-**Where does it fail?** On 26 test claims it caught 11 of 11 complex claims, and every mistake went the cautious way: more photos or a person, never the fast path. But 11 cases is few; the true rate could be as low as 74%. The failures that matter most are a complex claim reaching the fast path (blocked by locked rules), an estimate on the wrong side of the $2,500 limit, and edited photos (reused ones are caught, edited ones aren't yet). Sideways or poor photos cost the customer an extra photo, not a wrong decision.
+We'd also track how consistent, fast and cheap it is. Once it's live, we keep measuring the same things by tracking when reviewers disagree with it. The carrier decides what counts as good enough.
 
-**What we'd need from the carrier.** A few hundred past claims with photos, the route taken, the final paid cost and any supplements. Two estimating experts labelling them separately, since their agreement is the ceiling to beat. Today's baseline for late escalations, supplements and reviewer time. And their own limits, labour rates and vehicle values. Expert labelling at this scale is work Scale can supply.
+**Where does it fail?**
 
-**Is the repair estimate good enough?** We can't know without paid claims, and the app says so. The test is how often our range contains the final paid cost, and how wide it is. What matters most is which side of a limit it lands on: a range straddling the limit is flagged for a price check, one far past it goes to an adjuster. If it's too low, the shop files a supplement as it does today. It is never the amount paid.
+We tested it on 26 claims. It caught all 11 complex ones, and when it got something wrong, it was always too careful, never too lenient. But 11 is a small number. The real catch rate could be as low as 74%, so we can't promise it will never miss one.
+
+The mistakes we care most about:
+
+- A complex claim slipping through to the fast path. The locked rules are there to stop this.
+- A price on the wrong side of the $2,500 limit.
+- Edited photos. We catch reused photos, but not edited ones yet.
+
+Bad or sideways photos matter less. The customer gets asked for another photo, not a wrong decision.
+
+**What would we need from the carrier?**
+
+- A few hundred past claims: the photos, where each claim went, what was finally paid, and any supplements.
+- Two estimating experts to label them separately. How often they agree with each other is the bar to beat.
+- Today's numbers: how often claims are escalated late, how often shops file supplements, and how long reviewers spend on each claim.
+- Their own rules: limits, labour rates and vehicle values.
+
+Scale can do the expert labelling.
+
+**Is the repair estimate good enough?**
+
+We can't tell yet. That needs their paid claims, and the app says so on every estimate. Once we have them, we'd check how often the final paid amount falls inside our range, and how wide the range is. A huge range is always "right" but useless.
+
+What matters most is which side of the $2,500 limit the estimate lands on. If it's close, the claim is flagged for a price check. If it's well over, it goes to an adjuster. If our estimate is too low, the body shop files a supplement, the same as today. It's never the amount that gets paid.
 
 ### The detail
 
