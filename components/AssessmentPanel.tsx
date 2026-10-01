@@ -274,7 +274,9 @@ function Estimate({ e }: { e: EstimateOutput }) {
         <div className="est-pricing">
           {e.pricing.source === "rate_card" ? (
             <>
-              Priced from the carrier rate card: {usd(e.pricing.labourRateUsd)}/h labour, {e.pricing.tier} parts.
+              Priced from the carrier rate card: <b>{usd(e.pricing.labourRateUsd)}/h labour</b> ({e.pricing.market.name}
+              {e.pricing.market.zip ? `, ZIP ${e.pricing.market.zip}` : ""}
+              {e.pricing.market.factor !== 1 ? `: ${usd(e.pricing.baseLabourRateUsd)} base x ${e.pricing.market.factor}` : ""}) and <b>{e.pricing.tier} parts</b> ({e.pricing.tierWhy}).
             </>
           ) : (
             <>Priced from the AI&apos;s own figures.</>

@@ -105,7 +105,7 @@ export interface DecideOptions {
 }
 
 export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[], settings: Settings, opts: DecideOptions = {}): Decision {
-  const aiCost = buildCostRange(x, settings, claim.vehicleValueUsd);
+  const aiCost = buildCostRange(x, settings, claim);
   const cost = aiCost && opts.reviewerRange ? reviewerCost(aiCost, opts.reviewerRange) : aiCost;
   const firedSoFar: string[] = [];
   const ruleResults: RuleResult[] = [];

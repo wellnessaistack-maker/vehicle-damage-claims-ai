@@ -187,6 +187,32 @@ test("the carrier's labour rate changes the estimate", () => {
   assert.ok(dearer.highUsd! > base.highUsd!);
 });
 
+test("the claim's ZIP code sets the labour market", () => {
+  const columbus = run(civicA(), claim({ zip: "43215" })).requiredOutputs.estimate;
+  const sf = run(civicA(), claim({ zip: "94110" })).requiredOutputs.estimate;
+  const iowa = run(civicA(), claim({ zip: "50309" })).requiredOutputs.estimate;
+  assert.equal(columbus.pricing!.labourRateUsd, 65);
+  assert.equal(sf.pricing!.market.name, "San Francisco Bay Area");
+  assert.ok(sf.highUsd! > columbus.highUsd! && columbus.highUsd! > iowa.highUsd!);
+  assert.match(sf.workings![0], /\$65 base x 1\.25 for the San Francisco Bay Area market = \$81\/h/);
+  assert.equal(run(civicA(), claim({ zip: null })).requiredOutputs.estimate.pricing!.market.name, "National average");
+});
+
+test("a luxury make gets premium parts whatever its value", () => {
+  const x = civicA();
+  x.damage.items = [{ ...x.damage.items[0], area: "headlight", likely_repair: "replace" }];
+  const bmw = run(x, claim({ policyVehicle: { ...DEMO_CLAIMS.A.policyVehicle, make: "BMW" } })).requiredOutputs.estimate;
+  assert.equal(bmw.pricing!.tier, "premium");
+  assert.equal(bmw.pricing!.tierWhy, "BMW parts");
+});
+
+test("an electric car adds the high-voltage safety procedure", () => {
+  const ev = run(civicA(), claim({ policyVehicle: { ...DEMO_CLAIMS.A.policyVehicle, powertrain: "electric" } })).requiredOutputs.estimate;
+  assert.ok(ev.drivers.some((d) => d.label === "High-voltage safety procedure"));
+  const petrol = run(civicA()).requiredOutputs.estimate;
+  assert.ok(ev.highUsd! > petrol.highUsd!);
+});
+
 test("replacement parts cost more on a more valuable car", () => {
   const x = civicA();
   x.damage.items = [{ ...x.damage.items[0], area: "headlight", likely_repair: "replace" }];

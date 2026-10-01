@@ -12,6 +12,7 @@ export const claimSchema = z.object({
     colour: z.string().max(40).nullable(),
     powertrain: z.enum(["combustion", "hybrid", "electric", "unknown"]),
   }),
+  zip: z.string().max(10).nullable().optional(),
   vehicleValueUsd: z.number().min(0).max(5_000_000).nullable(),
   lossDate: z.string().max(20),
   lossDescription: z.string().max(1000),

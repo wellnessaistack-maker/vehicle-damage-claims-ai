@@ -114,8 +114,8 @@ export const SETTING_DEFS: SettingDef[] = [
   {
     key: "labourRateUsd",
     kind: "number",
-    label: "Labour rate (per hour)",
-    help: "The carrier's body and paint labour rate. Usually set by region or by the carrier's repair network.",
+    label: "Base labour rate (per hour)",
+    help: "The carrier's base body and paint labour rate. Each claim's ZIP code scales it for the local market (see the rate card below).",
     min: 30,
     max: 150,
     step: 1,

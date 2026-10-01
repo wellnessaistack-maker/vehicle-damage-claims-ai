@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { ClaimContext, ImpactArea } from "@/lib/claims/types.ts";
 import type { CaseItem } from "@/lib/client/cases.ts";
 import { PHOTO_QUALITY_THRESHOLDS, usd, type Settings } from "@/lib/policy/protocol.ts";
+import { marketFor } from "@/lib/policy/ratecard.ts";
 
 export function Viewer(props: {
   item: CaseItem | null;
@@ -89,6 +90,10 @@ export function Viewer(props: {
             <dd>{c.vehicleValueUsd ? usd(c.vehicleValueUsd) : "Not on file"}</dd>
           </div>
           <div>
+            <dt>Location</dt>
+            <dd>{c.zip ? `${marketFor(c.zip).name}, ${c.zip}` : "Not on file"}</dd>
+          </div>
+          <div>
             <dt>Loss date</dt>
             <dd>{c.lossDate}</dd>
           </div>
@@ -164,6 +169,10 @@ function ClaimEditor({ claim, onSave }: { claim: ClaimContext; onSave: (c: Claim
         <label>
           Vehicle value (USD)
           <input type="number" value={c.vehicleValueUsd ?? ""} onChange={(e) => setC({ ...c, vehicleValueUsd: num(e.target.value) })} />
+        </label>
+        <label>
+          ZIP code
+          <input value={c.zip ?? ""} inputMode="numeric" maxLength={10} onChange={(e) => setC({ ...c, zip: e.target.value.trim() || null })} />
         </label>
       </div>
       <div className="row">
