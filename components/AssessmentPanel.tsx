@@ -511,8 +511,13 @@ function Thread(props: {
   const end = useRef<HTMLDivElement>(null);
   // Braces matter: newer Chrome returns a Promise from scrollIntoView, and an
   // effect must return nothing or a cleanup function.
+  // Only follow new messages added while the claim is open. Opening a claim starts at the top.
+  const seen = useRef(item.thread.length);
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "nearest" });
+    if (item.thread.length > seen.current && seen.current > 0) {
+      end.current?.scrollIntoView({ block: "nearest" });
+    }
+    seen.current = item.thread.length;
   }, [item.thread.length]);
 
   const history = () => {
