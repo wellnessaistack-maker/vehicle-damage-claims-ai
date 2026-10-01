@@ -267,15 +267,15 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 
 Not every mistake costs the same here, so we don't focus on overall accuracy. We focus on three things:
 
-1. **Did it catch the complex claims?** If an expert would send a claim to an adjuster, we should too. Missing one is the most expensive mistake.
-2. **Did it send simple claims to a person anyway?** A bit of caution is fine. Too much and nobody saves any time.
-3. **Did it get the basics right?** The right make, model and colour, or left blank when it can't tell. Damage in the right place, with nothing missed or made up.
+1. **Did it catch the complex claims?** If an expert would send a claim to an adjuster, we should too. A missed one, like a likely total loss handled as a simple repair, is costly to fix later.
+2. **Did it send simple claims to a person anyway?** Some caution is expected, but the more simple claims go to a person, the less time the tool saves.
+3. **Did it get the basics right?** The right make, model and colour, or left blank when it can't tell. Damage described in the right place, without missing or adding any.
 
 We'd also track how consistent, fast and cheap it is. Once it's live, we keep measuring the same things by tracking when reviewers disagree with it. The carrier decides what counts as good enough.
 
 **Where does it fail?**
 
-We tested it on 26 claims. It caught all 11 complex ones, and when it got something wrong, it was always too careful, never too lenient. But 11 is a small number. The real catch rate could be as low as 74%, so we can't promise it will never miss one.
+We tested it on 26 claims. It caught all 11 complex ones, and where it disagreed with the expert, it was more cautious than needed rather than less. But 11 is a small sample. The real catch rate could be as low as 74%, so we'd need more cases to be confident.
 
 The mistakes we care most about:
 
@@ -283,7 +283,7 @@ The mistakes we care most about:
 - A price on the wrong side of the $2,500 limit.
 - Edited photos. We catch reused photos, but not edited ones yet.
 
-Bad or sideways photos matter less. The customer gets asked for another photo, not a wrong decision.
+Poor or sideways photos are less of a concern, since the usual result is asking the customer for another photo.
 
 **What would we need from the carrier?**
 
@@ -296,9 +296,9 @@ Scale can do the expert labelling.
 
 **Is the repair estimate good enough?**
 
-We can't tell yet. That needs their paid claims, and the app says so on every estimate. Once we have them, we'd check how often the final paid amount falls inside our range, and how wide the range is. A huge range is always "right" but useless.
+We can't tell yet. That needs their paid claims, and the app says so on every estimate. Once we have them, we'd check how often the final paid amount falls inside our range, and how wide the range is. A very wide range will usually contain the paid amount, but it isn't much help.
 
-What matters most is which side of the $2,500 limit the estimate lands on. If it's close, the claim is flagged for a price check. If it's well over, it goes to an adjuster. If our estimate is too low, the body shop files a supplement, the same as today. It's never the amount that gets paid.
+What matters most is which side of the $2,500 limit the estimate lands on. If it's close, the claim is flagged for a price check. If it's well over, it goes to an adjuster. If our estimate is too low, the body shop files a supplement, the same as today. It's a starting point, not the amount paid.
 
 ### The detail
 
