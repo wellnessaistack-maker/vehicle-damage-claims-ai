@@ -90,8 +90,8 @@ export default function EvaluationPage() {
             </div>
             <div className="ev-d">
               {s.escalation.caught === s.escalation.of
-                ? "None of the claims an expert would send to an adjuster went down the fast path."
-                : `${s.escalation.of - s.escalation.caught} went down the fast path; see "Where it went wrong" below.`}
+                ? "None of the claims an expert would send to an adjuster went straight to estimating."
+                : `${s.escalation.of - s.escalation.caught} went straight to estimating; see "Where it went wrong" below.`}
             </div>
             {low !== null && <div className="ev-fine">With this few cases, the true rate could be as low as {Math.round(low * 100)}%.</div>}
           </div>
@@ -151,7 +151,7 @@ export default function EvaluationPage() {
         <section className="card">
           <div className="card-head">
             <h3>Where it went wrong</h3>
-            <span className="sub">{cautious ? "Every mistake went the cautious way: more photos or a person, never the fast path" : "Includes a missed escalation"}</span>
+            <span className="sub">{cautious ? "Every mistake went the cautious way: more photos or a person, never straight to estimating" : "Includes a missed escalation"}</span>
           </div>
           <div className="card-body ev-misses">
             {misses.map((m) => {

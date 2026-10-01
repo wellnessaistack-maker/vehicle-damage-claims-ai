@@ -1,6 +1,6 @@
 # Vehicle damage claims AI
 
-A customer takes a photo of their damaged car. The AI reads the make, model, colour and damage, and gives a rough repair-cost range. Written rules then recommend the next step, and a reviewer makes the call: approve the photo estimate, ask the customer for better photos, or send the claim to an adjuster.
+A customer takes a photo of their damaged car. The AI reads the make, model, colour and damage, and gives a rough repair-cost range. Written rules then recommend the next step, and a reviewer makes the call: approve it for estimating, ask the customer for better photos, or send the claim to an adjuster.
 
 - Live prototype: https://vehicle-damage-claims-ai.vercel.app
 - Evaluation: the **Evaluation** page in the app, and [`eval/README.md`](eval/README.md)
@@ -22,7 +22,7 @@ The tool supports the first decision a reviewer makes on a claim. Getting that r
 
 | Route | What happens |
 |---|---|
-| Photo estimate path | The reviewer approves the route and range, and the claim goes to the estimating team as a starting point |
+| Ready for estimating | The reviewer approves the route and range, and the claim goes to the estimating team as a starting point |
 | Request more evidence | The reviewer texts or emails the customer which photos to retake, with an upload link. The claim waits until they reply |
 | Adjuster / total loss | The claim goes to a field adjuster or the total loss unit, plus the fraud team (SIU) if a photo matches a past claim |
 
@@ -228,7 +228,7 @@ We tested it on 26 claims. It caught 10 of the 11 complex ones. The one it misse
 
 The mistakes we care most about:
 
-- A complex claim slipping through to the fast path. The locked rules are there to stop this.
+- A complex claim going straight to estimating when it needed an adjuster. The locked rules are there to stop this.
 - A price on the wrong side of the $2,500 limit.
 - Edited photos. We catch reused photos, but not edited ones yet.
 
@@ -265,13 +265,13 @@ What matters most is which side of the $2,500 limit the estimate lands on. If it
 - **Prompt v1 to v2.** After the first run we changed four instructions based on the cases it got wrong. For example, a crumpled bumper no longer counts as "structural" damage. Since v2 was tuned on these same cases, its improvement probably looks better here than it would on new ones. With real data we'd keep a separate test set nobody tunes against.
 - **The rate card and the missed case.** All three columns are scored with today's rules and rate card, from the saved AI answers. Moving to the rate card changed one route: the Civic on a policy valuing the car at $2,500. The rate card prices the repair at about $1,130, which is 45% of the car's value and under the 60% total-loss line. With the AI's own price it crossed the line, which is what the draft label assumed. An estimator should decide which is right. If the carrier's threshold is lower, it's a setting.
 - **Opus or Sonnet.** They routed the same here, and Sonnet is faster and half the price. 26 cases aren't enough to tell them apart; the carrier's own claims should decide.
-- **The set's main gap.** Few cases should take the photo estimate path, so needless escalation is hard to measure for now. [`eval/README.md`](eval/README.md) lists what to add.
+- **The set's main gap.** Few cases should go straight to estimating, so needless escalation is hard to measure for now. [`eval/README.md`](eval/README.md) lists what to add.
 
 ### Failure modes
 
 | Failure | How likely | What the prototype does |
 |---|---|---|
-| Complex claim sent down the fast path | Low, but high impact | Locked safety rules, most cautious route wins, measured in the evaluation |
+| Complex claim sent straight to estimating | Low, but high impact | Locked safety rules, most cautious route wins, measured in the evaluation |
 | Wrong vehicle named with confidence | Medium | Make and model left blank without a badge or distinctive shape; policy mismatch flagged |
 | Damage missed or made up | Medium | "No damage visible" asks for photos; the reviewer approves each estimate |
 | Estimate on the wrong side of a limit | Likely near the limit | Ranges close to the limit are flagged, very wide ones go to an adjuster |

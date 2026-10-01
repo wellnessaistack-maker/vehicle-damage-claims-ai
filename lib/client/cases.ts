@@ -137,7 +137,7 @@ export function firstReviewNote(d: Decision): string {
   parts.push(
     top
       ? `Recommended route: ${d.routeLabel}, because ${lowerFirst(top.reason ?? top.title)}`
-      : `Recommended route: ${d.routeLabel}. No rules stopped it from taking the fast path.`,
+      : `Recommended route: ${d.routeLabel}. No concerns found.`,
   );
   if (d.route !== "adjuster" && d.humanReview.required) parts.push(`Flagged for review: ${d.humanReview.reasons.map(lowerFirst).join(" ")}`);
   return parts.join(" ");

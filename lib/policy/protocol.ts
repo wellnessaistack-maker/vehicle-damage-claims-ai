@@ -23,7 +23,7 @@ export const PROTOCOL_VERSION = "0.1";
 export type Route = "photo_estimate" | "more_evidence" | "adjuster" | "manual_triage";
 
 export const ROUTE_LABELS: Record<Route, string> = {
-  photo_estimate: "Photo estimate path",
+  photo_estimate: "Ready for estimating",
   more_evidence: "Request more evidence",
   adjuster: "Adjuster / total loss",
   manual_triage: "Not assessed: manual triage",
@@ -455,7 +455,7 @@ export const RULES: Rule[] = [
     check: ({ x }) =>
       x.vehicle.vehicle_present && (x.vehicle.vehicle_class === "race_or_non_road" || x.vehicle.vehicle_class === "other")
         ? {
-            reason: "This isn't a normal road car, so it's outside the photo estimate path.",
+            reason: "This isn't a normal road car, so it can't go straight to estimating from photos.",
             evidence: x.vehicle.identification_evidence,
           }
         : null,
@@ -731,14 +731,14 @@ export const RULES: Rule[] = [
     tier: "configurable",
     effect: "adjuster",
     title: "Estimate runs far past the fast-path limit",
-    when: "The likely range starts under the fast-path limit, but with possible hidden damage it could run well above it (by the set percentage), so the claim is too uncertain for the fast path.",
+    when: "The likely range starts under the fast-path limit, but with possible hidden damage it could run well above it (by the set percentage), so the claim is too uncertain to go straight to estimating.",
     settings: ["fastPathLimitUsd", "wideRangeOverLimitPct"],
     check: (ctx) => {
       const cost = usableCost(ctx);
       const { settings } = ctx;
       const ceiling = settings.fastPathLimitUsd * (1 + settings.wideRangeOverLimitPct / 100);
       return cost && cost.lowUsd <= settings.fastPathLimitUsd && cost.ceilingUsd > ceiling
-        ? { reason: `The estimate could run up to ${usd(cost.ceilingUsd)}, more than ${settings.wideRangeOverLimitPct}% above the ${usd(settings.fastPathLimitUsd)} fast-path limit, so it's too uncertain for the fast path.` }
+        ? { reason: `The estimate could run up to ${usd(cost.ceilingUsd)}, more than ${settings.wideRangeOverLimitPct}% above the ${usd(settings.fastPathLimitUsd)} fast-path limit, so it's too uncertain to go straight to estimating.` }
         : null;
     },
   },
@@ -749,7 +749,7 @@ export const RULES: Rule[] = [
     tier: "configurable",
     effect: "review",
     title: "Estimate straddles the fast-path limit",
-    when: "The fast-path limit falls inside the estimate, counting possible hidden damage, so the claim stays on the fast path but an appraiser should check the price.",
+    when: "The fast-path limit falls inside the estimate, counting possible hidden damage, so the claim stays ready for estimating but an appraiser should check the price.",
     settings: ["fastPathLimitUsd"],
     check: (ctx) => {
       const cost = usableCost(ctx);
