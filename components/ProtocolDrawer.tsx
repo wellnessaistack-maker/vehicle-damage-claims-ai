@@ -7,6 +7,7 @@ import { DEFAULT_MODEL } from "@/lib/extraction/models.ts";
 import { PROMPT_VERSION } from "@/lib/extraction/prompt.ts";
 import { currentDecision, type CaseItem } from "@/lib/client/cases.ts";
 import { scoreCase, summarise, type EvalRun } from "@/lib/eval/metrics.ts";
+import { RATE_CARD } from "@/lib/policy/ratecard.ts";
 import {
   clampSettings,
   DEFAULT_SETTINGS,
@@ -167,6 +168,8 @@ export function ProtocolDrawer(props: {
             </div>
           </div>
 
+          <RateCard />
+
           {GROUPS.map((g) => (
             <div className="rules-group" key={g.id}>
               <h4>
@@ -269,6 +272,52 @@ function ProtocolTest({ comparison }: { comparison: Comparison }) {
             </tbody>
           </table>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** The carrier's rate card, read only. In production it comes from an estimating platform and the carrier's own rates. */
+function RateCard() {
+  const h = (n?: number) => (n === undefined ? "" : String(n));
+  const d = (n?: number) => (n === undefined ? "" : usd(n));
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h3>Rate card</h3>
+        <span className="sub">How a described repair becomes a price</span>
+      </div>
+      <div className="card-body">
+        <div className="help">
+          The AI says which part is damaged, how badly, and whether it would be repaired, replaced or refinished. This card turns that into hours and parts, priced at the labour and paint rates above. Repair hours are for moderate damage (half for minor, 1.6x for severe), and each painted panel adds 1 h to remove trim and mask.
+          Parts cost 0.8x on cars worth under $10,000 and 1.5x over $40,000, using the policy&apos;s vehicle value. Every figure is an illustrative placeholder: in production the hours come from an
+          estimating platform&apos;s labour times and the rates and parts pricing from the carrier, checked against their paid claims.
+        </div>
+        <details className="fold">
+          <summary>Hours and parts by panel ({Object.keys(RATE_CARD).length})</summary>
+          <table className="ratecard-table">
+            <thead>
+              <tr>
+                <th>Part</th>
+                <th>Repair (h)</th>
+                <th>Replace (h)</th>
+                <th>Paint (h)</th>
+                <th>Part, mid-range car</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(RATE_CARD).map(([area, c]) => (
+                <tr key={area}>
+                  <td>{area.replace(/_/g, " ")}</td>
+                  <td>{h(c?.repairHours)}</td>
+                  <td>{h(c?.replaceHours)}</td>
+                  <td>{h(c?.paintHours)}</td>
+                  <td>{d(c?.partUsd)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
       </div>
     </div>
   );

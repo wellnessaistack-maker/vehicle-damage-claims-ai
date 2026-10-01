@@ -92,7 +92,7 @@ function cite(key: SourceKey, { x, claim, photos, cost }: Ctx): Citation {
       return { source: "Past claims", text: hit ? `${hit.name} matches a photo on claim ${hit.nearDuplicateOf}` : "No match against past-claim photos" };
     }
     case "estimate":
-      return { source: "Estimate", text: cost ? `Range ${usd(cost.lowUsd)} to ${usd(cost.highUsd)} (${cost.drivers.some((d) => d.label === "Reviewer's adjusted range") ? "reviewer's adjusted range" : "AI item prices plus rule adjustments"})` : "No estimate" };
+      return { source: "Estimate", text: cost ? `Range ${usd(cost.lowUsd)} to ${usd(cost.highUsd)}${cost.ceilingUsd > cost.highUsd ? `, up to ${usd(cost.ceilingUsd)} with possible hidden damage` : ""} (${cost.drivers.some((d) => d.label === "Reviewer's adjusted range") ? "reviewer's adjusted range" : cost.pricing.source === "rate_card" ? `rate card at ${usd(cost.pricing.labourRateUsd)}/h` : "AI item prices"})` : "No estimate" };
   }
 }
 
@@ -131,7 +131,7 @@ export function policyChecks({ x, claim, settings, cost }: Ctx): PolicyCheck[] {
   checks.push({
     label: "Vehicle value",
     onFile: claim.vehicleValueUsd ? `${usd(claim.vehicleValueUsd)} (mock)` : "Not on file",
-    observed: line ? `Total-loss line ${usd(line)} (${Math.round(settings.totalLossRatio * 100)}%)${cost ? `; estimate tops out at ${usd(cost.highUsd)}` : ""}` : "No total-loss check possible",
+    observed: line ? `Total-loss line ${usd(line)} (${Math.round(settings.totalLossRatio * 100)}%)${cost ? `; estimate could reach ${usd(cost.ceilingUsd)}` : ""}` : "No total-loss check possible",
     status: "info",
   });
 

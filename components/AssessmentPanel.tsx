@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { currentDecision, DIRECTORY, holderLine, recipient, REVIEWER, ROUTE_OWNER, type CaseItem, type CaseOutcome, type ThreadEntry } from "@/lib/client/cases.ts";
 import { CALL_OUTCOMES, channels, customerUpdate, defaultChannel, firstName, followUpDate, preview as messagePreview, reminder, sentVia, shortDate, type Channel } from "@/lib/client/customer.ts";
@@ -236,7 +236,11 @@ function Estimate({ e }: { e: EstimateOutput }) {
   }
   const lo = e.lowUsd!;
   const hi = e.highUsd!;
-  const max = Math.max(hi, e.fastPathLimitUsd, e.totalLossLineUsd && e.totalLossLineUsd < hi * 3 ? e.totalLossLineUsd : 0) * 1.12;
+  const ceil = Math.max(hi, e.ceilingUsd ?? hi);
+  const max = Math.max(ceil, e.fastPathLimitUsd, e.totalLossLineUsd && e.totalLossLineUsd < ceil * 3 ? e.totalLossLineUsd : 0) * 1.12;
+  const visible = e.drivers.filter((d) => d.kind !== "possible");
+  const possible = e.drivers.filter((d) => d.kind === "possible");
+  const one = (d: (typeof e.drivers)[number]) => (d.lowUsd === d.highUsd ? usd(d.highUsd) : d.lowUsd === 0 ? `up to ${usd(d.highUsd)}` : `${usd(d.lowUsd)} to ${usd(d.highUsd)}`);
   const pos = (n: number) => `${Math.min(100, (n / max) * 100)}%`;
   const showTl = e.totalLossLineUsd !== null && e.totalLossLineUsd <= max;
   return (
@@ -249,35 +253,75 @@ function Estimate({ e }: { e: EstimateOutput }) {
         <div className="rangebar est-bar" aria-label="Estimate range compared with the fast-path limit and total-loss line">
           <div className="rangebar-track" />
           <div className="rangebar-fill" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: e.status === "reference_only" || e.status === "provisional" ? "var(--text-3)" : undefined }} />
+          {ceil > hi && <div className="rangebar-extra" title="Possible extras" style={{ left: pos(hi), width: `calc(${pos(ceil)} - ${pos(hi)})` }} />}
           <div className="rangebar-mark" style={{ left: pos(e.fastPathLimitUsd) }}>
             <span>Limit {usd(e.fastPathLimitUsd)}</span>
           </div>
           {showTl && (
-            <div className="rangebar-mark tl" style={{ left: pos(e.totalLossLineUsd!) }}>
+            <div className={`rangebar-mark tl ${Math.abs(e.totalLossLineUsd! - e.fastPathLimitUsd) < max * 0.18 ? "above" : ""}`} style={{ left: pos(e.totalLossLineUsd!) }}>
               <span>Total loss {usd(e.totalLossLineUsd!)}</span>
             </div>
           )}
         </div>
       </div>
+      {e.likelyUsd !== undefined && (
+        <div className="est-likely">
+          Most likely about <b>{usd(e.likelyUsd)}</b> for the damage the photos show.
+          {ceil > hi && <> Could reach {usd(ceil)} if the possible extras below are found.</>}
+        </div>
+      )}
+      {e.pricing && (
+        <div className="est-pricing">
+          {e.pricing.source === "rate_card" ? (
+            <>
+              Priced from the carrier rate card: {usd(e.pricing.labourRateUsd)}/h labour, {e.pricing.tier} parts.
+            </>
+          ) : (
+            <>Priced from the AI&apos;s own figures.</>
+          )}
+          {e.pricing.source === "rate_card" && e.aiItemsUsd && e.aiItemsUsd.highUsd > 0 && (
+            <span className="hint"> The AI&apos;s own price for the same damage: {usd(e.aiItemsUsd.lowUsd)} to {usd(e.aiItemsUsd.highUsd)}, before adjustments.</span>
+          )}
+        </div>
+      )}
       <div className="hint">
         {e.status === "provisional" ? e.note : e.status === "reference_only" ? "For the adjuster's reference only." : "A range, never a payable amount."} {e.accuracyNote}
       </div>
       <details className="fold">
-        <summary>Cost drivers ({e.drivers.length})</summary>
+        <summary>
+          How it adds up ({visible.length} repair{visible.length === 1 ? "" : "s"}
+          {possible.length ? `, ${possible.length} possible extra${possible.length === 1 ? "" : "s"}` : ""})
+        </summary>
         <ul className="drivers">
-          {e.drivers.map((dr) => (
+          {visible.map((dr) => (
             <li key={dr.label}>
               <span>
                 {dr.label}
-                <span className={`chip src ${dr.source === "ai_estimate" ? "chip-info" : ""}`}>{dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}</span>
+                <span className={`chip src ${dr.source === "rule_adjustment" ? "" : "chip-info"}`}>
+                  {dr.source === "rate_card" ? "Rate card" : dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}
+                </span>
+                {dr.note && <span className="driver-note">{dr.note}</span>}
               </span>
-              <span style={{ whiteSpace: "nowrap" }}>
-                {dr.lowUsd === 0 ? "up to " : `${usd(dr.lowUsd)} to `}
-                {usd(dr.highUsd)}
-              </span>
+              <span style={{ whiteSpace: "nowrap" }}>{one(dr)}</span>
             </li>
           ))}
         </ul>
+        {possible.length > 0 && (
+          <>
+            <div className="drivers-head">Possible extras, not in the likely range</div>
+            <ul className="drivers possible">
+              {possible.map((dr) => (
+                <li key={dr.label}>
+                  <span>
+                    {dr.label}
+                    {dr.note && <span className="driver-note">{dr.note}</span>}
+                  </span>
+                  <span style={{ whiteSpace: "nowrap" }}>{one(dr)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         {e.status !== "provisional" && <div className="note">{e.note}</div>}
       </details>
     </>
@@ -714,7 +758,7 @@ function ActionBar(props: {
             {picker}
           </div>
           {contactable ? (
-            <textarea rows={4} value={adhoc} onChange={(ev) => setAdhoc(ev.target.value)} />
+            <MessageBox value={adhoc} onChange={(ev) => setAdhoc(ev.target.value)} />
           ) : (
             <div className="hint">No phone or email on file. Add them under Edit details.</div>
           )}
@@ -745,7 +789,7 @@ function ActionBar(props: {
             <b>Update for {name}, sent {route === "photo_estimate" ? "when you approve" : "when you send the claim on"}</b>
             {picker}
           </div>
-          <textarea rows={4} value={props.message} onChange={(ev) => props.setMessage(ev.target.value)} />
+          <MessageBox value={props.message} onChange={(ev) => props.setMessage(ev.target.value)} />
           <div className="composer-row">
             {route === "adjuster" && <span className="hint" style={{ marginRight: "auto" }}>Never mentions a total loss or a fraud review.</span>}
             <button className="btn btn-sm btn-primary" onClick={() => setMode(null)}>
@@ -972,7 +1016,7 @@ function ActionBar(props: {
                 Hide
               </button>
             </div>
-            <textarea rows={4} value={props.message} onChange={(ev) => props.setMessage(ev.target.value)} />
+            <MessageBox value={props.message} onChange={(ev) => props.setMessage(ev.target.value)} />
             <div className="composer-row">
               <span className="hint" style={{ marginRight: "auto" }}>
                 Includes an upload link. The claim then waits, with a follow-up date.
@@ -1105,4 +1149,16 @@ function CallForm({ claim, onLog, onCancel }: { claim: CaseItem["claim"]; onLog:
       </div>
     </div>
   );
+}
+
+/** A message box that grows to fit its message, up to a cap, so the whole draft is visible. */
+function MessageBox({ value, onChange }: { value: string; onChange: (ev: React.ChangeEvent<HTMLTextAreaElement>) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [value]);
+  return <textarea ref={ref} rows={3} value={value} onChange={onChange} className="message-box" />;
 }

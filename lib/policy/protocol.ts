@@ -46,6 +46,10 @@ export interface Settings {
   partialViewWideningPct: number;
   sensorCalibrationLowUsd: number;
   sensorCalibrationHighUsd: number;
+  pricing: "rate_card" | "ai";
+  estimateBandPct: number;
+  labourRateUsd: number;
+  paintMaterialsUsd: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -59,6 +63,10 @@ export const DEFAULT_SETTINGS: Settings = {
   partialViewWideningPct: 50,
   sensorCalibrationLowUsd: 250,
   sensorCalibrationHighUsd: 600,
+  pricing: "rate_card",
+  estimateBandPct: 15,
+  labourRateUsd: 65,
+  paintMaterialsUsd: 45,
 };
 
 interface NumberSetting {
@@ -83,6 +91,46 @@ interface ChoiceSetting {
 export type SettingDef = NumberSetting | ChoiceSetting;
 
 export const SETTING_DEFS: SettingDef[] = [
+  {
+    key: "pricing",
+    kind: "choice",
+    label: "How damage is priced",
+    help: "Rate card: the AI describes each repair and the carrier's labour times and rates price it. AI only: the AI's own rough price for each item.",
+    options: [
+      { value: "rate_card", label: "Carrier rate card" },
+      { value: "ai", label: "AI only" },
+    ],
+  },
+  {
+    key: "estimateBandPct",
+    kind: "number",
+    label: "Estimate range width",
+    help: "How far either side of the most likely rate-card cost the range runs. In production, set from paid claims so an agreed share of final costs land inside it.",
+    min: 5,
+    max: 50,
+    step: 5,
+    unit: "pct",
+  },
+  {
+    key: "labourRateUsd",
+    kind: "number",
+    label: "Labour rate (per hour)",
+    help: "The carrier's body and paint labour rate. Usually set by region or by the carrier's repair network.",
+    min: 30,
+    max: 150,
+    step: 1,
+    unit: "usd",
+  },
+  {
+    key: "paintMaterialsUsd",
+    kind: "number",
+    label: "Paint materials (per paint hour)",
+    help: "Paint and materials allowance for each hour of refinish labour.",
+    min: 10,
+    max: 100,
+    step: 1,
+    unit: "usd",
+  },
   {
     key: "fastPathLimitUsd",
     kind: "number",
@@ -662,16 +710,16 @@ export const RULES: Rule[] = [
     tier: "configurable",
     effect: "adjuster",
     title: "Repair may cost more than the car is worth",
-    when: "The high end of the estimate reaches the total-loss line (a share of the vehicle's value).",
+    when: "The estimate, including possible hidden damage, reaches the total-loss line (a share of the vehicle's value).",
     settings: ["totalLossRatio"],
     check: (ctx) => {
       const cost = usableCost(ctx);
       const { claim, settings } = ctx;
       if (!cost || !claim.vehicleValueUsd) return null;
       const line = claim.vehicleValueUsd * settings.totalLossRatio;
-      return cost.highUsd >= line
+      return cost.ceilingUsd >= line
         ? {
-            reason: `The high end of the estimate (${usd(cost.highUsd)}) reaches the total-loss line of ${usd(line)} (${Math.round(settings.totalLossRatio * 100)}% of the ${usd(claim.vehicleValueUsd)} vehicle value).`,
+            reason: `${cost.ceilingUsd > cost.highUsd ? `With possible hidden damage the estimate could reach ${usd(cost.ceilingUsd)}, which` : `The high end of the estimate (${usd(cost.highUsd)})`} reaches the total-loss line of ${usd(line)} (${Math.round(settings.totalLossRatio * 100)}% of the ${usd(claim.vehicleValueUsd)} vehicle value).`,
           }
         : null;
     },
@@ -683,14 +731,14 @@ export const RULES: Rule[] = [
     tier: "configurable",
     effect: "adjuster",
     title: "Estimate runs far past the fast-path limit",
-    when: "The range starts under the fast-path limit, but its high end is well above it (by the set percentage), so the claim is too uncertain for the fast path.",
+    when: "The likely range starts under the fast-path limit, but with possible hidden damage it could run well above it (by the set percentage), so the claim is too uncertain for the fast path.",
     settings: ["fastPathLimitUsd", "wideRangeOverLimitPct"],
     check: (ctx) => {
       const cost = usableCost(ctx);
       const { settings } = ctx;
       const ceiling = settings.fastPathLimitUsd * (1 + settings.wideRangeOverLimitPct / 100);
-      return cost && cost.lowUsd <= settings.fastPathLimitUsd && cost.highUsd > ceiling
-        ? { reason: `The range runs up to ${usd(cost.highUsd)}, more than ${settings.wideRangeOverLimitPct}% above the ${usd(settings.fastPathLimitUsd)} fast-path limit, so it's too uncertain for the fast path.` }
+      return cost && cost.lowUsd <= settings.fastPathLimitUsd && cost.ceilingUsd > ceiling
+        ? { reason: `The estimate could run up to ${usd(cost.ceilingUsd)}, more than ${settings.wideRangeOverLimitPct}% above the ${usd(settings.fastPathLimitUsd)} fast-path limit, so it's too uncertain for the fast path.` }
         : null;
     },
   },
@@ -701,15 +749,20 @@ export const RULES: Rule[] = [
     tier: "configurable",
     effect: "review",
     title: "Estimate straddles the fast-path limit",
-    when: "The fast-path limit falls inside the estimate range, so the claim stays on the fast path but an appraiser should check the price.",
+    when: "The fast-path limit falls inside the estimate, counting possible hidden damage, so the claim stays on the fast path but an appraiser should check the price.",
     settings: ["fastPathLimitUsd"],
     check: (ctx) => {
       const cost = usableCost(ctx);
       const { settings } = ctx;
       // A very wide range is already sent to an adjuster by C4.
       if (ctx.firedSoFar.includes("C4")) return null;
-      return cost && cost.lowUsd <= settings.fastPathLimitUsd && cost.highUsd > settings.fastPathLimitUsd
-        ? { reason: `The ${usd(settings.fastPathLimitUsd)} fast-path limit falls inside the estimate range, so the price needs a check.` }
+      return cost && cost.lowUsd <= settings.fastPathLimitUsd && cost.ceilingUsd > settings.fastPathLimitUsd
+        ? {
+            reason:
+              cost.highUsd > settings.fastPathLimitUsd
+                ? `The ${usd(settings.fastPathLimitUsd)} fast-path limit falls inside the estimate range, so the price needs a check.`
+                : `The likely range is under the ${usd(settings.fastPathLimitUsd)} limit, but possible hidden damage could take it to ${usd(cost.ceilingUsd)}, so the price needs a check.`,
+          }
         : null;
     },
   },
