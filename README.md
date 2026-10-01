@@ -263,13 +263,19 @@ Measured on the 26 labelled cases, end to end on the server (photo checks, AI ca
 
 ### Summary
 
-**How would we know it's working?** Mistakes here don't cost the same, so we don't lead with accuracy. The expensive mistake is a complex claim slipping onto the fast path, so the first measure is **complex claims caught**: of the claims an expert would send to an adjuster, how many we escalated. Next is **routing agreement** with expert labels, watched alongside **needless escalations**, because too much caution erases the time savings. Then the three outputs: make, model and colour right or correctly left blank, and a damage summary that names the right area without missing or inventing damage. Behind those sit stability on re-runs, time, cost and failures. Targets are agreed with the carrier's claims and risk owners, not set by us.
+**How would we know it's working?** Mistakes here don't cost the same, so overall accuracy is the wrong headline. In order, we measure:
 
-**Where does it fail, and what matters most?** The costliest failure is a complex claim sent down the fast path; on our 26 test claims it caught 11 of 11, which with so few cases still means the true rate could be as low as 74%. Every mistake it made went the cautious way: asking for another photo or a person, never the fast path. Other failures: naming the wrong car confidently (it leaves make and model blank unless a badge or distinctive shape supports them), an estimate on the wrong side of a limit, sideways or poor photos, and reused or edited photos (reuse is caught, edits aren't yet). A single photo rarely shows hidden damage, which is why the rules lean cautious.
+1. **Complex claims caught.** Of the claims an expert would send to an adjuster, how many we sent. Missing one is the costliest mistake.
+2. **Needless escalations.** Simple claims sent to a person anyway. Too many and the time savings disappear.
+3. **The three outputs.** The right make, model and colour (or correctly left blank), and damage in the right place, none missed or invented.
 
-**What we'd need from the carrier.** A few hundred past claims with photos, the route each took, the final paid cost and any supplements. Two estimating experts labelling them independently; how often they agree is the ceiling to beat. Today's baseline for late escalations, supplements and reviewer minutes. And their own eligibility rules, limits, labour rates and vehicle values. Expert labelling at this scale is work Scale can supply.
+Then stability, speed and cost. After launch, reviewer overrides and a sampled review keep measuring the same things on live claims. Targets are agreed with the carrier, not set by us.
 
-**Is the repair estimate good enough, and what happens when it's wrong?** The test is scoring past claims and comparing our range with the final paid cost: how often the range contains it, and how wide the range is, since a wide enough range always looks accurate. That needs paid-claims data, and the app says so on every estimate. The mistake that matters is a range on the wrong side of the fast-path limit or the total-loss line. If the range crosses the limit slightly, the claim is flagged for a price check; if it's over the limit, or runs far past it, it goes to an adjuster. If the estimate is too low, the shop files a supplement as it does today. It is never the amount paid.
+**Where does it fail?** On 26 test claims it caught 11 of 11 complex claims, and every mistake went the cautious way: more photos or a person, never the fast path. But 11 cases is few; the true rate could be as low as 74%. The failures that matter most are a complex claim reaching the fast path (blocked by locked rules), an estimate on the wrong side of the $2,500 limit, and edited photos (reused ones are caught, edited ones aren't yet). Sideways or poor photos cost the customer an extra photo, not a wrong decision.
+
+**What we'd need from the carrier.** A few hundred past claims with photos, the route taken, the final paid cost and any supplements. Two estimating experts labelling them separately, since their agreement is the ceiling to beat. Today's baseline for late escalations, supplements and reviewer time. And their own limits, labour rates and vehicle values. Expert labelling at this scale is work Scale can supply.
+
+**Is the repair estimate good enough?** We can't know without paid claims, and the app says so. The test is how often our range contains the final paid cost, and how wide it is. What matters most is which side of a limit it lands on: a range straddling the limit is flagged for a price check, one far past it goes to an adjuster. If it's too low, the shop files a supplement as it does today. It is never the amount paid.
 
 ### The detail
 
