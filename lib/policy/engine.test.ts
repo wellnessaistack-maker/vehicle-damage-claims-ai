@@ -518,7 +518,7 @@ test("a reviewer's adjusted range goes back through the rules", () => {
   assert.equal(over.route, "adjuster");
   const c1 = over.ruleResults.find((r) => r.id === "C1")!;
   assert.ok(c1.fired);
-  assert.match(c1.citations!.map((t) => t.text).join(" "), /reviewer's adjusted range/);
+  assert.match(c1.citations!.map((t) => t.text).join(" "), /reviewer's amount/);
 });
 
 test("a wide range that runs far past the limit goes to an adjuster, not just a price check", () => {

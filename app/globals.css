@@ -185,6 +185,7 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.25; }
 .rangebar-fill { position: absolute; top: 12px; height: 12px; background: var(--accent); border-radius: 999px; opacity: 0.85; }
 .rangebar-mark { position: absolute; top: 6px; width: 2px; height: 24px; background: var(--text); }
 .rangebar-mark span { position: absolute; top: 26px; transform: translateX(-50%); font-size: 10.5px; color: var(--text-2); white-space: nowrap; }
+.rangebar-mark span.has-tip { cursor: help; text-decoration: underline dotted; text-underline-offset: 2px; }
 .rangebar-mark.tl { background: var(--adjuster); }
 .rangebar-mark.tl span { color: var(--adjuster); }
 

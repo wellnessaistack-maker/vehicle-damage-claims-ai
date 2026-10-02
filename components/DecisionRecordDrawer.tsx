@@ -66,9 +66,12 @@ export function DecisionRecordDrawer({ item, settings, log, onClose }: { item: C
                   </dd>
                   {last.adjustedRange && last.aiRange && (
                     <>
-                      <dt>Range</dt>
+                      <dt>Estimate</dt>
                       <dd>
-                        AI {usd0(last.aiRange.lowUsd)} to {usd0(last.aiRange.highUsd)}; reviewer {usd0(last.adjustedRange.lowUsd)} to {usd0(last.adjustedRange.highUsd)}
+                        Rate card {usd0(last.aiRange.lowUsd)} to {usd0(last.aiRange.highUsd)}; reviewer{" "}
+                        {last.adjustedRange.lowUsd === last.adjustedRange.highUsd
+                          ? usd0(last.adjustedRange.highUsd)
+                          : `${usd0(last.adjustedRange.lowUsd)} to ${usd0(last.adjustedRange.highUsd)}`}
                       </dd>
                     </>
                   )}

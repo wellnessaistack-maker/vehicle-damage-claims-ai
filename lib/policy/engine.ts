@@ -187,9 +187,9 @@ function reviewerCost(ai: CostRange, r: { lowUsd: number; highUsd: number }): Co
     // The reviewer's range is their judgment of the full cost, extras included.
     possibleExtraUsd: 0,
     ceilingUsd: r.highUsd,
-    workings: [`The reviewer set the range to ${usd(r.lowUsd)} to ${usd(r.highUsd)}.`],
+    workings: [r.lowUsd === r.highUsd ? `The reviewer set the estimate to ${usd(r.highUsd)}.` : `The reviewer set the range to ${usd(r.lowUsd)} to ${usd(r.highUsd)}.`],
     drivers: [
-      { label: "Reviewer's adjusted range", lowUsd: r.lowUsd, highUsd: r.highUsd, source: "rule_adjustment", note: `Replaces the estimated range of ${usd(ai.lowUsd)} to ${usd(ai.highUsd)}` },
+      { label: "Reviewer's amount", lowUsd: r.lowUsd, highUsd: r.highUsd, source: "rule_adjustment", note: `Replaces the estimated range of ${usd(ai.lowUsd)} to ${usd(ai.highUsd)}` },
     ],
   };
 }

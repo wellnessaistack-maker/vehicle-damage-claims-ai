@@ -136,7 +136,7 @@ export const SETTING_DEFS: SettingDef[] = [
     key: "fastPathLimitUsd",
     kind: "number",
     label: "Approval limit",
-    help: "The reviewer can approve repair estimates up to this amount from photos. Above it, the claim goes to an adjuster. In production this matches the reviewer's authority limit.",
+    help: "The most a desk appraiser can approve from photos. Under it, the reviewer approves the estimate; above it, the claim goes to an adjuster. Carriers set these authority limits by role; $2,500 is a placeholder for this carrier's number.",
     min: 500,
     max: 10000,
     step: 250,

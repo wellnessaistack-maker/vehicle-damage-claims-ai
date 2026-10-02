@@ -139,6 +139,11 @@ export function AssessmentPanel(props: {
   );
 }
 
+/** Hover text for the approval limit mark on the estimate bar. */
+function approvalLimitTip(limitUsd: number) {
+  return `Approval limit: the most a desk appraiser can approve from photos. Under it, the reviewer approves the estimate; over it, the claim goes to an adjuster. Carriers set these limits by role. ${usd(limitUsd)} is a placeholder for this carrier's number.`;
+}
+
 function Assessing({ started }: { started: string }) {
   const [, tick] = useState(0);
   useEffect(() => {
@@ -281,11 +286,15 @@ function Estimate({ e }: { e: EstimateOutput }) {
           <div className="rangebar-fill" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: e.status === "reference_only" || e.status === "provisional" ? "var(--text-3)" : undefined }} />
           {ceil > hi && <div className="rangebar-extra" title="Possible extras" style={{ left: pos(hi), width: `calc(${pos(ceil)} - ${pos(hi)})` }} />}
           <div className="rangebar-mark" style={{ left: pos(e.fastPathLimitUsd) }}>
-            <span>Limit {usd(e.fastPathLimitUsd)}</span>
+            <span className="has-tip" title={approvalLimitTip(e.fastPathLimitUsd)}>
+              Limit {usd(e.fastPathLimitUsd)}
+            </span>
           </div>
           {showTl && (
             <div className={`rangebar-mark tl ${Math.abs(e.totalLossLineUsd! - e.fastPathLimitUsd) < max * 0.18 ? "above" : ""}`} style={{ left: pos(e.totalLossLineUsd!) }}>
-              <span>Total loss {usd(e.totalLossLineUsd!)}</span>
+              <span className={e.totalLossBasis ? "has-tip" : undefined} title={e.totalLossBasis ? `Total-loss line: ${e.totalLossBasis}` : undefined}>
+                Total loss {usd(e.totalLossLineUsd!)}
+              </span>
             </div>
           )}
         </div>
@@ -708,7 +717,7 @@ function ActionBar(props: {
   if (d?.siuReferral) adjusterTargets.push("siu");
   const names = (ids: string[]) => ids.map((id) => recipient(id).name.replace(/^(Estimating|Total|Field|Manual)/, (m) => m.toLowerCase())).join(" and ");
 
-  // The reviewer's range goes back through the same rules, so a correction can change the route.
+  // The reviewer's amount goes back through the same rules, so a correction can change the route.
   const amountN = Math.round(Number(amount));
   const loN = amountN;
   const hiN = amountN;

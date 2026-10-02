@@ -12,7 +12,7 @@ export type { Agreement };
 
 export const AGREEMENT_LABELS: Record<Agreement, string> = {
   kept: "Kept the recommendation",
-  adjusted_range: "Adjusted the range",
+  adjusted_range: "Changed the amount",
   changed_route: "Changed the route",
 };
 
@@ -45,7 +45,7 @@ export function recommendation(c: CaseItem, settings: Settings): Decision | null
 }
 
 /**
- * A route change is always a disagreement. A new range counts as "adjusted" when the route
+ * A route change is always a disagreement. A new amount counts as "adjusted" when the route
  * holds, and as a route change when the new range moves the claim to a different route.
  * Handing off with the recommended route is agreement.
  */
