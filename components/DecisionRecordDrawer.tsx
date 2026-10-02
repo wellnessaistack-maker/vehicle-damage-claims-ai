@@ -179,9 +179,9 @@ export function DecisionRecordDrawer({ item, settings, log, onClose }: { item: C
                   </tr>
                 </thead>
                 <tbody>
-                  {a.photos.map((p) => (
+                  {a.photos.map((p, i) => (
                     <tr key={p.name}>
-                      <td>{p.name}</td>
+                      <td>Photo {i + 1}</td>
                       <td>
                         {p.width} x {p.height}
                       </td>

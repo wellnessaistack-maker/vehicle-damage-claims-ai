@@ -97,11 +97,11 @@ function cite(key: SourceKey, { x, claim, photos, cost }: Ctx): Citation {
     case "photo.checks":
       return {
         source: "Photo check (code)",
-        text: photos.map((p) => `${p.name}: brightness ${Math.round(p.brightness)}, sharpness ${Math.round(p.sharpness)}, ${p.width} x ${p.height}`).join("; ") || "No photos",
+        text: photos.map((p, i) => `Photo ${i + 1}: brightness ${Math.round(p.brightness)}, sharpness ${Math.round(p.sharpness)}, ${p.width} x ${p.height}`).join("; ") || "No photos",
       };
     case "photo.pastClaims": {
       const hit = photos.find((p) => p.nearDuplicateOf);
-      return { source: "Past claims", text: hit ? `${hit.name} matches a photo on claim ${hit.nearDuplicateOf}` : "No match against past-claim photos" };
+      return { source: "Past claims", text: hit ? `Photo ${photos.indexOf(hit) + 1} matches a photo on claim ${hit.nearDuplicateOf}` : "No match against past-claim photos" };
     }
     case "estimate":
       return { source: "Estimate", text: cost ? `${cost.lowUsd === cost.highUsd ? usd(cost.highUsd) : `Range ${usd(cost.lowUsd)} to ${usd(cost.highUsd)}`}${cost.ceilingUsd > cost.highUsd ? `, up to ${usd(cost.ceilingUsd)} with possible hidden damage` : ""} (${cost.drivers.some((d) => d.label === "Reviewer's amount") ? "reviewer's amount" : cost.pricing.source === "rate_card" ? `rate card at ${usd(cost.pricing.labourRateUsd)}/h` : "AI item prices"})` : "No estimate" };
