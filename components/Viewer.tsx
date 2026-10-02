@@ -77,7 +77,6 @@ export function Viewer(props: {
           <div className="claim-contact">
             {c.contact.phone && <span>{c.contact.phone}</span>}
             {c.contact.email && <span>{c.contact.email}</span>}
-            <span className="hint">prefers {c.contact.preferred}</span>
           </div>
         )}
         <dl className="claim-meta">
@@ -183,13 +182,6 @@ function ClaimEditor({ claim, onSave }: { claim: ClaimContext; onSave: (c: Claim
         <label>
           Email
           <input value={c.contact?.email ?? ""} onChange={(e) => setC({ ...c, contact: { phone: c.contact?.phone ?? null, email: e.target.value || null, preferred: c.contact?.preferred ?? "email" } })} />
-        </label>
-        <label>
-          Prefers
-          <select value={c.contact?.preferred ?? "text"} onChange={(e) => setC({ ...c, contact: { phone: c.contact?.phone ?? null, email: c.contact?.email ?? null, preferred: e.target.value as "text" | "email" } })}>
-            <option value="text">Text</option>
-            <option value="email">Email</option>
-          </select>
         </label>
       </div>
       <div className="row">
