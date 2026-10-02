@@ -91,7 +91,7 @@ export default function EvaluationPage() {
             <div className="ev-d">
               {s.escalation.caught === s.escalation.of
                 ? "None of the claims an expert would send to an adjuster were approved from photos."
-                : `${s.escalation.of - s.escalation.caught} were approved from photos; see "Where it went wrong" below.`}
+                : `${s.escalation.of - s.escalation.caught} ${s.escalation.of - s.escalation.caught === 1 ? "was" : "were"} approved from photos instead; see "Where it went wrong" below.`}
             </div>
             {low !== null && <div className="ev-fine">With this few cases, the true rate could be as low as {Math.round(low * 100)}%.</div>}
           </div>
@@ -105,11 +105,11 @@ export default function EvaluationPage() {
             </div>
           </div>
           <div className="ev-tile">
-            <div className="ev-l">Over-escalated</div>
+            <div className="ev-l">Simple claims sent to an adjuster</div>
             <div className="ev-v">
               {s.overEscalated.count} of {s.overEscalated.of}
             </div>
-            <div className="ev-d">Too much caution would eat the time savings.</div>
+            <div className="ev-d">Each one is an adjuster&apos;s time spent on a claim that didn&apos;t need it.</div>
           </div>
           <div className="ev-tile">
             <div className="ev-l">Speed and cost</div>

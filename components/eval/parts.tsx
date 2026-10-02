@@ -156,13 +156,13 @@ export const publicPath = (p: string) => "/" + p.replace(/^demo-images\//, "demo
 export function ModelComparison({ runs, title, sub }: { runs: { run: EvalRun; summary: Summary }[]; title?: string; sub?: string }) {
   const label = (r: EvalRun) => `${modelInfo(r.model).label}, ${r.promptVersion}`;
   const rows: [string, (s: Summary) => string][] = [
-    ["Escalation recall", (s) => `${s.escalation.caught} of ${s.escalation.of}`],
-    ["Routing agreement (exact)", (s) => `${s.agreement.exact} of ${s.agreement.of}`],
-    ["Routing agreement (acceptable)", (s) => `${s.agreement.acceptable} of ${s.agreement.of}`],
-    ["Escalated when not needed", (s) => `${s.overEscalated.count} of ${s.overEscalated.of}`],
+    ["Complex claims sent to an adjuster", (s) => `${s.escalation.caught} of ${s.escalation.of}`],
+    ["Same route as the expert label", (s) => `${s.agreement.exact} of ${s.agreement.of}`],
+    ["An acceptable route per the label", (s) => `${s.agreement.acceptable} of ${s.agreement.of}`],
+    ["Simple claims sent to an adjuster", (s) => `${s.overEscalated.count} of ${s.overEscalated.of}`],
     ["Didn't guess when unsure", (s) => `${s.abstention.correct} of ${s.abstention.of}`],
     ["Make / model / colour", (s) => `${s.vehicle.make.right}/${s.vehicle.make.of}, ${s.vehicle.model.right}/${s.vehicle.model.of}, ${s.vehicle.colour.right}/${s.vehicle.colour.of}`],
-    ["Median time per case", (s) => (s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s` : "n/a")],
+    ["Typical time per claim", (s) => (s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s` : "n/a")],
     ["Cost per case", (s) => `$${s.cost.mean.toFixed(3)}`],
     ["AI failures", (s) => String(s.failures)],
   ];
@@ -233,6 +233,15 @@ export function Confusion({ s }: { s: Summary }) {
   );
 }
 
+/** The expert's cost band, in words. */
+const BAND_TEXT: Record<string, string> = {
+  under_1000: "under $1,000",
+  "1000_2500": "$1,000 to $2,500",
+  "2500_to_total_loss": "$2,500 up to total loss",
+  total_loss: "total loss",
+  unsure: "unsure of the band",
+};
+
 const fieldText: Record<FieldScore, string> = {
   correct: "✓",
   correctly_unknown: "✓ (didn't guess)",
@@ -279,7 +288,7 @@ export function CaseTable({ scored }: { scored: ScoredCase[] }) {
                   </td>
                   <td>
                     {ROUTE_LABELS[r.labels.expectedRoute]}
-                    {r.labels.mustEscalate && <div className="chip chip-bad" style={{ marginTop: 2 }}>must escalate</div>}
+                    {r.labels.mustEscalate && <div className="chip chip-bad" style={{ marginTop: 2 }}>needs an adjuster</div>}
                   </td>
                   <td className={`route-${s.route}`}>
                     <span className="route-pill">{ROUTE_LABELS[s.route]}</span>
@@ -318,7 +327,7 @@ export function CaseTable({ scored }: { scored: ScoredCase[] }) {
                         <span className="hint">none</span>
                       )
                     )}
-                    <div className="hint">label: {r.labels.expectedCostBand}</div>
+                    {BAND_TEXT[r.labels.expectedCostBand] && <div className="hint">Expert: {BAND_TEXT[r.labels.expectedCostBand]}</div>}
                   </td>
                 </tr>
               );
