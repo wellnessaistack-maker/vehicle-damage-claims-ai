@@ -202,8 +202,8 @@ export function Confusion({ s }: { s: Summary }) {
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Where the routes landed</h3>
-        <span className="sub">Rows: expert label. Columns: our route.</span>
+        <h3>Our route compared with the expert&apos;s</h3>
+        <span className="sub">Each row is what the expert said; each column is what we did. Bold is where we agreed.</span>
       </div>
       <div className="card-body">
         <table className="t">

@@ -13,27 +13,27 @@ import { DEFAULT_SETTINGS, ROUTE_LABELS, type Route } from "@/lib/policy/protoco
 const RUNS = (results as { runs: EvalRun[] }).runs;
 const MAIN = RUNS.find((r) => r.model === DEFAULT_MODEL && r.promptVersion === "extract-v2") ?? RUNS[0];
 
-// Plain-language notes on each case the default model didn't get exactly right.
+// Plain-language notes on each claim the default model didn't get exactly right.
 const NOTES: Record<string, { what: string; why: string; next: string }> = {
   "05_rotated": {
     what: "A clean photo, uploaded sideways.",
-    why: "On its side, the model couldn't name the car, so the rules asked the customer for another photo instead of guessing.",
-    next: "Straighten photos in code before the AI sees them. Costs the customer one extra photo today; never a missed escalation.",
+    why: "Sideways, the AI couldn't tell which car it was, so it asked the customer for another photo instead of guessing.",
+    next: "Straighten photos automatically before the AI looks at them. Today this costs the customer one extra photo; it never lets a serious claim through.",
   },
   "00a_camry": {
-    what: "Front-corner damage with a wide price range across the $2,500 limit.",
-    why: "Over four runs it went to an adjuster once and the photo path three times. The expert label prefers the photo path but accepts an adjuster.",
-    next: "Ranges that run far past the limit now go to an adjuster (rule C4), which should stop the flip. With your data we'd tune that setting on real paid costs.",
+    what: "Front-corner damage priced close to the $2,500 approval limit.",
+    why: "The price sat right around the limit, so on repeat runs it went to an adjuster once and was approved three times. The expert would approve it, but an adjuster is a reasonable call too.",
+    next: "Claims whose price could run well past the limit now always go to an adjuster, so it gives the same answer every time. With your paid claims we'd set that threshold properly.",
   },
   V3_low_value: {
-    what: "The same Civic, on a policy that values the car at only $2,500.",
-    why: "The rate card prices the repair at about $1,130 ($950 to $1,300). That's 45% of the car's value, under the 60% total-loss line, so it stayed on the photo path. The label was written when the AI's own price ($850 to $2,100) crossed the line.",
-    next: "An estimator should confirm whether this repair makes the car a total loss. If the carrier's threshold is lower, it's a setting: at 45% this claim goes to an adjuster.",
+    what: "The same Civic, but the policy says the car is only worth $2,500.",
+    why: "The repair comes to about $1,130, which is 45% of the car's value. That's under the 60% total-loss line, so it was approved. The expert label assumed a higher repair price and called it a total loss.",
+    next: "An estimator should decide whether this is a total loss. If the carrier's line is lower than 60%, it's a one-number change.",
   },
   "03_compressed": {
-    what: "A heavily compressed, forwarded copy of a photo.",
-    why: "Asked the customer for a better photo. The label accepts this; an expert might have estimated from it.",
-    next: "Acceptable as is. Your reviewers' overrides would tell us whether it's too cautious.",
+    what: "A blurry, forwarded copy of a photo.",
+    why: "It asked the customer for a better photo. The expert might have approved from it, but asking is reasonable.",
+    next: "Fine as it is. Your reviewers' decisions would tell us whether it asks too often.",
   },
 };
 
@@ -55,7 +55,14 @@ export default function EvaluationPage() {
         .map((r) => ({ run: r, summary: summarise(r.cases.map((c) => scoreCase(c, DEFAULT_SETTINGS))) })),
     [],
   );
-  const misses = scored.filter((x) => !x.exact || (x.result.repeatRoutes && new Set(x.result.repeatRoutes).size > 1));
+  const severity = (x: (typeof scored)[number]) => (x.missedEscalation ? 0 : !x.acceptable ? 1 : x.result.repeatRoutes && new Set(x.result.repeatRoutes).size > 1 ? 2 : 3);
+  // Most serious first: a serious claim approved, then a wrong route, then a route that varied, then reasonable alternatives.
+  const misses = scored.filter((x) => !x.exact || (x.result.repeatRoutes && new Set(x.result.repeatRoutes).size > 1)).sort((a, b) => severity(a) - severity(b));
+  const varied = (routes: string[]) =>
+    Object.entries(routes.reduce<Record<string, number>>((n, r) => ({ ...n, [r]: (n[r] ?? 0) + 1 }), {}))
+      .sort((a, b) => b[1] - a[1])
+      .map(([r, k]) => `${ROUTE_LABELS[r as Route]} ${k} time${k === 1 ? "" : "s"}`)
+      .join(", ");
   const low = plausibleLow(s.escalation.caught, s.escalation.of);
   const cautious = misses.every((m) => !m.missedEscalation);
 
@@ -74,84 +81,106 @@ export default function EvaluationPage() {
 
       <main className="eval-page">
         <div>
-          <h1 style={{ fontSize: 24, marginBottom: 4 }}>Can you trust the route it recommends?</h1>
-          <p style={{ color: "var(--text-2)", maxWidth: 860, margin: 0 }}>
-            {run.cases.length} labelled claims through the real pipeline with {modelInfo(run.model).label} ({run.promptVersion}). A check that nothing is broken, not proof it works on your claims. Labels are drafts pending expert review, and there are
-            no pass marks here on purpose: those get agreed with your claims and risk owners.
+          <h1 style={{ fontSize: 24, marginBottom: 6 }}>Can you trust the route it recommends?</h1>
+          <p className="ev-answer">
+            On {run.cases.length} test claims, it sent <b>{s.escalation.caught} of {s.escalation.of}</b> serious claims to an adjuster and{" "}
+            <b>{s.overEscalated.count === 0 ? "none" : `${s.overEscalated.count}`} of the {s.overEscalated.of}</b> simple ones. When it was unsure, it asked for another photo rather than guess. That&apos;s a
+            good start, not proof: proof needs your own claims.
           </p>
         </div>
 
-        {/* 1. The answer */}
-        <div className="ev-score">
+        <div className="ev-score ev-score-4">
           <div className="ev-tile ev-lead">
-            <div className="ev-l">Complex claims caught</div>
             <div className="ev-v">
               {s.escalation.caught} of {s.escalation.of}
             </div>
+            <div className="ev-l2">serious claims went to an adjuster</div>
             <div className="ev-d">
               {s.escalation.caught === s.escalation.of
-                ? "None of the claims an expert would send to an adjuster were approved from photos."
-                : `${s.escalation.of - s.escalation.caught} ${s.escalation.of - s.escalation.caught === 1 ? "was" : "were"} approved from photos instead; see "Where it went wrong" below.`}
-            </div>
-            {low !== null && <div className="ev-fine">With this few cases, the true rate could be as low as {Math.round(low * 100)}%.</div>}
-          </div>
-          <div className="ev-tile">
-            <div className="ev-l">Matched the expert</div>
-            <div className="ev-v">
-              {s.agreement.exact} of {s.agreement.of}
-            </div>
-            <div className="ev-d">
-              {s.agreement.acceptable} of {s.agreement.of} counting routes the label also accepts.
+                ? "None was approved from photos."
+                : `The ${s.escalation.of - s.escalation.caught === 1 ? "one it missed was a borderline total loss" : `${s.escalation.of - s.escalation.caught} it missed are below`}. With so few claims, the real rate could be as low as ${low !== null ? Math.round(low * 100) : "?"}%.`}
             </div>
           </div>
           <div className="ev-tile">
-            <div className="ev-l">Simple claims sent to an adjuster</div>
             <div className="ev-v">
               {s.overEscalated.count} of {s.overEscalated.of}
             </div>
-            <div className="ev-d">Each one is an adjuster&apos;s time spent on a claim that didn&apos;t need it.</div>
+            <div className="ev-l2">simple claims sent to an adjuster they didn&apos;t need</div>
+            <div className="ev-d">Each one would be an adjuster&apos;s time spent for nothing.</div>
           </div>
           <div className="ev-tile">
-            <div className="ev-l">Speed and cost</div>
-            <div className="ev-v">{s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s` : "n/a"}</div>
-            <div className="ev-d">About {Math.round(s.cost.mean * 100)} cents a claim, estimated. {s.failures} AI failures.</div>
+            <div className="ev-v">
+              {s.agreement.exact} of {s.agreement.of}
+            </div>
+            <div className="ev-l2">got the same route as our expert</div>
+            <div className="ev-d">The other {s.agreement.of - s.agreement.exact} are explained below.</div>
           </div>
-          <div className="ev-tile ev-gap">
-            <div className="ev-l">Estimate vs paid cost</div>
-            <div className="ev-v">Needs your data</div>
-            <div className="ev-d">How often your final paid cost lands inside our range. Can&apos;t be measured without paid claims.</div>
+          <div className="ev-tile">
+            <div className="ev-v">{s.latency ? `${Math.round(s.latency.p50 / 1000)} sec` : "n/a"}</div>
+            <div className="ev-l2">and about {Math.round(s.cost.mean * 100)} cents a claim</div>
+            <div className="ev-d">Runs in the background, so a reviewer rarely waits.</div>
           </div>
         </div>
-
-        <div className="ev-strip">
-          <span>
-            <b>Didn&apos;t guess when unsure</b> {s.abstention.correct} of {s.abstention.of}
-          </span>
-          <span>
-            <b>Make · model · colour</b> {s.vehicle.make.right}/{s.vehicle.make.of} · {s.vehicle.model.right}/{s.vehicle.model.of} · {s.vehicle.colour.right}/{s.vehicle.colour.of}
-          </span>
-          <span>
-            <b>Review flags raised</b> {s.flags.caught} of {s.flags.of}
-          </span>
-          <span>
-            <b>Same route every run</b> {s.stability ? `${s.stability.stable} of ${s.stability.of}` : "not measured"}
-          </span>
-          <span>
-            <b>Slowest 1 in 20</b> {s.latency ? `${(s.latency.p95 / 1000).toFixed(1)} s` : "n/a"}
-          </span>
+        <div className="ev-gapline">
+          <b>Not measured yet:</b> whether the repair estimate matches what you&apos;d actually pay. That needs your paid claims.
         </div>
 
-        {/* Models and routes, side by side */}
         <div className="ev-two">
-          <ModelComparison runs={saved} title="Models and prompts side by side" sub="Same 26 cases, same rules" />
-          <Confusion s={s} />
+          <section className="card">
+            <div className="card-head">
+              <h3>What we tested it on</h3>
+            </div>
+            <div className="card-body ev-source">
+              <p>
+                <b>Are they real claims?</b> No. The photos are real photos of damaged cars, but the claim details (the customer, the policy, the car&apos;s value) are made up for testing. None come from an insurer.
+              </p>
+              <p>
+                <b>Where are the photos from?</b> 8 originals: four real crashes from Wikimedia Commons (a flood, a front-end crush, a van under a wall, a car into a tree), a press photo of a race-car crash, a dented Honda Civic and Toyota
+                Camry I sourced, and one photo with no car in it.
+              </p>
+              <p>
+                <b>Why 26?</b> The other 18 are built from those 8 to test one thing each. 13 are harder versions of a photo (too dark, blurry, sideways, glare, close-ups): does it ask for a better photo instead of guessing? 5 reuse the
+                Civic photo with a tricky claim detail (an injury, damage on the wrong side, a cheap car, two different cars): do the rules catch it?
+              </p>
+              <p>
+                <b>Who decided the right answer?</b> I did, as drafts. An estimator should review them before anyone relies on these numbers.
+              </p>
+              <p className="hint">
+                {s.escalation.of} should go to an adjuster, and only {run.cases.filter((c) => c.labels.expectedRoute === "photo_estimate").length} should be approved from photos, so the next gap to fill is more simple claims. Every test
+                claim is listed with its photo under More detail, at the bottom.
+              </p>
+            </div>
+          </section>
+          <section className="card">
+            <div className="card-head">
+              <h3>What we&apos;d need from you to trust it</h3>
+            </div>
+            <div className="card-body ev-needs ev-needs-2">
+              <div>
+                <b>A few hundred past claims</b>
+                <span>with photos, where each one went, and what was finally paid</span>
+              </div>
+              <div>
+                <b>Two of your estimators</b>
+                <span>labelling them separately, so we know how often experts agree</span>
+              </div>
+              <div>
+                <b>Today&apos;s numbers</b>
+                <span>how often claims are escalated late, and how long a review takes</span>
+              </div>
+              <div>
+                <b>A test set we never tune on</b>
+                <span>so every change is checked against it before it goes live</span>
+              </div>
+            </div>
+          </section>
         </div>
 
         {/* 2. Where it went wrong */}
         <section className="card">
           <div className="card-head">
-            <h3>Where it went wrong</h3>
-            <span className="sub">{cautious ? "Every mistake erred on the safe side: more photos or a person, never approved from photos" : "Includes a missed escalation"}</span>
+            <h3>The {misses.length} claims it didn&apos;t get exactly right</h3>
+            <span className="sub">{cautious ? "Every one erred on the safe side" : "One serious claim was approved; the rest erred on the safe side"}</span>
           </div>
           <div className="card-body ev-misses">
             {misses.map((m) => {
@@ -164,22 +193,52 @@ export default function EvaluationPage() {
                   <div>
                     <div className="ev-miss-head">
                       <span>{n?.what ?? m.result.labels.whatItTests}</span>
-                      <span className={`chip ${m.acceptable ? "chip-warn" : "chip-bad"}`}>{flipped ? "Unstable at the limit" : m.acceptable ? "Acceptable, not exact" : m.missedEscalation ? "Missed escalation" : "Wrong route"}</span>
+                      <span className={`chip ${m.acceptable ? "chip-warn" : "chip-bad"}`}>{m.missedEscalation ? "Approved, but should have gone to an adjuster" : flipped ? "Different answer on repeat runs" : m.acceptable ? "Reasonable, not the expert's first choice" : "Asked for a photo it didn't need"}</span>
                     </div>
                     <div className="ev-miss-routes">
-                      Expert: <b>{ROUTE_LABELS[m.result.labels.expectedRoute]}</b> · Ours: <b>{ROUTE_LABELS[m.route as Route]}</b>{flipped ? " on the saved run" : ""}
+                      Expert said: <b>{ROUTE_LABELS[m.result.labels.expectedRoute]}</b> · It said: <b>{flipped ? varied(m.result.repeatRoutes!) : ROUTE_LABELS[m.route as Route]}</b>
                     </div>
                     {n && (
-                      <>
-                        <div>{n.why}</div>
-                        <div className="hint">What we&apos;d do: {n.next}</div>
-                      </>
+                      <dl className="ev-miss-body">
+                        <dt>What happened</dt>
+                        <dd>{n.why}</dd>
+                        <dt>What we&apos;d change</dt>
+                        <dd>{n.next}</dd>
+                      </dl>
                     )}
                   </div>
                 </div>
               );
             })}
-            <div className="ev-fixed">
+          </div>
+        </section>
+
+        <details className="ev-fold">
+          <summary>More detail: every test claim with its photo, models compared, and how it was scored</summary>
+          <div className="ev-tech">
+            <div className="ev-strip">
+              <span>
+                <b>Didn&apos;t guess when unsure</b> {s.abstention.correct} of {s.abstention.of}
+              </span>
+              <span>
+                <b>Car identified right</b> make {s.vehicle.make.right} of {s.vehicle.make.of}, model {s.vehicle.model.right} of {s.vehicle.model.of}, colour {s.vehicle.colour.right} of {s.vehicle.colour.of}
+              </span>
+              <span>
+                <b>Review flags raised</b> {s.flags.caught} of {s.flags.of}
+              </span>
+              <span>
+                <b>Same route every run</b> {s.stability ? `${s.stability.stable} of ${s.stability.of}` : "not measured"}
+              </span>
+              <span>
+                <b>Slowest 1 in 20</b> {s.latency ? `${(s.latency.p95 / 1000).toFixed(1)} s` : "n/a"}
+              </span>
+              <span>
+                <b>Model and prompt</b> {modelInfo(run.model).label}, {run.promptVersion}
+              </span>
+            </div>
+            <section className="card">
+              <div className="card-body">
+                <div className="ev-fixed" style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}>
               <div className="section-label">Already fixed, from the first run (prompt v1)</div>
               <ul>
                 {FIXED_IN_V2.map((f) => (
@@ -190,41 +249,18 @@ export default function EvaluationPage() {
               </ul>
               <div className="hint">Prompt v2 was written after seeing these, so its gain on the same cases is flattering. With your data we&apos;d keep a locked test set nobody tunes against.</div>
             </div>
-          </div>
-        </section>
-
-        <CaseTable scored={scored} />
-
+              </div>
+            </section>
+        {/* Models and routes, side by side */}
         <div className="ev-two">
-          <LiveRunner onProgress={(r) => setLive(r)} />
-        <section className="card">
-          <div className="card-head">
-            <h3>What it takes to trust it on your claims</h3>
-            <a className="sub" href={`${REPO}#evaluation`}>
-              Detail in the README
-            </a>
-          </div>
-          <div className="card-body ev-needs ev-needs-2">
-            <div>
-              <b>A few hundred past claims</b>
-              <span>with photos, the route taken, the final paid cost and supplements</span>
-            </div>
-            <div>
-              <b>Two estimating experts</b>
-              <span>labelling independently; their agreement is the ceiling to beat</span>
-            </div>
-            <div>
-              <b>Today&apos;s baseline</b>
-              <span>late escalations, supplement rate, reviewer minutes per claim</span>
-            </div>
-            <div>
-              <b>A locked test set</b>
-              <span>scored before any prompt, model or rule change goes live</span>
-            </div>
-          </div>
-        </section>
-
+          <ModelComparison runs={saved} title="Models and prompts side by side" sub="Same 26 cases, same rules" />
+          <Confusion s={s} />
         </div>
+
+            <CaseTable scored={scored} />
+            <LiveRunner onProgress={(r) => setLive(r)} />
+          </div>
+        </details>
       </main>
     </div>
   );
