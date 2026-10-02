@@ -33,6 +33,8 @@ export function Worklist(props: {
   loadingDemo: boolean;
   openCount: number;
   reviewLog: ReviewLogEntry[];
+  /** The tab a claim was just moved to, flashed briefly instead of a pop-up. */
+  lastMove: { tab: "waiting" | "completed"; text: string; n: number } | null;
 }) {
   const { cases, settings, selectedId, onSelect } = props;
   // Inbox holds what still needs this reviewer. A claim leaves it only when a final action is taken:
@@ -114,9 +116,15 @@ export function Worklist(props: {
             ] as const
           ).map(([key, label, n]) => (
             <button key={key} role="tab" title={key === "waiting" ? "Waiting on the customer's photos" : undefined} aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>
-              {label} <span className="n">{n}</span>
+              {label}{" "}
+              <span key={props.lastMove?.tab === key ? `${key}-${props.lastMove.n}` : key} className={props.lastMove?.tab === key ? "n bump" : "n"}>
+                {n}
+              </span>
             </button>
           ))}
+        </div>
+        <div className="sr-only" role="status">
+          {props.lastMove?.text}
         </div>
         <div className="wl-actions">
           <button className="btn btn-primary" onClick={props.onAdd}>

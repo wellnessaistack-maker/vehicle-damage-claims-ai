@@ -8,7 +8,6 @@ import {
   currentDecision,
   failureNote,
   firstReviewNote,
-  holderLine,
   newClaimId,
   now,
   REVIEWER,
@@ -218,12 +217,8 @@ export function Workspace() {
     [update],
   );
 
-  const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  // The tab a claim just moved to, so the worklist can flash it. n changes on every move to restart the flash.
+  const [lastMove, setLastMove] = useState<{ tab: "waiting" | "completed"; text: string; n: number } | null>(null);
 
   const complete = useCallback(
     (id: string, reviewed: Omit<CaseOutcome, "at">) => {
@@ -234,10 +229,8 @@ export function Workspace() {
       const outcome: Omit<CaseOutcome, "at"> = { ...reviewed, recommendedRoute, agreement: agreementOf(recommendedRoute, reviewed) };
       const at = now();
       if (c) setReviewLog((log) => [...log, logEntry(c, { ...outcome, at }, rec)]);
-      const next = cases.find((x) => x.status !== "done" && x.id !== id);
-      const holder = holderLine({ ...outcome, at: now() });
-      const where = outcome.action === "message_sent" ? "moved to Waiting on customer" : `moved to Completed${holder ? `. ${holder}` : ""}`;
-      setToast(`${c?.claim.claimId ?? "Claim"} ${where}. ${next ? `Next up: ${next.claim.claimId}.` : "Inbox clear."}`);
+      const tab = outcome.action === "message_sent" ? "waiting" : "completed";
+      setLastMove((m) => ({ tab, text: `${c?.claim.claimId ?? "Claim"} moved to ${tab === "waiting" ? "Waiting" : "Completed"}.`, n: (m?.n ?? 0) + 1 }));
       update(id, (c) => ({
         ...c,
         status: "done",
@@ -351,6 +344,7 @@ export function Workspace() {
           loadingDemo={loadingDemo}
           openCount={openCases.length}
           reviewLog={reviewLog}
+          lastMove={lastMove}
         />
         </ErrorBoundary>
         <ErrorBoundary key={`a-${selected?.id ?? "none"}`} label="Assessment" className="col assess">
@@ -373,11 +367,6 @@ export function Workspace() {
         </ErrorBoundary>
       </div>
 
-      {toast && (
-        <div className="toast" role="status" onClick={() => setToast(null)}>
-          {toast}
-        </div>
-      )}
       {intakeOpen && <IntakeModal onClose={() => setIntakeOpen(false)} onAdd={(n) => { addCases(n); setIntakeOpen(false); }} />}
       {drawer === "protocol" && (
         <ProtocolDrawer
