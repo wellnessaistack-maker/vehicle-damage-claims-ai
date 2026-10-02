@@ -107,18 +107,18 @@ Colour key: green is plain code, orange is the AI, purple is people.
 
 The **Routing protocol** page in the app shows all of this on one page: a diagram from the claim and photos, to what the AI describes, to the rules, to the reviewer, with what sends a claim to each route (the open claim's route and the rules it set off are highlighted). Below it are the six rule groups (what each catches, where it sends the claim, whether it's locked), the three settings that matter most, and how prices are set, with a worked example.
 
-**The repair estimate.** The AI describes each repair; the carrier's rate card prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, then prices them for this car and this place:
+**The repair estimate.** The AI describes each repair; the carrier's price guide (how long each repair takes, and what an hour and a part cost) prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, then prices them for this car and this place:
 
 - **Where:** the claim's ZIP code picks a labour market that scales the carrier's base rate ($65/h). Maria's Columbus claim is $65/h; the same damage in San Francisco is $81/h, and in Iowa $53/h.
 - **What car:** parts cost more on a luxury make or a car worth over $40,000, and less on one worth under $10,000. Electric and hybrid cars add a high-voltage safety step.
 
 The same photo now prices at $950 to $1,300 (Columbus) on every call.
 
-- **Under each estimate, three boxes show where its inputs came from:** *From the photos* (the AI's reading: each damaged part, how badly, repair or replace), *From the claim* (the ZIP and its labour market, the car on the policy and its value, which set the parts level), and *From the rate card* (the carrier's hours, labour and paint rates, and range width). The AI only fills the first box.
+- **Under each estimate, three boxes show where its inputs came from:** *From the photos* (the AI's reading: each damaged part, how badly, repair or replace), *From the claim* (the ZIP and its labour market, the car on the policy and its value, which set the parts level), and *From the price guide* (the carrier's hours, labour and paint rates, and range width). The AI only fills the first box.
 - **Each line shows its working:** what the AI saw in the photo, the hours and rates ("4.5 h body x $65 + 3.5 h paint x $110 = $678"), and the repair cost against the replacement cost, with the one priced marked. If repairing a part would cost more than replacing it, it's priced as a replacement.
 - **The range covers what the photos show,** 15% either side of the most likely cost (a setting).
 - **What the photos can't show is listed separately** as possible extras: damage behind the panels, parts the AI flagged for inspection, sensor recalibration. The routing rules use the figure with them included, so a claim isn't approved on the assumption that nothing else turns up.
-- **The AI's own price is kept as a cross-check,** and used for parts the rate card doesn't cover and for vehicles that aren't road cars.
+- **The AI's own price is kept as a cross-check,** and used for parts the price guide doesn't cover and for vehicles that aren't road cars.
 - **Every hour, rate and market is a placeholder.** In production:
     - **Third-party data** gives the hours and parts: an estimating platform's labour times (CCC, Mitchell or Audatex), and parts priced for the exact car from its VIN.
     - **The carrier's data** gives the rates: labour rates by market and the deals with its partner shops.
@@ -189,7 +189,7 @@ Colour key: green is plain code, orange is the AI, blue is stored data, purple i
 | Versions shown on each result | Each prompt, model or rule change tested against the labelled set before release |
 | Mock roles | Single sign-on, role-based access, two-person approval for rule changes |
 | Checks against one demo past-claim photo | Duplicate search across all past photos, plus a check for edited images |
-| A placeholder rate card | Labour times from an estimating platform, the carrier's own rates, and calibration on its paid claims |
+| A placeholder price guide | Labour times from an estimating platform, the carrier's own rates, and calibration on its paid claims |
 | A person approves each claim | Gradual automation for narrow, low-risk cases (see [Path to production](#path-to-production)) |
 
 ## Why these tools
@@ -294,7 +294,7 @@ What matters most is which side of the $2,500 approval limit the estimate lands 
 
 - **Prompt v1 to v2.** After the first run we changed four instructions based on the cases it got wrong. For example, a crumpled bumper no longer counts as "structural" damage. Since v2 was written after seeing these same cases, its improvement probably looks better here than it would on new ones.
 - **Opus or Sonnet.** They routed the same here, and Sonnet is faster and half the price. 26 cases aren't enough to tell them apart; the carrier's own claims should decide.
-- All three columns are scored with today's rules and rate card, from the saved AI answers, so re-scoring costs nothing.
+- All three columns are scored with today's rules and price guide, from the saved AI answers, so re-scoring costs nothing.
 
 ### Failure modes
 
@@ -344,7 +344,7 @@ How often reviewers disagree with the recommendation is a direct way to measure 
 ## What we'd do next
 
 1. Run the evaluation on the carrier's past claims, with expert labels, and test the estimate against what was actually paid.
-2. Replace the placeholder rate card with an estimating platform's labour times and the carrier's own rates, and calibrate the range width on paid claims.
+2. Replace the placeholder price guide with an estimating platform's labour times and the carrier's own rates, and calibrate the range width on paid claims.
 3. Straighten photos in code, accept video and HEIC, and add a check for edited photos.
 
 ## Repository layout

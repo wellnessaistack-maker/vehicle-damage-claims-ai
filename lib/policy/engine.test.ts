@@ -226,7 +226,7 @@ test("a part the rate card doesn't cover keeps the AI's own price, labelled", ()
   x.damage.items[0] = { ...x.damage.items[0], area: "other" };
   const d = run(x).requiredOutputs.estimate.drivers[0];
   assert.equal(d.source, "ai_estimate");
-  assert.match(d.note!, /Not on the rate card/);
+  assert.match(d.note!, /Not in the price guide/);
 });
 
 test("vehicles that aren't road cars keep the AI's own price", () => {
@@ -281,7 +281,7 @@ test("C: race car goes to an adjuster, with no estimate of our own", () => {
   const e = d.requiredOutputs.estimate;
   assert.equal(e.status, "withheld");
   assert.equal(e.lowUsd, null);
-  assert.match(e.note, /rate card doesn't cover it/);
+  assert.match(e.note, /price guide doesn't cover it/);
   assert.ok(e.aiItemsUsd!.highUsd > 0, "the AI's rough guess is kept for reference");
   assert.equal(d.humanReview.required, true);
   assert.equal(d.customerMessage, null, "don't ask for more photos when it's clearly serious");

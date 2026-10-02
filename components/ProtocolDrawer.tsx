@@ -397,11 +397,11 @@ function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMateria
     <div className="card">
       <div className="card-head">
         <h3>How prices are set</h3>
-        <span className="sub">Rate card, labour markets, state total-loss rules</span>
+        <span className="sub">Price guide, labour markets, state total-loss rules</span>
       </div>
       <div className="card-body">
         <div>
-          The AI tells us what&apos;s damaged and how badly. The rate card turns that into a price: how long the job takes, what an hour of work costs where the customer lives, and the cost of any new parts.
+          The AI tells us what&apos;s damaged and how badly. The carrier&apos;s price guide turns that into a price: how long the job takes, what an hour of work costs where the customer lives, and the cost of any new parts.
         </div>
         {example && (
           <div className="ratecard-example">

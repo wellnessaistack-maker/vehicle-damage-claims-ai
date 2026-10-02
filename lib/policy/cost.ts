@@ -137,7 +137,7 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
         lowUsd: low,
         highUsd: high,
         source: "ai_estimate",
-        note: s.pricing !== "rate_card" ? undefined : onCard ? "Not on the rate card, so the AI's own price" : "Rate card covers road cars only, so the AI's own price",
+        note: s.pricing !== "rate_card" ? undefined : onCard ? "Not in the price guide, so the AI's own price" : "The price guide covers road cars only, so the AI's own price",
         kind: "visible",
         evidence: item.visible_evidence,
         math: `The AI's own estimate: ${usd(low)} to ${usd(high)}`,

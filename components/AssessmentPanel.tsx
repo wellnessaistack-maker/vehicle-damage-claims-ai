@@ -206,7 +206,7 @@ function RequiredOutputs({ d }: { d: Decision }) {
     <div className="card">
       <div className="card-head">
         <h3>What the AI found</h3>
-        <span className="sub">From the photos, priced with the carrier&apos;s rate card</span>
+        <span className="sub">From the photos, priced with the carrier&apos;s price guide</span>
       </div>
       <div className="card-body outputs">
         <div className="out-vehicle">
@@ -231,7 +231,7 @@ function RequiredOutputs({ d }: { d: Decision }) {
   );
 }
 
-/** What went into the price, split by where it came from: the AI's reading of the photos, the claim, and the carrier's rate card. */
+/** What went into the price, split by where it came from: the AI's reading of the photos, the claim, and the carrier's price guide. */
 function PriceSources({ e }: { e: EstimateOutput }) {
   const p = e.pricing!;
   const cross =
@@ -240,7 +240,7 @@ function PriceSources({ e }: { e: EstimateOutput }) {
         The AI&apos;s own price for the same damage, as a cross-check only: {usd(e.aiItemsUsd.lowUsd)} to {usd(e.aiItemsUsd.highUsd)}.
       </div>
     ) : null;
-  if (p.source !== "rate_card") return <div className="est-pricing">Priced from the AI&apos;s own figures: the rate card covers ordinary road cars only.</div>;
+  if (p.source !== "rate_card") return <div className="est-pricing">Priced from the AI&apos;s own figures: the price guide covers ordinary road cars only.</div>;
 
   const parts = e.drivers.filter((d) => d.fromPhotos && d.kind !== "possible");
   const shown = parts.slice(0, 4);
@@ -283,7 +283,7 @@ function PriceSources({ e }: { e: EstimateOutput }) {
         </div>
         <div className="price-src-col card">
           <div className="price-src-tag">
-            From the rate card <span>Carrier settings</span>
+            From the price guide <span>The carrier&apos;s hours and rates</span>
           </div>
           <ul>
             <li>Hours for each part and repair type</li>
@@ -314,7 +314,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
           <details className="fold">
             <summary>The AI&apos;s rough guess, for reference only</summary>
             <div className="hint" style={{ margin: "6px 0" }}>
-              From the AI&apos;s general knowledge, not our rate card, and not used for anything: {usd(guess.lowUsd)} to {usd(guess.highUsd)}.
+              From the AI&apos;s general knowledge, not our price guide, and not used for anything: {usd(guess.lowUsd)} to {usd(guess.highUsd)}.
             </div>
             <ul className="drivers">
               {e.drivers
@@ -417,7 +417,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
                 <span>
                   {dr.label}
                   <span className={`chip src ${dr.source === "rule_adjustment" ? "" : "chip-info"}`}>
-                    {dr.source === "rate_card" ? "Rate card" : dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}
+                    {dr.source === "rate_card" ? "Price guide" : dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}
                   </span>
                 </span>
                 <span className="drv-amt">{one(dr)}</span>
@@ -1173,7 +1173,7 @@ function ActionBar(props: {
               disabled={!preview}
               onClick={() => {
                 if (!preview) return;
-                const range = `${usd(amountN)} (the rate card said ${usd(e.likelyUsd ?? e.highUsd!)}, range ${usd(e.lowUsd!)} to ${usd(e.highUsd!)})`;
+                const range = `${usd(amountN)} (the price guide said ${usd(e.likelyUsd ?? e.highUsd!)}, range ${usd(e.lowUsd!)} to ${usd(e.highUsd!)})`;
                 // The message names the approved amount, so redraft it for the new one.
                 const update = withUpdate(customerUpdate(preview, item.claim));
                 done(

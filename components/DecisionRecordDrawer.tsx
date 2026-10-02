@@ -68,7 +68,7 @@ export function DecisionRecordDrawer({ item, settings, log, onClose }: { item: C
                     <>
                       <dt>Estimate</dt>
                       <dd>
-                        Rate card {usd0(last.aiRange.lowUsd)} to {usd0(last.aiRange.highUsd)}; reviewer{" "}
+                        Price guide {usd0(last.aiRange.lowUsd)} to {usd0(last.aiRange.highUsd)}; reviewer{" "}
                         {last.adjustedRange.lowUsd === last.adjustedRange.highUsd
                           ? usd0(last.adjustedRange.highUsd)
                           : `${usd0(last.adjustedRange.lowUsd)} to ${usd0(last.adjustedRange.highUsd)}`}

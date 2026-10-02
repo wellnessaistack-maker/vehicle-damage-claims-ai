@@ -258,8 +258,8 @@ function estimateOutput(
       highUsd: null,
       drivers: cost.drivers,
       note: firedIds.includes("P1")
-        ? "Not a road car, so our rate card doesn't cover it. An adjuster will value it."
-        : "This type of vehicle isn't on our rate card, so an adjuster will value it.",
+        ? "Not a road car, so our price guide doesn't cover it. An adjuster will value it."
+        : "This type of vehicle isn't in our price guide, so an adjuster will value it.",
     };
   }
   // Still give a figure from what can be seen, clearly marked as provisional.
