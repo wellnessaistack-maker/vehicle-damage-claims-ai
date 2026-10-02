@@ -39,6 +39,12 @@ export function sentVia(claim: ClaimContext, channel: Channel): string {
  * The update a customer gets when the reviewer decides the route. Deliberately neutral
  * on the adjuster route: it never mentions a total loss or a fraud review.
  */
+const approved = (d: Decision) => {
+  const e = d.requiredOutputs.estimate;
+  const n = e.likelyUsd ?? e.highUsd ?? 0;
+  return `$${Math.round(n).toLocaleString("en-US")}`;
+};
+
 export function customerUpdate(d: Decision, claim: ClaimContext): string | null {
   const hi = `Hi ${firstName(claim) ?? "there"},`;
   const sign = ["", "Thanks,", "Your claims team"];
@@ -46,7 +52,9 @@ export function customerUpdate(d: Decision, claim: ClaimContext): string | null 
     return [
       hi,
       "",
-      `Thanks for the photos for claim ${claim.claimId}. They show us what we need, so your claim is now with our estimating team. You'll get your repair estimate within one business day, with the next steps for booking a repair.`,
+      `We've reviewed the photos for claim ${claim.claimId} and approved a repair estimate of ${approved(d)}. We'll email you the itemised estimate and payment details within one business day, with the next steps for booking a repair.`,
+      "",
+      "If the repair shop finds more damage once they start, they'll send us a supplement and we'll review it.",
       ...sign,
     ].join("\n");
   }

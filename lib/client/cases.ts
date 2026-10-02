@@ -28,7 +28,8 @@ export interface Recipient {
 }
 
 export const DIRECTORY: Recipient[] = [
-  { id: "estimating", name: "Estimating team", role: "Desk appraisers", forWhat: "Writes the final estimate on the photo path" },
+  { id: "repair", name: "Repair and payment", role: "Claims payments", forWhat: "Pays the approved estimate and helps the customer book a repair" },
+  { id: "estimating", name: "Estimating team", role: "Senior desk appraisers", forWhat: "Supplements from the shop, and estimates above a reviewer's approval limit" },
   { id: "field", name: "Field adjuster queue", role: "Field adjusters", forWhat: "Inspects the car in person" },
   { id: "total_loss", name: "Total loss unit", role: "Total loss specialists", forWhat: "Valuation and settlement when repair may cost more than the car is worth" },
   { id: "siu", name: "Special Investigations Unit", role: "SIU", forWhat: "Possible fraud, such as reused photos" },
@@ -41,7 +42,7 @@ export const recipient = (id: string) => DIRECTORY.find((r) => r.id === id)!;
 
 /** Where a claim goes next on each route when the reviewer accepts it. */
 export const ROUTE_OWNER: Record<Route, string> = {
-  photo_estimate: "estimating",
+  photo_estimate: "repair",
   more_evidence: "estimating",
   adjuster: "field",
   manual_triage: "manual",
@@ -79,7 +80,7 @@ export interface CaseItem {
   addedAt: string;
 }
 
-export const REVIEWER = { name: "Jordan Reyes", role: "Auto damage appraiser", initials: "JR" };
+export const REVIEWER = { name: "Jordan Reyes", role: "Desk appraiser", initials: "JR" };
 
 let counter = 0;
 export const uid = (p = "id") => `${p}-${Date.now().toString(36)}-${(counter++).toString(36)}`;

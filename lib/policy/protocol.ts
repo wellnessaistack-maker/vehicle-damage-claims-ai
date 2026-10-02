@@ -17,13 +17,14 @@
 import type { ClaimContext, PhotoMetrics } from "../claims/types.ts";
 import type { Area, DamageItem, Extraction, RiskSign } from "../extraction/schema.ts";
 import type { CostRange } from "./cost.ts";
+import { totalLossLine } from "./states.ts";
 
 export const PROTOCOL_VERSION = "0.1";
 
 export type Route = "photo_estimate" | "more_evidence" | "adjuster" | "manual_triage";
 
 export const ROUTE_LABELS: Record<Route, string> = {
-  photo_estimate: "Ready for estimating",
+  photo_estimate: "Ready to approve",
   more_evidence: "Request more evidence",
   adjuster: "Adjuster / total loss",
   manual_triage: "Not assessed: manual triage",
@@ -134,8 +135,8 @@ export const SETTING_DEFS: SettingDef[] = [
   {
     key: "fastPathLimitUsd",
     kind: "number",
-    label: "Fast-path limit",
-    help: "Claims whose estimate is clearly above this go to an adjuster.",
+    label: "Approval limit",
+    help: "The reviewer can approve repair estimates up to this amount from photos. Above it, the claim goes to an adjuster. In production this matches the reviewer's authority limit.",
     min: 500,
     max: 10000,
     step: 250,
@@ -144,8 +145,8 @@ export const SETTING_DEFS: SettingDef[] = [
   {
     key: "totalLossRatio",
     kind: "number",
-    label: "Total-loss line",
-    help: "Share of the vehicle's value at which a repair may not be worth doing. Varies by state, usually 60 to 100%.",
+    label: "Total-loss line (where the state sets none)",
+    help: "Share of the vehicle's value at which a repair may not be worth doing. Used only where the claim's state has no rule of its own; see the state rules under the rate card.",
     min: 0.5,
     max: 1,
     step: 0.05,
@@ -155,7 +156,7 @@ export const SETTING_DEFS: SettingDef[] = [
     key: "wideRangeOverLimitPct",
     kind: "number",
     label: "Wide range past the limit",
-    help: "If a range starts under the fast-path limit but its high end runs this far above it, send the claim to an adjuster instead of only flagging a price check.",
+    help: "If a range starts under the approval limit but its high end runs this far above it, send the claim to an adjuster instead of only flagging a price check.",
     min: 10,
     max: 200,
     step: 10,
@@ -455,7 +456,7 @@ export const RULES: Rule[] = [
     check: ({ x }) =>
       x.vehicle.vehicle_present && (x.vehicle.vehicle_class === "race_or_non_road" || x.vehicle.vehicle_class === "other")
         ? {
-            reason: "This isn't a normal road car, so it can't go straight to estimating from photos.",
+            reason: "This isn't a normal road car, so it can't be approved from photos.",
             evidence: x.vehicle.identification_evidence,
           }
         : null,
@@ -692,14 +693,19 @@ export const RULES: Rule[] = [
     group: "cost",
     tier: "configurable",
     effect: "adjuster",
-    title: "Estimate is over the fast-path limit",
-    when: "The low end of the estimate is above the fast-path limit.",
+    title: "Estimate is over the approval limit",
+    when: "The low end of the estimate is above the approval limit.",
     settings: ["fastPathLimitUsd"],
     check: (ctx) => {
       const cost = usableCost(ctx);
       const { settings } = ctx;
       return cost && cost.lowUsd > settings.fastPathLimitUsd
-        ? { reason: `Even the low end of the estimate (${usd(cost.lowUsd)}) is above the ${usd(settings.fastPathLimitUsd)} fast-path limit.` }
+        ? {
+            reason:
+              cost.lowUsd === cost.highUsd
+                ? `The estimate (${usd(cost.lowUsd)}) is above the ${usd(settings.fastPathLimitUsd)} approval limit.`
+                : `Even the low end of the estimate (${usd(cost.lowUsd)}) is above the ${usd(settings.fastPathLimitUsd)} approval limit.`,
+          }
         : null;
     },
   },
@@ -710,16 +716,16 @@ export const RULES: Rule[] = [
     tier: "configurable",
     effect: "adjuster",
     title: "Repair may cost more than the car is worth",
-    when: "The estimate, including possible hidden damage, reaches the total-loss line (a share of the vehicle's value).",
+    when: "The estimate, including possible hidden damage, reaches the total-loss line: the claim's state rule, or the carrier's setting where the state has none.",
     settings: ["totalLossRatio"],
     check: (ctx) => {
       const cost = usableCost(ctx);
       const { claim, settings } = ctx;
-      if (!cost || !claim.vehicleValueUsd) return null;
-      const line = claim.vehicleValueUsd * settings.totalLossRatio;
-      return cost.ceilingUsd >= line
+      const tl = totalLossLine(claim.vehicleValueUsd, claim.zip, settings);
+      if (!cost || !tl) return null;
+      return cost.ceilingUsd >= tl.lineUsd
         ? {
-            reason: `${cost.ceilingUsd > cost.highUsd ? `With possible hidden damage the estimate could reach ${usd(cost.ceilingUsd)}, which` : `The high end of the estimate (${usd(cost.highUsd)})`} reaches the total-loss line of ${usd(line)} (${Math.round(settings.totalLossRatio * 100)}% of the ${usd(claim.vehicleValueUsd)} vehicle value).`,
+            reason: `${cost.ceilingUsd > cost.highUsd ? `With possible hidden damage the estimate could reach ${usd(cost.ceilingUsd)}, which` : `The high end of the estimate (${usd(cost.highUsd)})`} reaches the total-loss line of ${usd(tl.lineUsd)}: ${tl.basis}.`,
           }
         : null;
     },
@@ -730,15 +736,15 @@ export const RULES: Rule[] = [
     group: "cost",
     tier: "configurable",
     effect: "adjuster",
-    title: "Estimate runs far past the fast-path limit",
-    when: "The likely range starts under the fast-path limit, but with possible hidden damage it could run well above it (by the set percentage), so the claim is too uncertain to go straight to estimating.",
+    title: "Estimate runs far past the approval limit",
+    when: "The likely range starts under the approval limit, but with possible hidden damage it could run well above it (by the set percentage), so the claim is too uncertain to approve from photos.",
     settings: ["fastPathLimitUsd", "wideRangeOverLimitPct"],
     check: (ctx) => {
       const cost = usableCost(ctx);
       const { settings } = ctx;
       const ceiling = settings.fastPathLimitUsd * (1 + settings.wideRangeOverLimitPct / 100);
       return cost && cost.lowUsd <= settings.fastPathLimitUsd && cost.ceilingUsd > ceiling
-        ? { reason: `The estimate could run up to ${usd(cost.ceilingUsd)}, more than ${settings.wideRangeOverLimitPct}% above the ${usd(settings.fastPathLimitUsd)} fast-path limit, so it's too uncertain to go straight to estimating.` }
+        ? { reason: `The estimate could run up to ${usd(cost.ceilingUsd)}, more than ${settings.wideRangeOverLimitPct}% above the ${usd(settings.fastPathLimitUsd)} approval limit, so it's too uncertain to approve from photos.` }
         : null;
     },
   },
@@ -748,8 +754,8 @@ export const RULES: Rule[] = [
     group: "cost",
     tier: "configurable",
     effect: "review",
-    title: "Estimate straddles the fast-path limit",
-    when: "The fast-path limit falls inside the estimate, counting possible hidden damage, so the claim stays ready for estimating but an appraiser should check the price.",
+    title: "Estimate straddles the approval limit",
+    when: "The approval limit falls inside the estimate, counting possible hidden damage, so the claim can still be approved, but the price needs a closer check.",
     settings: ["fastPathLimitUsd"],
     check: (ctx) => {
       const cost = usableCost(ctx);
@@ -760,7 +766,7 @@ export const RULES: Rule[] = [
         ? {
             reason:
               cost.highUsd > settings.fastPathLimitUsd
-                ? `The ${usd(settings.fastPathLimitUsd)} fast-path limit falls inside the estimate range, so the price needs a check.`
+                ? `The ${usd(settings.fastPathLimitUsd)} approval limit falls inside the estimate range, so the price needs a check.`
                 : `The likely range is under the ${usd(settings.fastPathLimitUsd)} limit, but possible hidden damage could take it to ${usd(cost.ceilingUsd)}, so the price needs a check.`,
           }
         : null;

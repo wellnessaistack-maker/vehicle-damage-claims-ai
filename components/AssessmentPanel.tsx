@@ -276,7 +276,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
           {usd(lo)} to {usd(hi)}
           {e.status === "provisional" && <span className="chip chip-warn est-chip">Provisional</span>}
         </div>
-        <div className="rangebar est-bar" aria-label="Estimate range compared with the fast-path limit and total-loss line">
+        <div className="rangebar est-bar" aria-label="Estimate range compared with the approval limit and total-loss line">
           <div className="rangebar-track" />
           <div className="rangebar-fill" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: e.status === "reference_only" || e.status === "provisional" ? "var(--text-3)" : undefined }} />
           {ceil > hi && <div className="rangebar-extra" title="Possible extras" style={{ left: pos(hi), width: `calc(${pos(ceil)} - ${pos(hi)})` }} />}
@@ -398,7 +398,7 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
       <div className="card-body">
         {d.reasons.length === 0 ? (
           <div className="reason-text">
-            No concerns found, so this claim can go straight to estimating. The photos show the vehicle and the whole damaged area, nothing suggests hidden or serious damage, and the estimate is under the limit.
+            No concerns found, so the reviewer can approve this estimate. The photos show the vehicle and the whole damaged area, nothing suggests hidden or serious damage, and the estimate is under the limit.
           </div>
         ) : (
           GROUPS.map((g) => {
@@ -672,8 +672,8 @@ function ActionBar(props: {
   const [newRoute, setNewRoute] = useState<Route>(route === "adjuster" ? "photo_estimate" : "adjuster");
   const [reason, setReason] = useState("");
   const e = d?.requiredOutputs.estimate;
-  const [lo, setLo] = useState(String(e?.lowUsd ?? ""));
-  const [hi, setHi] = useState(String(e?.highUsd ?? ""));
+  // The amount the reviewer approves: the most likely figure unless they change it.
+  const [amount, setAmount] = useState(String(e?.likelyUsd ?? e?.highUsd ?? ""));
   const [to, setTo] = useState("dana");
   const [note, setNote] = useState("");
   const [uploadErr, setUploadErr] = useState<string | null>(null);
@@ -709,16 +709,17 @@ function ActionBar(props: {
   const names = (ids: string[]) => ids.map((id) => recipient(id).name.replace(/^(Estimating|Total|Field|Manual)/, (m) => m.toLowerCase())).join(" and ");
 
   // The reviewer's range goes back through the same rules, so a correction can change the route.
-  const loN = Number(lo);
-  const hiN = Number(hi);
-  const rangeValid = lo.trim() !== "" && hi.trim() !== "" && loN >= 0 && hiN >= loN;
+  const amountN = Math.round(Number(amount));
+  const loN = amountN;
+  const hiN = amountN;
+  const rangeValid = amount.trim() !== "" && Number.isFinite(amountN) && amountN >= 0;
   const preview =
     mode === "adjust" && rangeValid && item.assessment?.ok
       ? decide(item.assessment.extraction, item.claim, item.assessment.photos, props.settings, { reviewerRange: { lowUsd: loN, highUsd: hiN } })
       : null;
   const previewCostReasons = preview?.reasons.filter((r) => r.group === "cost") ?? [];
   const previewTotalLoss = !!preview?.reasons.some((r) => r.id === "C2");
-  const previewTargets = preview?.route === "adjuster" ? [previewTotalLoss ? "total_loss" : "field", ...(preview.siuReferral ? ["siu"] : [])] : ["estimating"];
+  const previewTargets = preview?.route === "adjuster" ? [previewTotalLoss ? "total_loss" : "field", ...(preview.siuReferral ? ["siu"] : [])] : ["repair"];
 
   const extras = (
     <>
@@ -978,20 +979,16 @@ function ActionBar(props: {
         <div className="inline-form">
           <div className="row">
             <label>
-              Low (USD)
-              <input type="number" min={0} value={lo} onChange={(ev) => setLo(ev.target.value)} />
-            </label>
-            <label>
-              High (USD)
-              <input type="number" min={0} value={hi} onChange={(ev) => setHi(ev.target.value)} />
+              Estimate to approve (USD)
+              <input type="number" min={0} value={amount} onChange={(ev) => setAmount(ev.target.value)} />
             </label>
           </div>
           {!rangeValid ? (
-            <div className="err">Enter a low and a high, with the high at least as big as the low.</div>
+            <div className="err">Enter the amount you want to approve.</div>
           ) : preview ? (
             <div className={`adjust-preview route-${preview.route}`}>
-              <b>With this range the rules say: {preview.routeLabel}.</b>{" "}
-              {previewCostReasons.length ? previewCostReasons.map((r) => `${r.reason} (rule ${r.id})`).join(" ") : `It stays under the ${usd(props.settings.fastPathLimitUsd)} fast-path limit.`}
+              <b>At {usd(amountN)} the rules say: {preview.routeLabel}.</b>{" "}
+              {previewCostReasons.length ? previewCostReasons.map((r) => `${r.reason} (rule ${r.id})`).join(" ") : `It's within your ${usd(props.settings.fastPathLimitUsd)} approval limit.`}
             </div>
           ) : null}
           <label>
@@ -1007,14 +1004,15 @@ function ActionBar(props: {
               disabled={!preview}
               onClick={() => {
                 if (!preview) return;
-                const range = `${usd(loN)} to ${usd(hiN)} (AI said ${usd(e.lowUsd!)} to ${usd(e.highUsd!)})`;
-                const update = withUpdate(preview.route === route ? props.message : customerUpdate(preview, item.claim));
+                const range = `${usd(amountN)} (the rate card said ${usd(e.likelyUsd ?? e.highUsd!)}, range ${usd(e.lowUsd!)} to ${usd(e.highUsd!)})`;
+                // The message names the approved amount, so redraft it for the new one.
+                const update = withUpdate(customerUpdate(preview, item.claim));
                 done(
                   preview.route === "adjuster"
                     ? {
                         action: "assigned_adjuster",
                         route: "adjuster",
-                        summary: `Adjusted the range to ${range}. That puts it on the ${preview.routeLabel} route, so it went to the ${names(previewTargets)}.${update}`,
+                        summary: `Changed the estimate to ${range}. That's over the approval limit, so it went to the ${names(previewTargets)}.${update}`,
                         reason: reason.trim() || undefined,
                         adjustedRange: { lowUsd: loN, highUsd: hiN },
                         sentTo: previewTargets,
@@ -1022,7 +1020,7 @@ function ActionBar(props: {
                     : {
                         action: "approved",
                         route: preview.route,
-                        summary: `Approved for estimating with an adjusted range of ${range}. Sent to the estimating team as the starting estimate.${update}`,
+                        summary: `Approved a repair estimate of ${range}, within the ${usd(props.settings.fastPathLimitUsd)} approval limit. Sent to repair and payment.${update}`,
                         reason: reason.trim() || undefined,
                         adjustedRange: { lowUsd: loN, highUsd: hiN },
                         sentTo: previewTargets,
@@ -1030,7 +1028,7 @@ function ActionBar(props: {
                 );
               }}
             >
-              {preview?.route === "adjuster" ? `Send to ${names(previewTargets)}` : "Approve adjusted range"}
+              {preview?.route === "adjuster" ? `Send to ${names(previewTargets)}` : `Approve ${usd(amountN)} estimate`}
             </button>
           </div>
         </div>
@@ -1044,15 +1042,15 @@ function ActionBar(props: {
               done({
                 action: "approved",
                 route,
-                summary: `Approved for estimating, with the ${usd(e.lowUsd!)} to ${usd(e.highUsd!)} range as the starting estimate. Sent to the estimating team.${withUpdate(props.message)}`,
-                sentTo: ["estimating"],
+                summary: `Approved a repair estimate of ${usd(e.likelyUsd ?? e.highUsd!)} (range ${usd(e.lowUsd!)} to ${usd(e.highUsd!)}), within the ${usd(props.settings.fastPathLimitUsd)} approval limit. Sent to repair and payment.${withUpdate(props.message)}`,
+                sentTo: ["repair"],
               })
             }
           >
-            Approve route and estimate range
+            Approve {usd(e.likelyUsd ?? e.highUsd!)} estimate
           </button>
           <button className="btn" onClick={() => open("adjust")}>
-            Adjust range
+            Change amount
           </button>
         </div>
       )}
