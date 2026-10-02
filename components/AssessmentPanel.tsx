@@ -674,7 +674,8 @@ function Thread(props: {
 }) {
   const { item, decision, mode } = props;
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  // What the assistant is doing while it answers, guessed from the question so it doesn't always say "photos".
+  const [busy, setBusy] = useState<string | false>(false);
   const [err, setErr] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
   // Braces matter: newer Chrome returns a Promise from scrollIntoView, and an
@@ -706,7 +707,7 @@ function Thread(props: {
       props.setMode(null);
       return;
     }
-    setBusy(true);
+    setBusy(workingOn(q));
     props.onThread(item.id, { kind: "question", author: REVIEWER.name, text: q });
     setText("");
     try {
@@ -756,7 +757,7 @@ function Thread(props: {
                 <b>AI assistant</b>
               </div>
               <div className="entry-body">
-                <span className="spinner" /> Looking at the photos...
+                <span className="spinner" /> {busy}
               </div>
             </div>
           )}
@@ -778,7 +779,7 @@ function Thread(props: {
               <button className="btn btn-sm btn-ghost" onClick={() => props.setMode(null)}>
                 Cancel
               </button>
-              <button className="btn btn-sm btn-primary" onClick={() => void submit()} disabled={busy || !text.trim()}>
+              <button className="btn btn-sm btn-primary" onClick={() => void submit()} disabled={!!busy || !text.trim()}>
                 {mode === "ask" ? "Ask" : "Add comment"}
               </button>
             </div>
@@ -833,6 +834,7 @@ function ActionBar(props: {
   const withUpdate = (text: string | null) => (props.sendUpdate && text ? tellCustomer(text) : "");
   const open = (m: Mode) => {
     setReason("");
+    setCallOpen(false);
     setMode(mode === m ? null : m);
   };
 
@@ -951,7 +953,19 @@ function ActionBar(props: {
   const verb = channel === "email" ? "email" : "text";
   return (
     <div className="actionbar">
-      {mode === "contact" && (
+      {mode === "contact" && callOpen && (
+        <CallForm
+          claim={item.claim}
+          cancelLabel="Back to message"
+          onLog={(text) => {
+            props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
+            setCallOpen(false);
+            setMode(null);
+          }}
+          onCancel={() => setCallOpen(false)}
+        />
+      )}
+      {mode === "contact" && !callOpen && (
         <div className="contact-composer">
           <div className="contact-head">
             <b>Message {name}</b>
@@ -966,7 +980,7 @@ function ActionBar(props: {
             <button className="btn btn-sm btn-ghost" onClick={() => setMode(null)}>
               Cancel
             </button>
-            <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen((o) => !o)}>
+            <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen(true)}>
               Log a call
             </button>
             <button
@@ -997,16 +1011,6 @@ function ActionBar(props: {
             </button>
           </div>
         </div>
-      )}
-      {callOpen && item.status !== "done" && (
-        <CallForm
-          claim={item.claim}
-          onLog={(text) => {
-            props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
-            setCallOpen(false);
-          }}
-          onCancel={() => setCallOpen(false)}
-        />
       )}
       {!formOpen && contactable && (route === "photo_estimate" || route === "adjuster") && (
         <div className="update-line">
@@ -1208,6 +1212,16 @@ function ActionBar(props: {
               </button>
             </div>
           </div>
+        ) : callOpen ? (
+          <CallForm
+            claim={item.claim}
+            cancelLabel="Back to message"
+            onLog={(text) => {
+              props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
+              setCallOpen(false);
+            }}
+            onCancel={() => setCallOpen(false)}
+          />
         ) : (
           <div className="contact-composer">
             <div className="contact-head">
@@ -1223,7 +1237,7 @@ function ActionBar(props: {
               <span className="hint" style={{ marginRight: "auto" }}>
                 Includes an upload link. The claim then waits, with a follow-up date.
               </span>
-              <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen((o) => !o)}>
+              <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen(true)}>
                 Log a call
               </button>
               <button
@@ -1319,7 +1333,15 @@ function FollowUp({ item, channel, onReminder, onCall }: { item: CaseItem; chann
   );
 }
 
-function CallForm({ claim, onLog, onCancel }: { claim: CaseItem["claim"]; onLog: (text: string) => void; onCancel: () => void }) {
+/** A short status for the assistant while it answers, matched to what the question is about. */
+function workingOn(question: string): string {
+  const q = question.toLowerCase();
+  if (/photo|picture|image|\bsee\b|\bseen\b|visible|\bshows?\b|\blook|damage|\bdents?\b|\bdented\b|scratch|crack|bumper|door|panel|airbag|frame|structur/.test(q)) return "Looking at the photos...";
+  if (/why|route|rule|adjuster|approve|limit|evidence|fraud|total loss|estimate|price|cost|\$|labor|parts|hours/.test(q)) return "Checking the rules and the estimate...";
+  return "Reading the claim...";
+}
+
+function CallForm({ claim, onLog, onCancel, cancelLabel = "Cancel" }: { claim: CaseItem["claim"]; onLog: (text: string) => void; onCancel: () => void; cancelLabel?: string }) {
   const [outcome, setOutcome] = useState<(typeof CALL_OUTCOMES)[number]>(CALL_OUTCOMES[0]);
   const [note, setNote] = useState("");
   return (
@@ -1340,7 +1362,7 @@ function CallForm({ claim, onLog, onCancel }: { claim: CaseItem["claim"]; onLog:
       </label>
       <div className="composer-row">
         <button className="btn btn-sm btn-ghost" onClick={onCancel}>
-          Cancel
+          {cancelLabel}
         </button>
         <button
           className="btn btn-sm btn-primary"
