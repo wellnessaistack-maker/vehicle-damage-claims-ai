@@ -276,11 +276,32 @@ function Estimate({ e }: { e: EstimateOutput }) {
   // Keep a hover note inside the card: anchor it to the label's nearer edge.
   const tipSide = (n: number) => (n / max < 0.3 ? "tip-start" : n / max > 0.6 ? "tip-end" : "");
   const showTl = e.totalLossLineUsd !== null && e.totalLossLineUsd <= max;
+  // After a reviewer changes the amount, the estimate is theirs, not the rate card's.
+  const reviewerSet = e.drivers.find((d) => d.label === "Reviewer's amount");
+  if (reviewerSet) {
+    return (
+      <>
+        <div className="est-row">
+          <div className="range">{lo === hi ? usd(hi) : `${usd(lo)} to ${usd(hi)}`}</div>
+          <div className="rangebar est-bar" aria-label="Estimate compared with the approval limit and total-loss line">
+            <div className="rangebar-track" />
+            <div className="rangebar-fill" style={{ left: pos(lo), width: `max(6px, calc(${pos(hi)} - ${pos(lo)}))` }} />
+            <div className="rangebar-mark" style={{ left: pos(e.fastPathLimitUsd) }}>
+              <span className={`has-tip ${tipSide(e.fastPathLimitUsd)}`} tabIndex={0} data-tip={approvalLimitTip(e.fastPathLimitUsd)}>
+                Limit {usd(e.fastPathLimitUsd)}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="est-likely">Set by the reviewer. {reviewerSet.note}.</div>
+      </>
+    );
+  }
   return (
     <>
       <div className="est-row">
         <div className="range" style={{ opacity: e.status === "reference_only" || e.status === "provisional" ? 0.7 : 1 }}>
-          {usd(lo)} to {usd(hi)}
+          {lo === hi ? usd(hi) : `${usd(lo)} to ${usd(hi)}`}
           {e.status === "provisional" && <span className="chip chip-warn est-chip">Provisional</span>}
         </div>
         <div className="rangebar est-bar" aria-label="Estimate range compared with the approval limit and total-loss line">
@@ -328,7 +349,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
         </div>
       )}
       <div className="hint">
-        {e.status === "provisional" ? e.note : e.status === "reference_only" ? "For the adjuster's reference only." : "A range, never a payable amount."} {e.accuracyNote}
+        {e.status === "provisional" ? e.note : e.status === "reference_only" ? "For the adjuster's reference only." : "If the shop finds more damage, it sends a supplement."} {e.accuracyNote}
       </div>
       <details className="fold">
         <summary>
