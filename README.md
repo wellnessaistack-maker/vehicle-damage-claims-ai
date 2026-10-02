@@ -114,7 +114,7 @@ The **Routing protocol** page in the app shows all of this on one page: a diagra
 
 The same photo now prices at $950 to $1,300 (Columbus) on every call.
 
-- **Under each estimate, three boxes show where its inputs came from:** *From the photos* (the AI's reading: each damaged part, how badly, repair or replace), *From the claim* (the ZIP and its labour market, the car on the policy and its value, which set the parts level), and *From the price guide* (the carrier's hours, labour and paint rates, and range width). The AI only fills the first box.
+- **Under each estimate, three short lines show where its inputs came from:** *From the photos* (the AI's reading: each damaged part, how badly, repair or replace), *From the claim* (the ZIP and its labour market, the car on the policy and its value, which set the parts level), and *From the price guide* (the carrier's hours, labour and paint rates, and range width). The AI only supplies the first.
 - **Each line shows its working:** what the AI saw in the photo, the hours and rates ("4.5 h body x $65 + 3.5 h paint x $110 = $678"), and the repair cost against the replacement cost, with the one priced marked. If repairing a part would cost more than replacing it, it's priced as a replacement.
 - **The range covers what the photos show,** 15% either side of the most likely cost (a setting).
 - **What the photos can't show is listed separately** as possible extras: damage behind the panels, parts the AI flagged for inspection, sensor recalibration. The routing rules use the figure with them included, so a claim isn't approved on the assumption that nothing else turns up.

@@ -234,69 +234,42 @@ function RequiredOutputs({ d }: { d: Decision }) {
 /** What went into the price, split by where it came from: the AI's reading of the photos, the claim, and the carrier's price guide. */
 function PriceSources({ e }: { e: EstimateOutput }) {
   const p = e.pricing!;
-  const cross =
-    p.source === "rate_card" && e.aiItemsUsd && e.aiItemsUsd.highUsd > 0 ? (
-      <div className="hint">
-        The AI&apos;s own price for the same damage, as a cross-check only: {usd(e.aiItemsUsd.lowUsd)} to {usd(e.aiItemsUsd.highUsd)}.
-      </div>
-    ) : null;
   if (p.source !== "rate_card") return <div className="est-pricing">Priced from the AI&apos;s own figures: the price guide covers ordinary road cars only.</div>;
 
-  const parts = e.drivers.filter((d) => d.fromPhotos && d.kind !== "possible");
-  const shown = parts.slice(0, 4);
-  const market = p.market.zip ? `ZIP ${p.market.zip}: ${p.market.name}` : "No ZIP on file: national average";
-  const car = p.claimVehicle
-    ? `${p.claimVehicle}${p.vehicleValueUsd ? `, worth ${usd(p.vehicleValueUsd)}` : ", value not on file"}`
-    : p.vehicleValueUsd
-      ? `Car worth ${usd(p.vehicleValueUsd)}`
-      : "Car and value not on file";
+  const parts = e.drivers.filter((d) => d.fromPhotos && d.kind !== "possible").map((d) => d.label.split(":")[0].toLowerCase());
+  const partList = parts.length > 3 ? `${parts.slice(0, 3).join(", ")} and ${parts.length - 3} more` : parts.join(", ");
   const hv = e.drivers.some((d) => d.label === "High-voltage safety procedure");
+  const where = p.market.zip ? `ZIP ${p.market.zip} (${p.market.name})` : "No ZIP on file (national average)";
+  const car = p.claimVehicle
+    ? `${p.claimVehicle}${p.vehicleValueUsd ? ` worth ${usd(p.vehicleValueUsd)}` : ""}`
+    : p.vehicleValueUsd
+      ? `car worth ${usd(p.vehicleValueUsd)}`
+      : "car not on file";
+  const rate = p.market.factor !== 1 ? `${usd(p.baseLabourRateUsd)}/h x ${p.market.factor} = ${usd(p.labourRateUsd)}/h` : `${usd(p.labourRateUsd)}/h`;
   return (
     <>
-      <div className="price-src" aria-label="What went into this price">
-        <div className="price-src-col ai">
-          <div className="price-src-tag">
-            From the photos <span>The AI&apos;s reading</span>
-          </div>
-          <ul>
-            {shown.map((d) => (
-              <li key={d.label}>{d.label}</li>
-            ))}
-            {parts.length > shown.length && <li>and {parts.length - shown.length} more</li>}
-            {p.makeFrom === "photos" && <li>Make read from the photo, which sets the parts level</li>}
-            {hv && p.electrifiedFrom === "photos" && <li>Looks electric or hybrid: adds high-voltage safety work</li>}
-          </ul>
+      <dl className="price-src" aria-label="Where the price comes from">
+        <dt className="ai">From the photos (AI)</dt>
+        <dd>
+          {parts.length} damaged part{parts.length === 1 ? "" : "s"}: {partList}
+          {p.makeFrom === "photos" ? "; make read from the photo" : ""}
+          {hv && p.electrifiedFrom === "photos" ? "; looks electric or hybrid" : ""}
+        </dd>
+        <dt className="claim">From the claim</dt>
+        <dd>
+          {where}, {car}
+          {hv && p.electrifiedFrom === "claim" ? ", electric or hybrid" : ""}
+        </dd>
+        <dt className="guide">From the price guide</dt>
+        <dd>
+          Hours per repair at {rate}, plus {usd(p.paintMaterialsUsd)}/h paint, {p.tier} parts
+        </dd>
+      </dl>
+      {e.aiItemsUsd && e.aiItemsUsd.highUsd > 0 && (
+        <div className="hint">
+          The AI&apos;s own price for the same damage, as a cross-check only: {usd(e.aiItemsUsd.lowUsd)} to {usd(e.aiItemsUsd.highUsd)}.
         </div>
-        <div className="price-src-col claim">
-          <div className="price-src-tag">
-            From the claim <span>Policy and claim form</span>
-          </div>
-          <ul>
-            <li>
-              {market} sets the labour rate
-            </li>
-            <li>
-              {car}: {p.tier} parts ({p.tierWhy})
-            </li>
-            {hv && p.electrifiedFrom === "claim" && <li>Electric or hybrid on the policy: adds high-voltage safety work</li>}
-          </ul>
-        </div>
-        <div className="price-src-col card">
-          <div className="price-src-tag">
-            From the price guide <span>The carrier&apos;s hours and rates</span>
-          </div>
-          <ul>
-            <li>Hours for each part and repair type</li>
-            <li>
-              {usd(p.baseLabourRateUsd)}/h labour
-              {p.market.factor !== 1 ? `, x ${p.market.factor} here = ${usd(p.labourRateUsd)}/h` : ""}
-            </li>
-            <li>+{usd(p.paintMaterialsUsd)}/h for paint and materials</li>
-            <li>Range of {p.bandPct}% either side</li>
-          </ul>
-        </div>
-      </div>
-      {cross}
+      )}
     </>
   );
 }
