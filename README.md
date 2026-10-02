@@ -100,7 +100,7 @@ Colour key: green is plain code, orange is the AI, purple is people.
 - **The AI only sees the photos.** Policy and claim details go to the rules. If the AI were told "the policy says Honda Civic", it would likely lean that way, which would weaken the check that the car matches the policy. It also keeps customer-written text away from the AI.
 - **One AI call, not an agent.** The steps are known up front, so letting the model choose them would add time, cost and unpredictability. One call is also easy to measure, retry and fall back from.
 - **No confidence scores.** Models aren't reliable judges of their own confidence, so the rules use facts instead. For example, if no badge is visible, the make is left blank.
-- **The most cautious route wins.** If any rule says adjuster, the claim goes to an adjuster.
+- **When rules disagree, the more serious route takes priority.** If one rule says adjuster and another says ask for photos, the claim goes to an adjuster.
 
 **The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 approval limit and the total-loss line. The total-loss line follows the claim's state, found from its ZIP code: a fixed share of the car's value in some states, a formula (repair plus salvage reaching the car's value) in others, and the carrier's 60% setting where neither applies. **The state rules are from a secondary source and still need checking against each state's law.** Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published.
 
@@ -113,7 +113,7 @@ The same photo now prices at $950 to $1,300 (Columbus) on every call.
 
 - **Each line shows its working:** what the AI saw in the photo, the hours and rates ("4.5 h body x $65 + 3.5 h paint x $110 = $678"), and the repair cost against the replacement cost, with the one priced marked. If repairing a part would cost more than replacing it, it's priced as a replacement.
 - **The range covers what the photos show,** 15% either side of the most likely cost (a setting).
-- **What the photos can't show is listed separately** as possible extras: damage behind the panels, parts the AI flagged for inspection, sensor recalibration. The routing rules use the cautious figure that includes them.
+- **What the photos can't show is listed separately** as possible extras: damage behind the panels, parts the AI flagged for inspection, sensor recalibration. The routing rules use the figure with them included, so a claim isn't approved on the assumption that nothing else turns up.
 - **The AI's own price is kept as a cross-check,** and used for parts the rate card doesn't cover and for vehicles that aren't road cars.
 - **Every hour, rate and market is a placeholder.** In production:
     - **Third-party data** gives the hours and parts: an estimating platform's labour times (CCC, Mitchell or Audatex), and parts priced for the exact car from its VIN.
@@ -282,7 +282,7 @@ What matters most is which side of the $2,500 approval limit the estimate lands 
 
 | Failure | How likely | What the prototype does |
 |---|---|---|
-| Complex claim sent straight to estimating | Low, but high impact | Locked safety rules, most cautious route wins, measured in the evaluation |
+| Complex claim sent straight to estimating | Low, but high impact | Locked safety rules, the more serious route takes priority, measured in the evaluation |
 | Wrong vehicle named with confidence | Medium | Make and model left blank without a badge or distinctive shape; policy mismatch flagged |
 | Damage missed or made up | Medium | "No damage visible" asks for photos; the reviewer approves each estimate |
 | Estimate on the wrong side of a limit | Likely near the limit | Ranges close to the limit are flagged, very wide ones go to an adjuster |

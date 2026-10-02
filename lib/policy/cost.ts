@@ -219,7 +219,7 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
         `Range: ${usd(likely)} less and plus ${s.estimateBandPct}% is ${usd(low)} to ${usd(high)}, rounded out to ${usd(lowR)} to ${usd(highR)}.`,
       ]
     : [`The AI's own prices add up to ${usd(visLow)} to ${usd(visHigh)}, rounded out to ${usd(lowR)} to ${usd(highR)}.`];
-  if (extra > 0) workings.push(`Cautious figure for routing: ${usd(highR)} + ${usd(extra)} of possible extras = ${usd(ceilR)}.`);
+  if (extra > 0) workings.push(`If every possible extra turns up: ${usd(highR)} + ${usd(extra)} = ${usd(ceilR)}. The routing rules check this figure against the limits.`);
   return {
     lowUsd: lowR,
     highUsd: highR,

@@ -151,7 +151,7 @@ export default function EvaluationPage() {
         <section className="card">
           <div className="card-head">
             <h3>Where it went wrong</h3>
-            <span className="sub">{cautious ? "Every mistake went the cautious way: more photos or a person, never approved from photos" : "Includes a missed escalation"}</span>
+            <span className="sub">{cautious ? "Every mistake erred on the safe side: more photos or a person, never approved from photos" : "Includes a missed escalation"}</span>
           </div>
           <div className="card-body ev-misses">
             {misses.map((m) => {

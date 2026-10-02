@@ -35,7 +35,7 @@ const GROUPS: { id: RuleGroup; title: string; catches: string; sendsTo: string }
   { id: "review", title: "Review flags", catches: "Sensor area, car or damage doesn't match the claim", sendsTo: "Same route, flagged" },
 ];
 
-/** Which rule groups lead to each route, most cautious first. */
+/** Which rule groups lead to each route, highest priority first. */
 const ROUTE_FLOW: { route: Route; groups: RuleGroup[] }[] = [
   { route: "adjuster", groups: ["safety", "scope", "integrity", "cost"] },
   { route: "more_evidence", groups: ["evidence"] },
@@ -196,7 +196,7 @@ export function ProtocolDrawer(props: {
                 })}
               </div>
               <div className="hint">
-                If rules point to different routes, the most cautious wins, left to right. Review flags keep the route but ask a person to check. If the AI fails, the claim goes to manual triage.
+                When rules point to different routes, the one further left takes priority: if one rule says adjuster and another says ask for photos, it goes to the adjuster. Review flags keep the route but ask a person to check. If the AI fails, the claim goes to manual triage.
               </div>
             </div>
           </div>
