@@ -8,16 +8,21 @@ import {
   currentDecision,
   failureNote,
   firstReviewNote,
-  holderLine,
   newClaimId,
+  isOpen,
   now,
+  recipient,
+  recommendedTeams,
+  shortName,
   REVIEWER,
   routeOf,
   uid,
   type CaseItem,
   type CaseOutcome,
+  type SecondOpinionAction,
   type ThreadEntry,
 } from "@/lib/client/cases.ts";
+import { demoSecondOpinion } from "@/lib/client/second-opinion.ts";
 import { loadDemoPhoto, type CasePhoto } from "@/lib/client/intake.ts";
 import { reportClientError } from "@/lib/client/report.ts";
 import type { Assessment } from "@/lib/pipeline.ts";
@@ -203,11 +208,11 @@ export function Workspace() {
   }, [addCases]);
 
   // ---- Reviewer actions -----------------------------------------------------------
-  const openCases = useMemo(() => cases.filter((c) => c.status !== "done"), [cases]);
+  const openCases = useMemo(() => cases.filter(isOpen), [cases]);
 
   const advanceFrom = useCallback(
     (id: string) => {
-      const order = cases.filter((c) => c.status !== "done" && c.id !== id);
+      const order = cases.filter((c) => isOpen(c) && c.id !== id);
       setSelectedId(order[0]?.id ?? id);
     },
     [cases],
@@ -218,12 +223,8 @@ export function Workspace() {
     [update],
   );
 
-  const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  // The tab a claim just moved to, so the worklist can flash it. n changes on every move to restart the flash.
+  const [lastMove, setLastMove] = useState<{ tab: "inbox" | "waiting" | "completed"; text: string; n: number } | null>(null);
 
   const complete = useCallback(
     (id: string, reviewed: Omit<CaseOutcome, "at">) => {
@@ -231,13 +232,11 @@ export function Workspace() {
       // Record what was recommended next to what the reviewer chose, so agreement can be measured.
       const rec = c ? recommendation(c, settings) : null;
       const recommendedRoute = rec?.route ?? "manual_triage";
-      const outcome: Omit<CaseOutcome, "at"> = { ...reviewed, recommendedRoute, agreement: agreementOf(recommendedRoute, reviewed) };
+      const outcome: Omit<CaseOutcome, "at"> = { ...reviewed, recommendedRoute, agreement: agreementOf(recommendedRoute, reviewed, recommendedTeams(rec)) };
       const at = now();
       if (c) setReviewLog((log) => [...log, logEntry(c, { ...outcome, at }, rec)]);
-      const next = cases.find((x) => x.status !== "done" && x.id !== id);
-      const holder = holderLine({ ...outcome, at: now() });
-      const where = outcome.action === "message_sent" ? "moved to Waiting on customer" : `moved to Completed${holder ? `. ${holder}` : ""}`;
-      setToast(`${c?.claim.claimId ?? "Claim"} ${where}. ${next ? `Next up: ${next.claim.claimId}.` : "Inbox clear."}`);
+      const tab = outcome.action === "message_sent" ? "waiting" : "completed";
+      setLastMove((m) => ({ tab, text: `${c?.claim.claimId ?? "Claim"} moved to ${tab === "waiting" ? "Waiting" : "Completed"}.`, n: (m?.n ?? 0) + 1 }));
       update(id, (c) => ({
         ...c,
         status: "done",
@@ -245,6 +244,40 @@ export function Workspace() {
         thread: [...c.thread, { id: uid("t"), kind: "action", author: REVIEWER.name, text: outcome.summary + (outcome.reason ? ` Reason: ${outcome.reason}` : ""), at: now() }],
       }));
       advanceFrom(id);
+    },
+    [cases, settings, update, advanceFrom],
+  );
+
+  // A second opinion parks the claim in Waiting until the colleague replies (in the demo, on request) or it's taken back.
+  const secondOpinion = useCallback(
+    (id: string, a: SecondOpinionAction) => {
+      const c = cases.find((x) => x.id === id);
+      if (!c) return;
+      const entry = (e: Omit<ThreadEntry, "id" | "at">): ThreadEntry => ({ ...e, id: uid("t"), at: now() });
+      const move = (tab: "inbox" | "waiting", text: string) => setLastMove((m) => ({ tab, text, n: (m?.n ?? 0) + 1 }));
+      if (a.kind === "ask") {
+        const who = recipient(a.from).name;
+        update(id, (x) => ({
+          ...x,
+          secondOpinion: { from: a.from, note: a.note, askedAt: now() },
+          thread: [...x.thread, entry({ kind: "comment", author: REVIEWER.name, text: `@${who}: second opinion requested.${a.note ? ` ${a.note}` : ""}` })],
+        }));
+        move("waiting", `${c.claim.claimId} is waiting on ${shortName(a.from)}.`);
+        advanceFrom(id);
+        return;
+      }
+      if (!c.secondOpinion) return;
+      const from = c.secondOpinion.from;
+      const who = recipient(from).name;
+      if (a.kind === "reply") {
+        const text = demoSecondOpinion(c, currentDecision(c, settings), from);
+        update(id, (x) => ({ ...x, secondOpinion: undefined, reply: { from, at: now() }, thread: [...x.thread, entry({ kind: "comment", author: who, text })] }));
+        move("inbox", `${shortName(from, true)} replied. ${c.claim.claimId} is back in your inbox.`);
+      } else {
+        update(id, (x) => ({ ...x, secondOpinion: undefined, thread: [...x.thread, entry({ kind: "action", author: REVIEWER.name, text: `Took the claim back from ${shortName(from)} before a reply.` })] }));
+        move("inbox", `${c.claim.claimId} is back in your inbox.`);
+      }
+      setSelectedId(id);
     },
     [cases, settings, update, advanceFrom],
   );
@@ -351,6 +384,7 @@ export function Workspace() {
           loadingDemo={loadingDemo}
           openCount={openCases.length}
           reviewLog={reviewLog}
+          lastMove={lastMove}
         />
         </ErrorBoundary>
         <ErrorBoundary key={`a-${selected?.id ?? "none"}`} label="Assessment" className="col assess">
@@ -363,6 +397,7 @@ export function Workspace() {
           onThread={addThread}
           onReassess={reassess}
           onCustomerPhotos={addCustomerPhotos}
+          onSecondOpinion={secondOpinion}
           onOpenRecord={() => setDrawer("record")}
           onOpenProtocol={() => setDrawer("protocol")}
         />
@@ -373,11 +408,6 @@ export function Workspace() {
         </ErrorBoundary>
       </div>
 
-      {toast && (
-        <div className="toast" role="status" onClick={() => setToast(null)}>
-          {toast}
-        </div>
-      )}
       {intakeOpen && <IntakeModal onClose={() => setIntakeOpen(false)} onAdd={(n) => { addCases(n); setIntakeOpen(false); }} />}
       {drawer === "protocol" && (
         <ProtocolDrawer

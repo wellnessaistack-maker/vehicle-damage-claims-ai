@@ -25,6 +25,8 @@ export interface Recipient {
   role: string;
   /** What the recipient is for, shown when choosing. */
   forWhat: string;
+  /** A named colleague rather than a team or queue. */
+  person?: boolean;
 }
 
 export const DIRECTORY: Recipient[] = [
@@ -34,11 +36,32 @@ export const DIRECTORY: Recipient[] = [
   { id: "total_loss", name: "Total loss unit", role: "Total loss specialists", forWhat: "Valuation and settlement when repair may cost more than the car is worth" },
   { id: "siu", name: "Special Investigations Unit", role: "SIU", forWhat: "Possible fraud, such as reused photos" },
   { id: "manual", name: "Manual triage queue", role: "Claims handlers", forWhat: "Today's process, for anything the tool couldn't assess" },
-  { id: "dana", name: "Dana Kim", role: "Senior appraiser", forWhat: "Second opinion on a price or a borderline route" },
-  { id: "marcus", name: "Marcus Hill", role: "Claims supervisor", forWhat: "Escalations, complaints and exceptions to the protocol" },
+  { id: "dana", name: "Dana Kim", role: "Senior appraiser", forWhat: "Second opinion on a price or a borderline route", person: true },
+  { id: "marcus", name: "Marcus Hill", role: "Claims supervisor", forWhat: "Escalations, complaints and exceptions to the protocol", person: true },
 ];
 
 export const recipient = (id: string) => DIRECTORY.find((r) => r.id === id)!;
+
+/** How a recipient reads mid-sentence: "Dana" for a person, "the total loss unit" for a team. */
+export function shortName(id: string, capital = false): string {
+  const r = recipient(id);
+  if (r.person) return r.name.split(" ")[0];
+  const team = r.name.startsWith("Special") ? r.name : r.name.charAt(0).toLowerCase() + r.name.slice(1);
+  return capital ? r.name : `the ${team}`;
+}
+
+/**
+ * Who the recommendation would send the claim to. On the adjuster route that depends on why:
+ * the total loss unit when the repair may cost more than the car is worth, a field adjuster
+ * otherwise, and SIU as well when fraud signs fired.
+ */
+export function recommendedTeams(d: Decision | null): string[] {
+  if (!d) return ["manual"];
+  if (d.route !== "adjuster") return [ROUTE_OWNER[d.route]];
+  const teams = [d.reasons.some((r) => r.id === "C2") ? "total_loss" : "field"];
+  if (d.siuReferral) teams.push("siu");
+  return teams;
+}
 
 /** Where a claim goes next on each route when the reviewer accepts it. */
 export const ROUTE_OWNER: Record<Route, string> = {
@@ -49,7 +72,7 @@ export const ROUTE_OWNER: Record<Route, string> = {
 };
 
 /** How the reviewer's decision compares with the recommendation. See review-log.ts. */
-export type Agreement = "kept" | "adjusted_range" | "changed_route";
+export type Agreement = "kept" | "adjusted_range" | "changed_route" | "changed_team";
 
 export interface CaseOutcome {
   action: OutcomeAction;
@@ -78,7 +101,16 @@ export interface CaseItem {
   demoKey?: string;
   folder?: string | null;
   addedAt: string;
+  /** Set while a colleague gives a second opinion. The claim waits until they reply or it's taken back. */
+  secondOpinion?: { from: string; note?: string; askedAt: string };
+  /** The colleague who last replied, flagged on the inbox card until the claim is decided. */
+  reply?: { from: string; at: string };
 }
+
+/** Still on the reviewer's desk: not decided and not waiting on a colleague. */
+export const isOpen = (c: CaseItem) => c.status !== "done" && !c.secondOpinion;
+
+export type SecondOpinionAction = { kind: "ask"; from: string; note?: string } | { kind: "reply" } | { kind: "take_back" };
 
 export const REVIEWER = { name: "Jordan Reyes", role: "Desk appraiser", initials: "JR" };
 

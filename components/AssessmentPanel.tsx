@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { currentDecision, DIRECTORY, holderLine, recipient, REVIEWER, ROUTE_OWNER, type CaseItem, type CaseOutcome, type ThreadEntry } from "@/lib/client/cases.ts";
+import { currentDecision, DIRECTORY, holderLine, recipient, recommendedTeams, REVIEWER, ROUTE_OWNER, shortName, timeAgo, type CaseItem, type CaseOutcome, type SecondOpinionAction, type ThreadEntry } from "@/lib/client/cases.ts";
 import { CALL_OUTCOMES, channels, customerUpdate, defaultChannel, firstName, followUpDate, preview as messagePreview, reminder, sentVia, shortDate, type Channel } from "@/lib/client/customer.ts";
 import { loadDemoPhoto, shrink, kindOf, type CasePhoto } from "@/lib/client/intake.ts";
 import { decide, type Decision, type EstimateOutput } from "@/lib/policy/engine.ts";
@@ -18,6 +18,7 @@ export function AssessmentPanel(props: {
   onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
   onReassess: (id: string) => void;
   onCustomerPhotos: (id: string, photos: CasePhoto[]) => void;
+  onSecondOpinion: (id: string, action: SecondOpinionAction) => void;
   onOpenRecord: () => void;
   onOpenProtocol: () => void;
 }) {
@@ -133,6 +134,7 @@ export function AssessmentPanel(props: {
         onThread={props.onThread}
         onReassess={props.onReassess}
         onCustomerPhotos={props.onCustomerPhotos}
+        onSecondOpinion={props.onSecondOpinion}
       />
     </aside>
   );
@@ -674,7 +676,8 @@ function Thread(props: {
 }) {
   const { item, decision, mode } = props;
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  // What the assistant is doing while it answers, guessed from the question so it doesn't always say "photos".
+  const [busy, setBusy] = useState<string | false>(false);
   const [err, setErr] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
   // Braces matter: newer Chrome returns a Promise from scrollIntoView, and an
@@ -706,7 +709,7 @@ function Thread(props: {
       props.setMode(null);
       return;
     }
-    setBusy(true);
+    setBusy(workingOn(q));
     props.onThread(item.id, { kind: "question", author: REVIEWER.name, text: q });
     setText("");
     try {
@@ -744,7 +747,7 @@ function Thread(props: {
             <div key={t.id} className={`entry ${t.kind === "note" || t.kind === "answer" ? "ai" : t.kind}`}>
               <div className="entry-head">
                 <b>{t.author}</b>
-                <span>{t.kind === "question" ? "asked" : t.kind === "comment" ? "commented" : t.kind === "action" ? "" : ""}</span>
+                <span>{t.kind === "question" ? "asked" : t.kind === "comment" ? (t.author === REVIEWER.name ? "commented" : "replied") : ""}</span>
                 <span style={{ marginLeft: "auto" }}>{new Date(t.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
               </div>
               <div className="entry-body">{t.text}</div>
@@ -756,7 +759,7 @@ function Thread(props: {
                 <b>AI assistant</b>
               </div>
               <div className="entry-body">
-                <span className="spinner" /> Looking at the photos...
+                <span className="spinner" /> {busy}
               </div>
             </div>
           )}
@@ -778,7 +781,7 @@ function Thread(props: {
               <button className="btn btn-sm btn-ghost" onClick={() => props.setMode(null)}>
                 Cancel
               </button>
-              <button className="btn btn-sm btn-primary" onClick={() => void submit()} disabled={busy || !text.trim()}>
+              <button className="btn btn-sm btn-primary" onClick={() => void submit()} disabled={!!busy || !text.trim()}>
                 {mode === "ask" ? "Ask" : "Add comment"}
               </button>
             </div>
@@ -806,6 +809,7 @@ function ActionBar(props: {
   onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
   onReassess: (id: string) => void;
   onCustomerPhotos: (id: string, photos: CasePhoto[]) => void;
+  onSecondOpinion: (id: string, action: SecondOpinionAction) => void;
 }) {
   const { item, route, d, mode, setMode, channel } = props;
   const [callOpen, setCallOpen] = useState(false);
@@ -833,6 +837,7 @@ function ActionBar(props: {
   const withUpdate = (text: string | null) => (props.sendUpdate && text ? tellCustomer(text) : "");
   const open = (m: Mode) => {
     setReason("");
+    setCallOpen(false);
     setMode(mode === m ? null : m);
   };
 
@@ -848,6 +853,7 @@ function ActionBar(props: {
   const totalLoss = !!d?.reasons.some((r) => r.id === "C2");
   const adjusterTargets = totalLoss ? ["total_loss"] : ["field"];
   if (d?.siuReferral) adjusterTargets.push("siu");
+  const recommendedTo = recommendedTeams(d);
   const names = (ids: string[]) => ids.map((id) => recipient(id).name.replace(/^(Estimating|Total|Field|Manual)/, (m) => m.toLowerCase())).join(" and ");
 
   // The reviewer's amount goes back through the same rules, so a correction can change the route.
@@ -888,6 +894,30 @@ function ActionBar(props: {
       )}
     </>
   );
+
+  if (item.secondOpinion && item.status !== "done") {
+    const who = recipient(item.secondOpinion.from);
+    const first = shortName(item.secondOpinion.from);
+    return (
+      <div className="actionbar">
+        <div className="followup">
+          <div>
+            <b>Waiting on {who.person ? who.name : first}</b> ({who.role}) for a second opinion. Asked {timeAgo(item.secondOpinion.askedAt)}.
+            {item.secondOpinion.note && <div className="hint">Your note: {item.secondOpinion.note}</div>}
+          </div>
+          <div className="hint">When {first} replies, the claim comes back to your inbox with the reply in the case thread.</div>
+          <div className="followup-actions">
+            <button className="btn btn-sm" title="Demo only: plays the colleague's reply" onClick={() => props.onSecondOpinion(item.id, { kind: "reply" })}>
+              Demo: get {first}&apos;s reply
+            </button>
+            <button className="btn btn-sm btn-ghost" onClick={() => props.onSecondOpinion(item.id, { kind: "take_back" })}>
+              Take it back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (item.status === "done" && item.outcome) {
     const waiting = item.outcome.action === "message_sent";
@@ -951,7 +981,19 @@ function ActionBar(props: {
   const verb = channel === "email" ? "email" : "text";
   return (
     <div className="actionbar">
-      {mode === "contact" && (
+      {mode === "contact" && callOpen && (
+        <CallForm
+          claim={item.claim}
+          cancelLabel="Back to message"
+          onLog={(text) => {
+            props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
+            setCallOpen(false);
+            setMode(null);
+          }}
+          onCancel={() => setCallOpen(false)}
+        />
+      )}
+      {mode === "contact" && !callOpen && (
         <div className="contact-composer">
           <div className="contact-head">
             <b>Message {name}</b>
@@ -966,7 +1008,7 @@ function ActionBar(props: {
             <button className="btn btn-sm btn-ghost" onClick={() => setMode(null)}>
               Cancel
             </button>
-            <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen((o) => !o)}>
+            <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen(true)}>
               Log a call
             </button>
             <button
@@ -998,16 +1040,6 @@ function ActionBar(props: {
           </div>
         </div>
       )}
-      {callOpen && item.status !== "done" && (
-        <CallForm
-          claim={item.claim}
-          onLog={(text) => {
-            props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
-            setCallOpen(false);
-          }}
-          onCancel={() => setCallOpen(false)}
-        />
-      )}
       {!formOpen && contactable && (route === "photo_estimate" || route === "adjuster") && (
         <div className="update-line">
           <label>
@@ -1026,13 +1058,16 @@ function ActionBar(props: {
               <select value={to} onChange={(ev) => setTo(ev.target.value)}>
                 {DIRECTORY.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.name} ({r.role})
+                    {r.name} ({r.role}){recommendedTo.includes(r.id) ? ", recommended" : ""}
                   </option>
                 ))}
               </select>
             </label>
           </div>
-          <div className="hint">{recipient(to).forWhat}.</div>
+          <div className="hint">
+            {recipient(to).forWhat}.
+            {!recommendedTo.includes(to) && <> The recommended team is the {names(recommendedTo)}, so handing off here is logged as a different decision.</>}
+          </div>
           <label>
             Note for {recipient(to).name}
             <textarea rows={2} value={note} onChange={(ev) => setNote(ev.target.value)} placeholder="What do you need from them?" />
@@ -1043,13 +1078,9 @@ function ActionBar(props: {
             </button>
             <button
               className="btn btn-sm"
-              title="Keeps the claim on your worklist and adds the request to the case thread"
+              title="Moves the claim to Waiting until they reply, then it comes back to your inbox"
               onClick={() => {
-                props.onThread(item.id, {
-                  kind: "comment",
-                  author: REVIEWER.name,
-                  text: `@${recipient(to).name}: second opinion requested.${note.trim() ? ` ${note.trim()}` : ""} The claim stays on my worklist.`,
-                });
+                props.onSecondOpinion(item.id, { kind: "ask", from: to, note: note.trim() || undefined });
                 setNote("");
                 setMode(null);
               }}
@@ -1062,7 +1093,9 @@ function ActionBar(props: {
                 done({
                   action: "handed_off",
                   route,
-                  summary: `Handed off to ${recipient(to).name} (${recipient(to).role}) with the recommended route of ${ROUTE_LABELS[route]}.`,
+                  summary: recommendedTo.includes(to)
+                    ? `Handed off to ${recipient(to).name} (${recipient(to).role}), as recommended.`
+                    : `Handed off to ${recipient(to).name} (${recipient(to).role}) instead of the ${names(recommendedTo)}, the recommended team.`,
                   reason: note.trim() || undefined,
                   sentTo: [to],
                 })
@@ -1208,6 +1241,16 @@ function ActionBar(props: {
               </button>
             </div>
           </div>
+        ) : callOpen ? (
+          <CallForm
+            claim={item.claim}
+            cancelLabel="Back to message"
+            onLog={(text) => {
+              props.onThread(item.id, { kind: "action", author: REVIEWER.name, text });
+              setCallOpen(false);
+            }}
+            onCancel={() => setCallOpen(false)}
+          />
         ) : (
           <div className="contact-composer">
             <div className="contact-head">
@@ -1223,7 +1266,7 @@ function ActionBar(props: {
               <span className="hint" style={{ marginRight: "auto" }}>
                 Includes an upload link. The claim then waits, with a follow-up date.
               </span>
-              <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen((o) => !o)}>
+              <button className="btn btn-sm" disabled={!item.claim.contact?.phone} onClick={() => setCallOpen(true)}>
                 Log a call
               </button>
               <button
@@ -1319,7 +1362,15 @@ function FollowUp({ item, channel, onReminder, onCall }: { item: CaseItem; chann
   );
 }
 
-function CallForm({ claim, onLog, onCancel }: { claim: CaseItem["claim"]; onLog: (text: string) => void; onCancel: () => void }) {
+/** A short status for the assistant while it answers, matched to what the question is about. */
+function workingOn(question: string): string {
+  const q = question.toLowerCase();
+  if (/photo|picture|image|\bsee\b|\bseen\b|visible|\bshows?\b|\blook|damage|\bdents?\b|\bdented\b|scratch|crack|bumper|door|panel|airbag|frame|structur/.test(q)) return "Looking at the photos...";
+  if (/why|route|rule|adjuster|approve|limit|evidence|fraud|total loss|estimate|price|cost|\$|labor|parts|hours/.test(q)) return "Checking the rules and the estimate...";
+  return "Reading the claim...";
+}
+
+function CallForm({ claim, onLog, onCancel, cancelLabel = "Cancel" }: { claim: CaseItem["claim"]; onLog: (text: string) => void; onCancel: () => void; cancelLabel?: string }) {
   const [outcome, setOutcome] = useState<(typeof CALL_OUTCOMES)[number]>(CALL_OUTCOMES[0]);
   const [note, setNote] = useState("");
   return (
@@ -1340,7 +1391,7 @@ function CallForm({ claim, onLog, onCancel }: { claim: CaseItem["claim"]; onLog:
       </label>
       <div className="composer-row">
         <button className="btn btn-sm btn-ghost" onClick={onCancel}>
-          Cancel
+          {cancelLabel}
         </button>
         <button
           className="btn btn-sm btn-primary"
