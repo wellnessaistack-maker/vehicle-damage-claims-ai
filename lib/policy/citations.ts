@@ -10,6 +10,7 @@
 import type { ClaimContext, PhotoMetrics } from "../claims/types.ts";
 import type { Extraction } from "../extraction/schema.ts";
 import type { CostRange } from "./cost.ts";
+import { areaLabel } from "./ratecard.ts";
 import { totalLossLine } from "./states.ts";
 import { PROTOCOL_VERSION, SETTING_DEFS, sameColour, sameMake, usd, zonesFor, type Effect, type Rule, type Settings, type SourceKey } from "./protocol.ts";
 
@@ -85,7 +86,7 @@ function cite(key: SourceKey, { x, claim, photos, cost }: Ctx): Citation {
     case "ai.damage":
       return {
         source: "Photo (AI)",
-        text: x.damage.items.length ? x.damage.items.map((i) => `${i.side === "unknown" ? "" : i.side + " "}${i.area.replace(/_/g, " ")} (${i.severity})`).join(", ") : "No damage seen",
+        text: x.damage.items.length ? x.damage.items.map((i) => `${i.side === "unknown" ? "" : i.side + " "}${areaLabel(i.area)} (${i.severity})`).join(", ") : "No damage seen",
       };
     case "ai.evidence":
       return {
@@ -104,7 +105,7 @@ function cite(key: SourceKey, { x, claim, photos, cost }: Ctx): Citation {
       return { source: "Past claims", text: hit ? `Photo ${photos.indexOf(hit) + 1} matches a photo on claim ${hit.nearDuplicateOf}` : "No match against past-claim photos" };
     }
     case "estimate":
-      return { source: "Estimate", text: cost ? `${cost.lowUsd === cost.highUsd ? usd(cost.highUsd) : `Range ${usd(cost.lowUsd)} to ${usd(cost.highUsd)}`}${cost.ceilingUsd > cost.highUsd ? `, up to ${usd(cost.ceilingUsd)} with possible hidden damage` : ""} (${cost.drivers.some((d) => d.label === "Reviewer's amount") ? "reviewer's amount" : cost.pricing.source === "rate_card" ? `price guide at ${usd(cost.pricing.labourRateUsd)}/h` : "AI item prices"})` : "No estimate" };
+      return { source: "Estimate", text: cost ? `${cost.lowUsd === cost.highUsd ? usd(cost.highUsd) : `Range ${usd(cost.lowUsd)} to ${usd(cost.highUsd)}`}${cost.ceilingUsd > cost.highUsd ? `, up to ${usd(cost.ceilingUsd)} with possible hidden damage` : ""} (${cost.drivers.some((d) => d.label === "Reviewer's amount") ? "reviewer's amount" : cost.pricing.source === "rate_card" ? `estimating guide at ${usd(cost.pricing.labourRateUsd)}/h` : "AI item prices"})` : "No estimate" };
   }
 }
 
@@ -125,7 +126,7 @@ export function policyChecks({ x, claim, settings, cost }: Ctx): PolicyCheck[] {
   });
 
   checks.push({
-    label: "Colour",
+    label: "Color",
     onFile: pv.colour ?? "Not on file",
     observed: v.colour ?? "Not determinable",
     status: !pv.colour || !v.colour ? "not_compared" : sameColour(v.colour, pv.colour) ? "match" : "mismatch",

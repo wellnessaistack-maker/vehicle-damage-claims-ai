@@ -258,8 +258,8 @@ function estimateOutput(
       highUsd: null,
       drivers: cost.drivers,
       note: firedIds.includes("P1")
-        ? "Not a road car, so our price guide doesn't cover it. An adjuster will value it."
-        : "This type of vehicle isn't in our price guide, so an adjuster will value it.",
+        ? "Not a road car, so our estimating guide doesn't cover it. An adjuster will value it."
+        : "This type of vehicle isn't in our estimating guide, so an adjuster will value it.",
     };
   }
   // Still give a figure from what can be seen, clearly marked as provisional.
@@ -333,7 +333,7 @@ function checklist(x: Extraction, photos: PhotoMetrics[], s: Settings, firedIds:
     { label: "Sharp enough", ok: soft.length === 0 && !issues.includes("blur"), detail: soft.length ? names(soft) : undefined },
     { label: "High enough resolution", ok: small.length === 0 && !issues.includes("low_resolution"), detail: small.length ? names(small) : undefined },
     { label: "No glare or obstruction over the damage", ok: !issues.includes("glare_over_damage") && !issues.includes("damage_obstructed") },
-    { label: "Colour photo", ok: grey.length === 0 && !issues.includes("black_and_white"), detail: grey.length ? names(grey) : undefined },
+    { label: "Color photo", ok: grey.length === 0 && !issues.includes("black_and_white"), detail: grey.length ? names(grey) : undefined },
     { label: "Only one car in the photo", ok: !x.vehicle.multiple_vehicles_in_frame },
     { label: "Not seen on a past claim", ok: !firedIds.includes("I1") },
   ];

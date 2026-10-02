@@ -216,7 +216,7 @@ export default function EvaluationPage() {
                 <b>Didn&apos;t guess when unsure</b> {s.abstention.correct} of {s.abstention.of}
               </span>
               <span>
-                <b>Car identified right</b> make {s.vehicle.make.right} of {s.vehicle.make.of}, model {s.vehicle.model.right} of {s.vehicle.model.of}, colour {s.vehicle.colour.right} of {s.vehicle.colour.of}
+                <b>Car identified right</b> make {s.vehicle.make.right} of {s.vehicle.make.of}, model {s.vehicle.model.right} of {s.vehicle.model.of}, color {s.vehicle.colour.right} of {s.vehicle.colour.of}
               </span>
               <span>
                 <b>Review flags raised</b> {s.flags.caught} of {s.flags.of}

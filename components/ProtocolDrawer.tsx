@@ -7,7 +7,8 @@ import { DEFAULT_MODEL } from "@/lib/extraction/models.ts";
 import { PROMPT_VERSION } from "@/lib/extraction/prompt.ts";
 import { currentDecision, type CaseItem } from "@/lib/client/cases.ts";
 import { scoreCase, summarise, type EvalRun } from "@/lib/eval/metrics.ts";
-import { HIGH_VOLTAGE_HOURS, MARKETS, priceItem, RATE_CARD } from "@/lib/policy/ratecard.ts";
+import type { Area } from "@/lib/extraction/schema.ts";
+import { areaLabel, HIGH_VOLTAGE_HOURS, MARKETS, priceItem, RATE_CARD } from "@/lib/policy/ratecard.ts";
 import { SALVAGE_SHARE, STATE_TOTAL_LOSS, TOTAL_LOSS_SOURCE } from "@/lib/policy/states.ts";
 import {
   clampSettings,
@@ -397,11 +398,11 @@ function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMateria
     <div className="card">
       <div className="card-head">
         <h3>How prices are set</h3>
-        <span className="sub">Price guide, labour markets, state total-loss rules</span>
+        <span className="sub">Estimating guide, labor markets, state total-loss rules</span>
       </div>
       <div className="card-body">
         <div>
-          The AI tells us what&apos;s damaged and how badly. The carrier&apos;s price guide turns that into a price: how long the job takes, what an hour of work costs where the customer lives, and the cost of any new parts.
+          The AI tells us what&apos;s damaged and how badly. The carrier&apos;s estimating guide turns that into a price: how long the job takes, what an hour of work costs where the customer lives, and the cost of any new parts.
         </div>
         {example && (
           <div className="ratecard-example">
@@ -422,7 +423,7 @@ function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMateria
               <b>How long the job takes.</b> Each part has a set number of hours to repair, replace or repaint it (see the table below). A minor dent takes half as long as a moderate one, and a severe one takes 1.6 times as long. Painting a panel adds an hour to take off the trim and tape it up.
             </li>
             <li>
-              <b>What an hour costs.</b> The base labour rate, adjusted for where the customer lives: higher in San Francisco, lower in Mississippi. Painting hours also cover the paint itself.
+              <b>What an hour costs.</b> The base labor rate, adjusted for where the customer lives: higher in San Francisco, lower in Mississippi. Painting hours also cover the paint itself.
             </li>
             <li>
               <b>Parts.</b> The table gives a price for a mid-range car. Parts for a car worth under $10,000 cost 80% of that; for a luxury car, or one worth over $40,000, they cost 150%.
@@ -434,7 +435,7 @@ function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMateria
               <b>Repair or replace.</b> If fixing a part would cost more than a new one, we price the new one, just as an estimator would.
             </li>
             <li>
-              <b>These numbers are placeholders.</b> A carrier would use labour times from an estimating platform and its own rates and parts prices, and check them against what it actually paid.
+              <b>These numbers are placeholders.</b> A carrier would use labor times from an estimating platform and its own rates and parts prices, and check them against what it actually paid.
             </li>
           </ul>
         </details>
@@ -453,7 +454,7 @@ function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMateria
             <tbody>
               {Object.entries(RATE_CARD).map(([area, c]) => (
                 <tr key={area}>
-                  <td>{area.replace(/_/g, " ")}</td>
+                  <td>{areaLabel(area as Area)}</td>
                   <td>{h(c?.repairHours)}</td>
                   <td>{h(c?.replaceHours)}</td>
                   <td>{h(c?.paintHours)}</td>
@@ -491,14 +492,14 @@ function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMateria
           </table>
         </details>
         <details className="fold">
-          <summary>Labour markets by ZIP code ({MARKETS.length})</summary>
+          <summary>Labor markets by ZIP code ({MARKETS.length})</summary>
           <table className="ratecard-table">
             <thead>
               <tr>
                 <th>Market</th>
                 <th>ZIP codes starting</th>
                 <th>Multiplier</th>
-                <th>Labour rate</th>
+                <th>Labor rate</th>
               </tr>
             </thead>
             <tbody>

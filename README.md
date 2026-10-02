@@ -1,6 +1,6 @@
 # Vehicle damage claims AI
 
-A customer takes a photo of their damaged car. The AI reads the make, model, colour and damage, and gives a rough repair-cost range. Written rules then recommend the next step, and a reviewer makes the call: approve the estimate, ask the customer for better photos, or send the claim to an adjuster.
+A customer takes a photo of their damaged car. The AI reads the make, model, color and damage, and gives a rough repair-cost range. Written rules then recommend the next step, and a reviewer makes the call: approve the estimate, ask the customer for better photos, or send the claim to an adjuster.
 
 - Live prototype: https://vehicle-damage-claims-ai.vercel.app
 - Evaluation: the **Evaluation** page in the app, and [`eval/README.md`](eval/README.md)
@@ -10,7 +10,7 @@ A customer takes a photo of their damaged car. The AI reads the make, model, col
 | You asked for | Where to find it |
 |---|---|
 | Accept a photo by upload or URL | **+ Add photos**: a photo, a folder per claim, or a link |
-| Make, model and colour | Top of the assessment card. If it can't tell, it says so instead of guessing |
+| Make, model and color | Top of the assessment card. If it can't tell, it says so instead of guessing |
 | Damage summary | Assessment card, e.g. "Left rear door dent with scraping" |
 | A rough repair estimate | Assessment card: a likely range, the hours and parts behind it, and possible extras listed separately |
 | Setup, architecture, tools, next steps | [Setup](#setup), [Architecture](#architecture-and-data-flow), [Why these tools](#why-these-tools), [Next steps](#what-wed-do-next) |
@@ -88,7 +88,7 @@ flowchart LR
   style VC fill:#f8fafc,stroke:#94a3b8,color:#334155
 ```
 
-Colour key: green is plain code, orange is the AI, purple is people.
+Color key: green is plain code, orange is the AI, purple is people.
 
 1. **Prepare photos.** Fix rotation and resize. Links are downloaded by a safe fetcher first.
 2. **Photo checks.** Plain code checks brightness, sharpness, black and white, and whether the photo matches one from a past claim.
@@ -107,21 +107,21 @@ Colour key: green is plain code, orange is the AI, purple is people.
 
 The **Routing protocol** page in the app shows all of this on one page: a diagram from the claim and photos, to what the AI describes, to the rules, to the reviewer, with what sends a claim to each route (the open claim's route and the rules it set off are highlighted). Below it are the six rule groups (what each catches, where it sends the claim, whether it's locked), the three settings that matter most, and how prices are set, with a worked example.
 
-**The repair estimate.** The AI describes each repair; the carrier's price guide (how long each repair takes, and what an hour and a part cost) prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, then prices them for this car and this place:
+**The repair estimate.** The AI describes each repair; an estimating guide (how long each repair takes, and what parts cost) and the carrier's labor rates price it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labor and paint hours and a part, then prices them for this car and this place:
 
-- **Where:** the claim's ZIP code picks a labour market that scales the carrier's base rate ($65/h). Maria's Columbus claim is $65/h; the same damage in San Francisco is $81/h, and in Iowa $53/h.
+- **Where:** the claim's ZIP code picks a labor market that scales the carrier's base rate ($65/h). Maria's Columbus claim is $65/h; the same damage in San Francisco is $81/h, and in Iowa $53/h.
 - **What car:** parts cost more on a luxury make or a car worth over $40,000, and less on one worth under $10,000. Electric and hybrid cars add a high-voltage safety step.
 
 The same photo now prices at $950 to $1,300 (Columbus) on every call.
 
-- **Under each estimate, three short lines show where its inputs came from:** *From the photos* (the AI's reading: each damaged part, how badly, repair or replace), *From the claim* (the ZIP and its labour market, the car on the policy and its value, which set the parts level), and *From the price guide* (the carrier's hours, labour and paint rates, and range width). The AI only supplies the first.
+- **Under each estimate, three short lines show where its inputs came from:** *From the photos* (the AI's reading: each damaged part, how badly, repair or replace), *From the claim* (the ZIP and its labor market, the car on the policy and its value, which set the parts level), and *From the estimating guide* (labor hours per repair, at the carrier's labor and paint rates). The AI only supplies the first.
 - **Each line shows its working:** what the AI saw in the photo, the hours and rates ("4.5 h body x $65 + 3.5 h paint x $110 = $678"), and the repair cost against the replacement cost, with the one priced marked. If repairing a part would cost more than replacing it, it's priced as a replacement.
 - **The range covers what the photos show,** 15% either side of the most likely cost (a setting).
 - **What the photos can't show is listed separately** as possible extras: damage behind the panels, parts the AI flagged for inspection, sensor recalibration. The routing rules use the figure with them included, so a claim isn't approved on the assumption that nothing else turns up.
-- **The AI's own price is kept as a cross-check,** and used for parts the price guide doesn't cover and for vehicles that aren't road cars.
+- **The AI's own price is kept as a cross-check,** and used for parts the estimating guide doesn't cover and for vehicles that aren't road cars.
 - **Every hour, rate and market is a placeholder.** In production:
-    - **Third-party data** gives the hours and parts: an estimating platform's labour times (CCC, Mitchell or Audatex), and parts priced for the exact car from its VIN.
-    - **The carrier's data** gives the rates: labour rates by market and the deals with its partner shops.
+    - **Third-party data** gives the hours and parts: an estimating platform's labor times (CCC, Mitchell or Audatex), and parts priced for the exact car from its VIN.
+    - **The carrier's data** gives the rates: labor rates by market and the deals with its partner shops.
     - **Historical paid claims** calibrate it: compare our estimates with what was finally paid, by region, vehicle and damage type, correct where we're consistently off, and set the range width so an agreed share of final costs land inside it.
     - **For total loss,** the car's value would come from a valuation provider, salvage values from salvage auction data, and the state rules from the carrier's compliance team. Past total-loss decisions show where the line sits in practice.
 
@@ -178,7 +178,7 @@ flowchart TB
   style RC fill:#f8fafc,stroke:#94a3b8,color:#334155
 ```
 
-Colour key: green is plain code, orange is the AI, blue is stored data, purple is people.
+Color key: green is plain code, orange is the AI, blue is stored data, purple is people.
 
 | Prototype | Production |
 |---|---|
@@ -189,7 +189,7 @@ Colour key: green is plain code, orange is the AI, blue is stored data, purple i
 | Versions shown on each result | Each prompt, model or rule change tested against the labelled set before release |
 | Mock roles | Single sign-on, role-based access, two-person approval for rule changes |
 | Checks against one demo past-claim photo | Duplicate search across all past photos, plus a check for edited images |
-| A placeholder price guide | Labour times from an estimating platform, the carrier's own rates, and calibration on its paid claims |
+| A placeholder estimating guide | Labor times from an estimating platform, the carrier's own rates, and calibration on its paid claims |
 | A person approves each claim | Gradual automation for narrow, low-risk cases (see [Path to production](#path-to-production)) |
 
 ## Why these tools
@@ -237,7 +237,7 @@ Measured on the 26 labelled cases, end to end:
 ### What we tested it on
 
 - **Are they real claims?** No. The photos are real photos of damaged cars, but the claim details (the customer, the policy, the car's value) are made up for testing. None come from an insurer.
-- **Where are the photos from?** 8 originals: four real crashes from Wikimedia Commons (a flood, a front-end crush, a van under a wall, a car into a tree; licences still to confirm), a press photo of a race-car crash, a dented Honda Civic and Toyota Camry, and one photo with no car in it.
+- **Where are the photos from?** 8 originals: four real crashes from Wikimedia Commons (a flood, a front-end crush, a van under a wall, a car into a tree; licenses still to confirm), a press photo of a race-car crash, a dented Honda Civic and Toyota Camry, and one photo with no car in it.
 - **Why 26?** The other 18 are built from those 8 to test one thing each. 13 are harder versions of a photo (too dark, blurry, compressed, sideways, glare, mirrored, close-ups): does it ask for a better photo instead of guessing? 5 reuse the Civic photo with a tricky claim detail (an injury, damage on the wrong side, a low-value car, two different cars, already asked twice): do the rules catch it?
 - **Who decided the right answer?** I did, as drafts. An estimator should review them before anyone relies on these numbers.
 - **The gap.** Only 6 cases should be approved from photos, because the set was built to cover the rules. More ordinary, simple claims are the next thing to add. [`eval/README.md`](eval/README.md) lists them.
@@ -272,7 +272,7 @@ The mistakes we'd watch most closely on live claims:
 - **Two of their estimators** labelling them separately. How often they agree with each other is the bar to beat.
 - **Today's numbers:** how often claims are escalated late, how often shops file supplements, and how long a review takes.
 - **A test set nobody tunes on,** so every prompt, model or rule change is checked against it before it goes live.
-- **Their own rules:** limits, labour rates and vehicle values, plus security and compliance input on where photos can be processed and how long they're kept.
+- **Their own rules:** limits, labor rates and vehicle values, plus security and compliance input on where photos can be processed and how long they're kept.
 
 Scale can do the expert labelling.
 
@@ -294,7 +294,7 @@ What matters most is which side of the $2,500 approval limit the estimate lands 
 
 - **Prompt v1 to v2.** After the first run we changed four instructions based on the cases it got wrong. For example, a crumpled bumper no longer counts as "structural" damage. Since v2 was written after seeing these same cases, its improvement probably looks better here than it would on new ones.
 - **Opus or Sonnet.** They routed the same here, and Sonnet is faster and half the price. 26 cases aren't enough to tell them apart; the carrier's own claims should decide.
-- All three columns are scored with today's rules and price guide, from the saved AI answers, so re-scoring costs nothing.
+- All three columns are scored with today's rules and estimating guide, from the saved AI answers, so re-scoring costs nothing.
 
 ### Failure modes
 
@@ -336,7 +336,7 @@ How often reviewers disagree with the recommendation is a direct way to measure 
 
 - **It doesn't store anything.** The worklist lives in your browser tab and photos are only held in memory. That keeps the privacy answer simple, but there's no history.
 - **One demo photo is AI-generated.** The Brooklyn RAV4 (demo claim F) is a generated image; every other demo and test photo is a real photo.
-- **The claim details and dollar limits are made up.** The $2,500 approval limit, the labour markets, the state total-loss rules and the cost adjustments are placeholders for the carrier's numbers. The approval limit stands in for a reviewer's authority limit; carriers set these by role, and photo estimating is usually kept to small, drivable, no-injury claims, so $2,500 sits in a realistic range.
+- **The claim details and dollar limits are made up.** The $2,500 approval limit, the labor markets, the state total-loss rules and the cost adjustments are placeholders for the carrier's numbers. The approval limit stands in for a reviewer's authority limit; carriers set these by role, and photo estimating is usually kept to small, drivable, no-injury claims, so $2,500 sits in a realistic range.
 - **The photo checks are rough.** They were tuned on a handful of images, and the reused-photo check catches a mirrored copy but not a rotated one.
 - **Some inputs are turned away.** JPEG, PNG and WebP only, up to eight photos a claim. HEIC and video get a message saying what to send instead.
 - **Links are treated as untrusted.** The server only follows https links to public addresses and only accepts real image files.
@@ -344,7 +344,7 @@ How often reviewers disagree with the recommendation is a direct way to measure 
 ## What we'd do next
 
 1. Run the evaluation on the carrier's past claims, with expert labels, and test the estimate against what was actually paid.
-2. Replace the placeholder price guide with an estimating platform's labour times and the carrier's own rates, and calibrate the range width on paid claims.
+2. Replace the placeholder estimating guide with an estimating platform's labor times and the carrier's own rates, and calibrate the range width on paid claims.
 3. Straighten photos in code, accept video and HEIC, and add a check for edited photos.
 
 ## Repository layout

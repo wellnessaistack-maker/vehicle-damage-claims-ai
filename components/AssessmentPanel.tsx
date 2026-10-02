@@ -206,7 +206,7 @@ function RequiredOutputs({ d }: { d: Decision }) {
     <div className="card">
       <div className="card-head">
         <h3>What the AI found</h3>
-        <span className="sub">From the photos, priced with the carrier&apos;s price guide</span>
+        <span className="sub">From the photos, priced with the carrier&apos;s estimating guide</span>
       </div>
       <div className="card-body outputs">
         <div className="out-vehicle">
@@ -214,7 +214,7 @@ function RequiredOutputs({ d }: { d: Decision }) {
           <div className="kv-grid">
             {cell("Make", v.make)}
             {cell("Model", v.model)}
-            {cell("Colour", v.colour)}
+            {cell("Color", v.colour)}
           </div>
           <div className="field-note">{identified ? basis : basis ? `Not guessed from these photos · ${basis}` : "Not guessed from these photos"}</div>
         </div>
@@ -231,10 +231,10 @@ function RequiredOutputs({ d }: { d: Decision }) {
   );
 }
 
-/** What went into the price, split by where it came from: the AI's reading of the photos, the claim, and the carrier's price guide. */
+/** What went into the price, split by where it came from: the AI's reading of the photos, the claim, and the estimating guide with the carrier's rates. */
 function PriceSources({ e }: { e: EstimateOutput }) {
   const p = e.pricing!;
-  if (p.source !== "rate_card") return <div className="est-pricing">Priced from the AI&apos;s own figures: the price guide covers ordinary road cars only.</div>;
+  if (p.source !== "rate_card") return <div className="est-pricing">Priced from the AI&apos;s own figures: the estimating guide covers ordinary road cars only.</div>;
 
   const parts = e.drivers.filter((d) => d.fromPhotos && d.kind !== "possible").map((d) => d.label.split(":")[0].toLowerCase());
   const partList = parts.length > 3 ? `${parts.slice(0, 3).join(", ")} and ${parts.length - 3} more` : parts.join(", ");
@@ -260,9 +260,9 @@ function PriceSources({ e }: { e: EstimateOutput }) {
           {where}, {car}
           {hv && p.electrifiedFrom === "claim" ? ", electric or hybrid" : ""}
         </dd>
-        <dt className="guide">From the price guide</dt>
+        <dt className="guide">From the estimating guide</dt>
         <dd>
-          Hours per repair at {rate}, plus {usd(p.paintMaterialsUsd)}/h paint, {p.tier} parts
+          Labor hours per repair, at the carrier&apos;s {rate} plus {usd(p.paintMaterialsUsd)}/h paint; {p.tier} parts
         </dd>
       </dl>
       {e.aiItemsUsd && e.aiItemsUsd.highUsd > 0 && (
@@ -287,7 +287,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
           <details className="fold">
             <summary>The AI&apos;s rough guess, for reference only</summary>
             <div className="hint" style={{ margin: "6px 0" }}>
-              From the AI&apos;s general knowledge, not our price guide, and not used for anything: {usd(guess.lowUsd)} to {usd(guess.highUsd)}.
+              From the AI&apos;s general knowledge, not our estimating guide, and not used for anything: {usd(guess.lowUsd)} to {usd(guess.highUsd)}.
             </div>
             <ul className="drivers">
               {e.drivers
@@ -390,7 +390,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
                 <span>
                   {dr.label}
                   <span className={`chip src ${dr.source === "rule_adjustment" ? "" : "chip-info"}`}>
-                    {dr.source === "rate_card" ? "Price guide" : dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}
+                    {dr.source === "rate_card" ? "Estimating guide" : dr.source === "ai_estimate" ? "AI estimate" : "Rule adjustment, illustrative"}
                   </span>
                 </span>
                 <span className="drv-amt">{one(dr)}</span>
@@ -572,11 +572,11 @@ const CHECK_RULES: Record<string, string[]> = {
   "Sharp enough": ["E4"],
   "High enough resolution": ["E4"],
   "No glare or obstruction over the damage": ["E4"],
-  "Colour photo": ["E4"],
+  "Color photo": ["E4"],
   "Only one car in the photo": ["E6"],
   "Not seen on a past claim": ["I1"],
   "Insured vehicle": ["R2"],
-  "Colour": ["R2"],
+  "Color": ["R2"],
   "Point of impact": ["R3"],
 };
 
@@ -1146,7 +1146,7 @@ function ActionBar(props: {
               disabled={!preview}
               onClick={() => {
                 if (!preview) return;
-                const range = `${usd(amountN)} (the price guide said ${usd(e.likelyUsd ?? e.highUsd!)}, range ${usd(e.lowUsd!)} to ${usd(e.highUsd!)})`;
+                const range = `${usd(amountN)} (the estimating guide said ${usd(e.likelyUsd ?? e.highUsd!)}, range ${usd(e.lowUsd!)} to ${usd(e.highUsd!)})`;
                 // The message names the approved amount, so redraft it for the new one.
                 const update = withUpdate(customerUpdate(preview, item.claim));
                 done(

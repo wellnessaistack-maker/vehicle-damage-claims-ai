@@ -17,7 +17,7 @@
 import type { Area, DamageItem, Extraction } from "../extraction/schema.ts";
 import { usd, type Settings } from "./protocol.ts";
 import type { ClaimContext } from "../claims/types.ts";
-import { HIGH_VOLTAGE_HOURS, marketFor, partsTierFor, priceItem, type PartsTier, type PriceOption } from "./ratecard.ts";
+import { areaLabel, HIGH_VOLTAGE_HOURS, marketFor, partsTierFor, priceItem, type PartsTier, type PriceOption } from "./ratecard.ts";
 
 export interface CostDriver {
   label: string;
@@ -55,7 +55,7 @@ export interface CostRange {
     tier: PartsTier;
     /** Why that parts tier: "BMW parts", "car worth under $10,000". */
     tierWhy: string;
-    /** The labour rate actually used: the base rate scaled by the market. */
+    /** The labor rate actually used: the base rate scaled by the market. */
     labourRateUsd: number;
     baseLabourRateUsd: number;
     market: { name: string; factor: number; zip: string | null };
@@ -86,7 +86,7 @@ export type PricingClaim = Partial<Pick<ClaimContext, "zip" | "vehicleValueUsd" 
 export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim = {}): CostRange | null {
   if (!x.vehicle.vehicle_present || x.damage.items.length === 0) return null;
 
-  // Where: the claim's ZIP picks a labour market. What: the make and value set the parts tier.
+  // Where: the claim's ZIP picks a labor market. What: the make and value set the parts tier.
   const market = marketFor(claim.zip);
   const labourRateUsd = Math.round(s.labourRateUsd * market.factor);
   const { tier, why: tierWhy } = partsTierFor(claim.vehicleValueUsd, claim.policyVehicle?.make ?? x.vehicle.make);
@@ -137,7 +137,7 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
         lowUsd: low,
         highUsd: high,
         source: "ai_estimate",
-        note: s.pricing !== "rate_card" ? undefined : onCard ? "Not in the price guide, so the AI's own price" : "The price guide covers road cars only, so the AI's own price",
+        note: s.pricing !== "rate_card" ? undefined : onCard ? "Not in the estimating guide, so the AI's own price" : "The estimating guide covers road cars only, so the AI's own price",
         kind: "visible",
         evidence: item.visible_evidence,
         math: `The AI's own estimate: ${usd(low)} to ${usd(high)}`,
@@ -225,8 +225,8 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
   const ceilR = roundUp(highR + extra);
   const rateLine =
     market.factor === 1
-      ? `Labour: ${usd(labourRateUsd)}/h (${market.name.toLowerCase() === "national average" ? "national average" : `${market.name} market`}). Parts: ${tier} (${tierWhy}).`
-      : `Labour: ${usd(s.labourRateUsd)} base x ${market.factor} for the ${market.name} market = ${usd(labourRateUsd)}/h. Parts: ${tier} (${tierWhy}).`;
+      ? `Labor: ${usd(labourRateUsd)}/h (${market.name.toLowerCase() === "national average" ? "national average" : `${market.name} market`}). Parts: ${tier} (${tierWhy}).`
+      : `Labor: ${usd(s.labourRateUsd)} base x ${market.factor} for the ${market.name} market = ${usd(labourRateUsd)}/h. Parts: ${tier} (${tierWhy}).`;
   const workings = allCard
     ? [
         rateLine,
@@ -261,11 +261,11 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
   };
 }
 
-const partName = (item: DamageItem) => `${item.side === "left" || item.side === "right" ? `${item.side} ` : ""}${item.area.replace(/_/g, " ")}`;
+const partName = (item: DamageItem) => `${item.side === "left" || item.side === "right" ? `${item.side} ` : ""}${areaLabel(item.area)}`;
 
 export function describeItem(item: DamageItem): string {
   const side = item.side === "unknown" || item.side === "centre" ? "" : `${item.side} `;
-  const area = item.area.replace(/_/g, " ");
+  const area = areaLabel(item.area);
   const type = item.damage_type.replace(/_/g, " ");
   const repair = item.likely_repair.replace(/_/g, " ");
   return `${capitalise(side + area)}: ${item.severity} ${type}, ${repair}`;

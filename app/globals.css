@@ -571,7 +571,7 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .ev-two > * { min-width: 0; }
 @media (max-width: 640px) { .card-head { flex-wrap: wrap; } .card-head .sub { white-space: normal; text-align: left; } .card-head h3 { white-space: normal; min-width: 0; } }
 
-/* Where each input to the price came from: the AI's reading of the photos, the claim, the carrier's price guide. */
+/* Where each input to the price came from: the AI's reading of the photos, the claim, the carrier's estimating guide. */
 :root {
   --src-ai: #6d28d9;
   --src-claim: #0f766e;
