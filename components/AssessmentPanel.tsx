@@ -273,6 +273,8 @@ function Estimate({ e }: { e: EstimateOutput }) {
   const possible = e.drivers.filter((d) => d.kind === "possible");
   const one = (d: (typeof e.drivers)[number]) => (d.lowUsd === d.highUsd ? usd(d.highUsd) : d.lowUsd === 0 ? `up to ${usd(d.highUsd)}` : `${usd(d.lowUsd)} to ${usd(d.highUsd)}`);
   const pos = (n: number) => `${Math.min(100, (n / max) * 100)}%`;
+  // Keep a hover note inside the card: anchor it to the label's nearer edge.
+  const tipSide = (n: number) => (n / max < 0.3 ? "tip-start" : n / max > 0.6 ? "tip-end" : "");
   const showTl = e.totalLossLineUsd !== null && e.totalLossLineUsd <= max;
   return (
     <>
@@ -286,13 +288,17 @@ function Estimate({ e }: { e: EstimateOutput }) {
           <div className="rangebar-fill" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: e.status === "reference_only" || e.status === "provisional" ? "var(--text-3)" : undefined }} />
           {ceil > hi && <div className="rangebar-extra" title="Possible extras" style={{ left: pos(hi), width: `calc(${pos(ceil)} - ${pos(hi)})` }} />}
           <div className="rangebar-mark" style={{ left: pos(e.fastPathLimitUsd) }}>
-            <span className="has-tip" title={approvalLimitTip(e.fastPathLimitUsd)}>
+            <span className={`has-tip ${tipSide(e.fastPathLimitUsd)}`} tabIndex={0} data-tip={approvalLimitTip(e.fastPathLimitUsd)}>
               Limit {usd(e.fastPathLimitUsd)}
             </span>
           </div>
           {showTl && (
             <div className={`rangebar-mark tl ${Math.abs(e.totalLossLineUsd! - e.fastPathLimitUsd) < max * 0.18 ? "above" : ""}`} style={{ left: pos(e.totalLossLineUsd!) }}>
-              <span className={e.totalLossBasis ? "has-tip" : undefined} title={e.totalLossBasis ? `Total-loss line: ${e.totalLossBasis}` : undefined}>
+              <span
+                className={e.totalLossBasis ? `has-tip ${tipSide(e.totalLossLineUsd!)}` : undefined}
+                tabIndex={e.totalLossBasis ? 0 : undefined}
+                data-tip={e.totalLossBasis ? `Total-loss line: ${e.totalLossBasis}` : undefined}
+              >
                 Total loss {usd(e.totalLossLineUsd!)}
               </span>
             </div>
