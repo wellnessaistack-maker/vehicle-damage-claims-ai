@@ -116,6 +116,10 @@ export default function EvaluationPage() {
           </div>
         </div>
 
+        <div className="ev-gapline">
+          <b>Not measured yet:</b> whether the repair estimate matches what you&apos;d actually pay. That needs your paid claims.
+        </div>
+
         <div className="ev-two">
           <section className="card">
             <div className="card-head">
