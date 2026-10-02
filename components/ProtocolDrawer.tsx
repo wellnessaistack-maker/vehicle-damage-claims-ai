@@ -7,7 +7,7 @@ import { DEFAULT_MODEL } from "@/lib/extraction/models.ts";
 import { PROMPT_VERSION } from "@/lib/extraction/prompt.ts";
 import { currentDecision, type CaseItem } from "@/lib/client/cases.ts";
 import { scoreCase, summarise, type EvalRun } from "@/lib/eval/metrics.ts";
-import { HIGH_VOLTAGE_HOURS, MARKETS, RATE_CARD } from "@/lib/policy/ratecard.ts";
+import { HIGH_VOLTAGE_HOURS, MARKETS, priceItem, RATE_CARD } from "@/lib/policy/ratecard.ts";
 import { SALVAGE_SHARE, STATE_TOTAL_LOSS, TOTAL_LOSS_SOURCE } from "@/lib/policy/states.ts";
 import {
   clampSettings,
@@ -308,7 +308,7 @@ export function ProtocolDrawer(props: {
             </div>
           </div>
 
-          <RateCard baseRate={settings.labourRateUsd} />
+          <RateCard baseRate={settings.labourRateUsd} paintMaterials={settings.paintMaterialsUsd} />
         </div>
       </div>
     </div>
@@ -385,9 +385,14 @@ function ProtocolTest({ comparison }: { comparison: Comparison }) {
 }
 
 /** The carrier's rate card, read only. In production it comes from an estimating platform and the carrier's own rates. */
-function RateCard({ baseRate }: { baseRate: number }) {
+function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMaterials: number }) {
   const h = (n?: number) => (n === undefined ? "" : String(n));
   const d = (n?: number) => (n === undefined ? "" : usd(n));
+  // A worked example, priced by the same code the estimates use, at the current settings.
+  const example = priceItem(
+    { area: "rear_door", side: "left", damage_type: "dent", severity: "moderate", likely_repair: "repair_and_refinish", visible_evidence: "", cost_low_usd: 0, cost_high_usd: 0 },
+    { labourRateUsd: baseRate, paintMaterialsUsd: paintMaterials, tier: "standard" },
+  );
   return (
     <div className="card">
       <div className="card-head">
@@ -395,16 +400,41 @@ function RateCard({ baseRate }: { baseRate: number }) {
         <span className="sub">Rate card, labour markets, state total-loss rules</span>
       </div>
       <div className="card-body">
-        <div>
-          The AI says which part is damaged and how badly. The rate card turns that into hours at the local labour rate, plus paint and parts. Every figure is a placeholder for the carrier&apos;s own.
-        </div>
+        <div>The AI says which part is damaged, how badly, and whether it needs repairing, replacing or repainting. The rate card prices that job in hours, parts and paint.</div>
+        {example && (
+          <div className="ratecard-example">
+            <div className="drivers-head">Example: a moderate dent in a rear door, mid-range car, at the base rate</div>
+            {example.options.map((o) => (
+              <div key={o.label} className={o.chosen ? "chosen" : ""}>
+                {o.label}
+                {o.chosen ? " (priced)" : ""}: {o.math}
+              </div>
+            ))}
+            <div className="hint">{example.decision ?? "Repairing costs less than replacing, so it's priced as a repair."}</div>
+          </div>
+        )}
         <details className="fold">
           <summary>How it&apos;s worked out</summary>
-          <div className="help" style={{ marginBottom: 6 }}>
-          The AI says which part is damaged, how badly, and whether it would be repaired, replaced or refinished. This card turns that into hours and parts, priced at the labour and paint rates in the settings. Repair hours are for moderate damage (half for minor, 1.6x for severe), and each painted panel adds 1 h to remove trim and mask.
-          Parts cost 0.8x on cars worth under $10,000, and 1.5x on cars worth over $40,000 or a luxury make. Electric and hybrid cars add {HIGH_VOLTAGE_HOURS} h to make the high-voltage system safe. The base labour rate is scaled by the market the claim&apos;s ZIP code falls in. Every figure is an illustrative placeholder: in production the hours come from an
-          estimating platform&apos;s labour times and the rates and parts pricing from the carrier, checked against their paid claims.
-        </div>
+          <ul className="ratecard-steps">
+            <li>
+              <b>Hours</b> come from the table below, per part and job. Repair hours are for moderate damage: half for minor, 1.6x for severe. Each painted panel adds 1 h to remove trim and mask.
+            </li>
+            <li>
+              <b>Labour</b> is priced at the base rate in the settings, scaled for the market the claim&apos;s ZIP code falls in. Paint hours add a materials allowance.
+            </li>
+            <li>
+              <b>Parts</b> use the table&apos;s price for a mid-range car: 0.8x for cars worth under $10,000, 1.5x for cars worth over $40,000 or a luxury make.
+            </li>
+            <li>
+              <b>Electric and hybrid cars</b> add {HIGH_VOLTAGE_HOURS} h to make the high-voltage system safe.
+            </li>
+            <li>
+              <b>Repair or replace:</b> if repairing would cost more than replacing, the part is priced as a replacement.
+            </li>
+            <li>
+              <b>All figures are placeholders.</b> In production the hours come from an estimating platform&apos;s labour times, and the rates and parts prices from the carrier, checked against their paid claims.
+            </li>
+          </ul>
         </details>
         <details className="fold">
           <summary>Hours and parts by panel ({Object.keys(RATE_CARD).length})</summary>
