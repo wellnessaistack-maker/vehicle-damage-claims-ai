@@ -2279,21 +2279,20 @@
             "priorEvidenceRequests": 0
           },
           "labels": {
-            "expectedRoute": "adjuster",
+            "expectedRoute": "photo_estimate",
             "acceptableRoutes": [
+              "photo_estimate",
               "adjuster"
             ],
-            "mustEscalate": true,
-            "expectedFlags": [
-              "C2"
-            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
             "expectedMake": "Honda",
             "expectedModel": "Civic",
             "expectedColour": "Silver",
             "expectedCostBand": "1000_2500",
-            "whatItTests": "Same damage on a car worth much less",
+            "whatItTests": "Same damage on a car worth much less (repair under the total-loss line)",
             "source": "Same photo as A",
-            "labelStatus": "draft"
+            "labelStatus": "corrected (borderline)"
           },
           "caseId": "V3_low_value",
           "ok": true,
@@ -5755,21 +5754,20 @@
             "priorEvidenceRequests": 0
           },
           "labels": {
-            "expectedRoute": "adjuster",
+            "expectedRoute": "photo_estimate",
             "acceptableRoutes": [
+              "photo_estimate",
               "adjuster"
             ],
-            "mustEscalate": true,
-            "expectedFlags": [
-              "C2"
-            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
             "expectedMake": "Honda",
             "expectedModel": "Civic",
             "expectedColour": "Silver",
             "expectedCostBand": "1000_2500",
-            "whatItTests": "Same damage on a car worth much less",
+            "whatItTests": "Same damage on a car worth much less (repair under the total-loss line)",
             "source": "Same photo as A",
-            "labelStatus": "draft"
+            "labelStatus": "corrected (borderline)"
           },
           "caseId": "V3_low_value",
           "ok": true,
@@ -9136,21 +9134,20 @@
             "priorEvidenceRequests": 0
           },
           "labels": {
-            "expectedRoute": "adjuster",
+            "expectedRoute": "photo_estimate",
             "acceptableRoutes": [
+              "photo_estimate",
               "adjuster"
             ],
-            "mustEscalate": true,
-            "expectedFlags": [
-              "C2"
-            ],
+            "mustEscalate": false,
+            "expectedFlags": [],
             "expectedMake": "Honda",
             "expectedModel": "Civic",
             "expectedColour": "Silver",
             "expectedCostBand": "1000_2500",
-            "whatItTests": "Same damage on a car worth much less",
+            "whatItTests": "Same damage on a car worth much less (repair under the total-loss line)",
             "source": "Same photo as A",
-            "labelStatus": "draft"
+            "labelStatus": "corrected (borderline)"
           },
           "caseId": "V3_low_value",
           "ok": true,

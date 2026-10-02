@@ -104,7 +104,7 @@ Color key: green is plain code, orange is the AI, purple is people.
 - **No confidence scores.** Models aren't reliable judges of their own confidence, so the rules use facts instead. For example, if no badge is visible, the make is left blank.
 - **When rules disagree, the more serious route takes priority.** If one rule says adjuster and another says ask for photos, the claim goes to an adjuster.
 
-**The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 approval limit and the total-loss line. The total-loss line follows the claim's state, found from its ZIP code: a fixed share of the car's value in some states, a formula (repair plus salvage reaching the car's value) in others, and the carrier's 60% setting where neither applies. **The state rules are from a secondary source and still need checking against each state's law.** Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published: lowering the approval limit to $750, for example, sends all 11 serious test claims to an adjuster, but 3 simple ones too.
+**The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 approval limit and the total-loss line. The total-loss line follows the claim's state, found from its ZIP code: a fixed share of the car's value in some states, a formula (repair plus salvage reaching the car's value) in others, and the carrier's 60% setting where neither applies. **The state rules are from a secondary source and still need checking against each state's law.** Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published: lowering the approval limit to $750, for example, sends all 10 serious test claims to an adjuster, but 3 simple ones too.
 
 The **Routing protocol** page in the app shows all of this on one page: a diagram from the claim and photos, to what the AI describes, to the rules, to the reviewer, with what sends a claim to each route (the open claim's route and the rules it set off are highlighted). Below it are the six rule groups (what each catches, where it sends the claim, whether it's locked), the three settings that matter most, and how prices are set, with a worked example.
 
@@ -226,13 +226,13 @@ Measured on the 26 labelled cases, end to end:
 
 ## Evaluation
 
-**The short answer.** On 26 test claims, it sent 10 of the 11 serious claims to an adjuster and none of the 15 simple ones. When it was unsure, it asked for another photo rather than guess. That's a good start, not proof: proof needs the carrier's own claims. The [evaluation page](https://vehicle-damage-claims-ai.vercel.app/evaluation) shows the same results, with every test claim and its photo.
+**The short answer.** On 26 test claims, it sent all 10 serious claims to an adjuster and none of the 16 simple ones. When it was unsure, it asked for another photo rather than guess. That's a good start, not proof: proof needs the carrier's own claims. The [evaluation page](https://vehicle-damage-claims-ai.vercel.app/evaluation) shows the same results, with every test claim and its photo.
 
 | | |
 |---|---|
-| Serious claims that went to an adjuster | 10 of 11 (with so few, the real rate could be as low as 62%) |
-| Simple claims sent to an adjuster they didn't need | 0 of 15 |
-| Same route as our expert | 22 of 26 |
+| Serious claims that went to an adjuster | 10 of 10 (with so few, the real rate could be as low as 72%) |
+| Simple claims sent to an adjuster they didn't need | 0 of 16 |
+| Same route as our expert | 23 of 26 |
 | Time and cost | About 10 seconds and 4 cents a claim |
 
 ### What we tested it on
@@ -241,7 +241,8 @@ Measured on the 26 labelled cases, end to end:
 - **Where are the photos from?** 8 originals: four real crashes from Wikimedia Commons (a flood, a front-end crush, a van under a wall, a car into a tree; licenses still to confirm), a press photo of a race-car crash, a dented Honda Civic and Toyota Camry, and one photo with no car in it.
 - **Why 26?** The other 18 are built from those 8 to test one thing each. 13 are harder versions of a photo (too dark, blurry, compressed, sideways, glare, mirrored, close-ups): does it ask for a better photo instead of guessing? 5 reuse the Civic photo with a tricky claim detail (an injury, damage on the wrong side, a low-value car, two different cars, already asked twice): do the rules catch it?
 - **Who decided the right answer?** I did, as drafts. An estimator should review them before anyone relies on these numbers.
-- **The gap.** Only 6 cases should be approved from photos, because the set was built to cover the rules. More ordinary, simple claims are the next thing to add. [`eval/README.md`](eval/README.md) lists them.
+- **Did any answers change after testing?** One. A test claim reuses the Civic photo on a car worth only $2,500, and I'd first labelled it a total loss. The repair is about $1,130, 45% of the car's value and under the 60% total-loss line, so an estimator would repair it. I corrected the label, and sending it to an adjuster still counts as reasonable. With the carrier's claims, their estimators set the answers before testing.
+- **The gap.** Only 7 cases should be approved from photos, because the set was built to cover the rules. More ordinary, simple claims are the next thing to add. [`eval/README.md`](eval/README.md) lists them.
 
 ### How would we know it's working?
 
@@ -254,12 +255,11 @@ We also check the basics: the right make, model and colour, or left blank when i
 
 ### Where does it fail?
 
-The 4 claims it didn't get exactly right, most serious first:
+The 3 claims it didn't get exactly right, most serious first. None was a serious claim approved from photos.
 
-1. **The same Civic, but the policy says the car is only worth $2,500.** It approved it; the expert said adjuster. The repair comes to about $1,130, which is 45% of the car's value and under the 60% total-loss line. The label assumed a higher repair price. An estimator should decide whether it's a total loss; if the carrier's line is lower, it's a one-number change.
-2. **A clean photo, uploaded sideways.** It asked for another photo; the expert would have approved. Sideways, the AI couldn't tell which car it was. Straightening photos before the AI sees them would fix it. Today it costs the customer one extra photo, and it never lets a serious claim through.
-3. **Front-corner damage priced close to the $2,500 limit.** Over four runs it was approved three times and sent to an adjuster once. Claims whose price could run well past the limit now always go to an adjuster, so it gives the same answer every time.
-4. **A blurry, forwarded copy of a photo.** It asked for a better photo; the expert might have approved from it. Asking is reasonable, and reviewers' decisions would tell us if it asks too often.
+1. **A clean photo, uploaded sideways.** It asked for another photo; the expert would have approved. Sideways, the AI couldn't tell which car it was. Straightening photos before the AI sees them would fix it. Today it costs the customer one extra photo, and it never lets a serious claim through.
+2. **Front-corner damage priced close to the $2,500 limit.** Over four runs it was approved three times and sent to an adjuster once. Claims whose price could run well past the limit now always go to an adjuster, so it gives the same answer every time.
+3. **A blurry, forwarded copy of a photo.** It asked for a better photo; the expert might have approved from it. Asking is reasonable, and reviewers' decisions would tell us if it asks too often.
 
 The mistakes we'd watch most closely on live claims:
 
@@ -287,9 +287,9 @@ What matters most is which side of the $2,500 approval limit the estimate lands 
 
 | | Opus 5.5, prompt v1 | Opus 5.5, prompt v2 | Sonnet 5.5, prompt v2 |
 |---|---|---|---|
-| Serious claims that went to an adjuster | 10 of 11 | 10 of 11 | 10 of 11 |
-| Same route as our expert (or one the label also accepts) | 21 (22) of 26 | 22 (24) of 26 | 22 (24) of 26 |
-| Simple claims sent to an adjuster they didn't need | 1 of 15 | 0 of 15 | 0 of 15 |
+| Serious claims that went to an adjuster | 10 of 10 | 10 of 10 | 10 of 10 |
+| Same route as our expert (or one the label also accepts) | 22 (23) of 26 | 23 (25) of 26 | 23 (25) of 26 |
+| Simple claims sent to an adjuster they didn't need | 1 of 16 | 0 of 16 | 0 of 16 |
 | Didn't guess when it couldn't tell | 17 of 17 | 17 of 17 | 16 of 17 |
 | Same route on all 4 runs | not measured | 25 of 26 (with AI pricing) | not measured |
 

@@ -25,11 +25,6 @@ const NOTES: Record<string, { what: string; why: string; next: string }> = {
     why: "The price sat right around the limit, so on repeat runs it went to an adjuster once and was approved three times. The expert would approve it, but an adjuster is a reasonable call too.",
     next: "Claims whose price could run well past the limit now always go to an adjuster, so it gives the same answer every time. With your paid claims we'd set that threshold properly.",
   },
-  V3_low_value: {
-    what: "The same Civic, but the policy says the car is only worth $2,500.",
-    why: "The repair comes to about $1,130, which is 45% of the car's value. That's under the 60% total-loss line, so it was approved. The expert label assumed a higher repair price and called it a total loss.",
-    next: "An estimator should decide whether this is a total loss. If the carrier's line is lower than 60%, it's a one-number change.",
-  },
   "03_compressed": {
     what: "A blurry, forwarded copy of a photo.",
     why: "It asked the customer for a better photo. The expert might have approved from it, but asking is reasonable.",
@@ -91,7 +86,7 @@ export default function EvaluationPage() {
             <div className="ev-l2">serious claims went to an adjuster</div>
             <div className="ev-d">
               {s.escalation.caught === s.escalation.of
-                ? "None was approved from photos."
+                ? `None was approved from photos. With so few claims, the real rate could be as low as ${low !== null ? Math.round(low * 100) : "?"}%.`
                 : `The ${s.escalation.of - s.escalation.caught === 1 ? "one it missed was a borderline total loss" : `${s.escalation.of - s.escalation.caught} it missed are below`}. With so few claims, the real rate could be as low as ${low !== null ? Math.round(low * 100) : "?"}%.`}
             </div>
           </div>
@@ -139,6 +134,11 @@ export default function EvaluationPage() {
               </p>
               <p>
                 <b>Who decided the right answer?</b> I did, as drafts. An estimator should review them before anyone relies on these numbers.
+              </p>
+              <p>
+                <b>Did any answers change after testing?</b> One. A test claim reuses the Civic photo on a car worth only $2,500, and I&apos;d first labelled it a total loss. The repair is about $1,130, 45% of the
+                car&apos;s value and under the 60% total-loss line, so an estimator would repair it. I corrected the label; sending it to an adjuster still counts as reasonable. With your claims, your estimators set the answers
+                before testing.
               </p>
               <p className="hint">
                 {s.escalation.of} should go to an adjuster, and only {run.cases.filter((c) => c.labels.expectedRoute === "photo_estimate").length} should be approved from photos, so the next gap to fill is more simple claims. Every test
