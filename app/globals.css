@@ -541,3 +541,31 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .why-summary { font-size: 13.5px; line-height: 1.5; display: flex; flex-direction: column; gap: 4px; }
 .reasons .cites { margin-top: 4px; font-size: 12px; }
 .reason-rule { color: var(--text); background: var(--panel-2); border-left: 3px solid var(--line-strong); padding: 4px 8px; border-radius: 0 4px 4px 0; margin-bottom: 4px; }
+
+.ev-source { font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.ev-source p { margin: 0; }
+.ev-section { font-size: 18px; margin: 8px 0 -4px; }
+.ev-lede { color: var(--text-2); margin: 0; max-width: 860px; font-size: 13.5px; }
+.ev-fold > summary { cursor: pointer; color: var(--accent); font-size: 13.5px; font-weight: 600; padding: 4px 0; }
+.ev-fold[open] > summary { margin-bottom: 10px; }
+
+.ev-answer { font-size: 16px; line-height: 1.5; margin: 0; max-width: 880px; color: var(--text); }
+.ev-score-4 { grid-template-columns: 1.3fr 1fr 1fr 1fr; }
+.ev-l2 { font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 2px; }
+.ev-gapline { font-size: 13.5px; color: var(--evidence); background: var(--evidence-soft); border: 1px solid var(--evidence-line); border-radius: var(--radius); padding: 10px 14px; }
+.ev-tech { display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 1100px) { .ev-score-4 { grid-template-columns: repeat(2, 1fr); } }
+
+.ev-miss-body { display: grid; grid-template-columns: 150px 1fr; gap: 4px 12px; margin: 6px 0 0; font-size: 13px; }
+.ev-miss-body dt { color: var(--text-3); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 2px; }
+.ev-miss-body dd { margin: 0; }
+@media (max-width: 640px) {
+  .ev-miss-body { grid-template-columns: 1fr; }
+  .ev-miss { grid-template-columns: 1fr; }
+  .ev-miss img { width: 100%; height: 160px; }
+  .ev-miss-head { flex-direction: column; align-items: flex-start; }
+  .ev-two { grid-template-columns: 1fr; }
+}
+.ev-miss > div { min-width: 0; }
+.ev-tech .card-body, .ev-two .card-body { overflow-x: auto; }
+.ev-two > * { min-width: 0; }
