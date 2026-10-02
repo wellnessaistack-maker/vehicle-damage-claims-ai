@@ -91,7 +91,16 @@ export interface CaseItem {
   demoKey?: string;
   folder?: string | null;
   addedAt: string;
+  /** Set while a colleague gives a second opinion. The claim waits until they reply or it's taken back. */
+  secondOpinion?: { from: string; note?: string; askedAt: string };
+  /** The colleague who last replied, flagged on the inbox card until the claim is decided. */
+  reply?: { from: string; at: string };
 }
+
+/** Still on the reviewer's desk: not decided and not waiting on a colleague. */
+export const isOpen = (c: CaseItem) => c.status !== "done" && !c.secondOpinion;
+
+export type SecondOpinionAction = { kind: "ask"; from: string; note?: string } | { kind: "reply" } | { kind: "take_back" };
 
 export const REVIEWER = { name: "Jordan Reyes", role: "Desk appraiser", initials: "JR" };
 

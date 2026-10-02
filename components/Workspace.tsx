@@ -9,15 +9,19 @@ import {
   failureNote,
   firstReviewNote,
   newClaimId,
+  isOpen,
   now,
+  recipient,
   recommendedTeams,
   REVIEWER,
   routeOf,
   uid,
   type CaseItem,
   type CaseOutcome,
+  type SecondOpinionAction,
   type ThreadEntry,
 } from "@/lib/client/cases.ts";
+import { demoSecondOpinion } from "@/lib/client/second-opinion.ts";
 import { loadDemoPhoto, type CasePhoto } from "@/lib/client/intake.ts";
 import { reportClientError } from "@/lib/client/report.ts";
 import type { Assessment } from "@/lib/pipeline.ts";
@@ -203,11 +207,11 @@ export function Workspace() {
   }, [addCases]);
 
   // ---- Reviewer actions -----------------------------------------------------------
-  const openCases = useMemo(() => cases.filter((c) => c.status !== "done"), [cases]);
+  const openCases = useMemo(() => cases.filter(isOpen), [cases]);
 
   const advanceFrom = useCallback(
     (id: string) => {
-      const order = cases.filter((c) => c.status !== "done" && c.id !== id);
+      const order = cases.filter((c) => isOpen(c) && c.id !== id);
       setSelectedId(order[0]?.id ?? id);
     },
     [cases],
@@ -219,7 +223,7 @@ export function Workspace() {
   );
 
   // The tab a claim just moved to, so the worklist can flash it. n changes on every move to restart the flash.
-  const [lastMove, setLastMove] = useState<{ tab: "waiting" | "completed"; text: string; n: number } | null>(null);
+  const [lastMove, setLastMove] = useState<{ tab: "inbox" | "waiting" | "completed"; text: string; n: number } | null>(null);
 
   const complete = useCallback(
     (id: string, reviewed: Omit<CaseOutcome, "at">) => {
@@ -239,6 +243,40 @@ export function Workspace() {
         thread: [...c.thread, { id: uid("t"), kind: "action", author: REVIEWER.name, text: outcome.summary + (outcome.reason ? ` Reason: ${outcome.reason}` : ""), at: now() }],
       }));
       advanceFrom(id);
+    },
+    [cases, settings, update, advanceFrom],
+  );
+
+  // A second opinion parks the claim in Waiting until the colleague replies (in the demo, on request) or it's taken back.
+  const secondOpinion = useCallback(
+    (id: string, a: SecondOpinionAction) => {
+      const c = cases.find((x) => x.id === id);
+      if (!c) return;
+      const entry = (e: Omit<ThreadEntry, "id" | "at">): ThreadEntry => ({ ...e, id: uid("t"), at: now() });
+      const move = (tab: "inbox" | "waiting", text: string) => setLastMove((m) => ({ tab, text, n: (m?.n ?? 0) + 1 }));
+      if (a.kind === "ask") {
+        const who = recipient(a.from).name;
+        update(id, (x) => ({
+          ...x,
+          secondOpinion: { from: a.from, note: a.note, askedAt: now() },
+          thread: [...x.thread, entry({ kind: "comment", author: REVIEWER.name, text: `@${who}: second opinion requested.${a.note ? ` ${a.note}` : ""}` })],
+        }));
+        move("waiting", `${c.claim.claimId} is waiting on ${who}.`);
+        advanceFrom(id);
+        return;
+      }
+      if (!c.secondOpinion) return;
+      const from = c.secondOpinion.from;
+      const who = recipient(from).name;
+      if (a.kind === "reply") {
+        const text = demoSecondOpinion(c, currentDecision(c, settings));
+        update(id, (x) => ({ ...x, secondOpinion: undefined, reply: { from, at: now() }, thread: [...x.thread, entry({ kind: "comment", author: who, text })] }));
+        move("inbox", `${who} replied. ${c.claim.claimId} is back in your inbox.`);
+      } else {
+        update(id, (x) => ({ ...x, secondOpinion: undefined, thread: [...x.thread, entry({ kind: "action", author: REVIEWER.name, text: `Took the claim back from ${who} before a reply.` })] }));
+        move("inbox", `${c.claim.claimId} is back in your inbox.`);
+      }
+      setSelectedId(id);
     },
     [cases, settings, update, advanceFrom],
   );
@@ -358,6 +396,7 @@ export function Workspace() {
           onThread={addThread}
           onReassess={reassess}
           onCustomerPhotos={addCustomerPhotos}
+          onSecondOpinion={secondOpinion}
           onOpenRecord={() => setDrawer("record")}
           onOpenProtocol={() => setDrawer("protocol")}
         />

@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { currentDecision, DIRECTORY, holderLine, recipient, recommendedTeams, REVIEWER, ROUTE_OWNER, type CaseItem, type CaseOutcome, type ThreadEntry } from "@/lib/client/cases.ts";
+import { currentDecision, DIRECTORY, holderLine, recipient, recommendedTeams, REVIEWER, ROUTE_OWNER, timeAgo, type CaseItem, type CaseOutcome, type SecondOpinionAction, type ThreadEntry } from "@/lib/client/cases.ts";
 import { CALL_OUTCOMES, channels, customerUpdate, defaultChannel, firstName, followUpDate, preview as messagePreview, reminder, sentVia, shortDate, type Channel } from "@/lib/client/customer.ts";
 import { loadDemoPhoto, shrink, kindOf, type CasePhoto } from "@/lib/client/intake.ts";
 import { decide, type Decision, type EstimateOutput } from "@/lib/policy/engine.ts";
@@ -18,6 +18,7 @@ export function AssessmentPanel(props: {
   onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
   onReassess: (id: string) => void;
   onCustomerPhotos: (id: string, photos: CasePhoto[]) => void;
+  onSecondOpinion: (id: string, action: SecondOpinionAction) => void;
   onOpenRecord: () => void;
   onOpenProtocol: () => void;
 }) {
@@ -133,6 +134,7 @@ export function AssessmentPanel(props: {
         onThread={props.onThread}
         onReassess={props.onReassess}
         onCustomerPhotos={props.onCustomerPhotos}
+        onSecondOpinion={props.onSecondOpinion}
       />
     </aside>
   );
@@ -745,7 +747,7 @@ function Thread(props: {
             <div key={t.id} className={`entry ${t.kind === "note" || t.kind === "answer" ? "ai" : t.kind}`}>
               <div className="entry-head">
                 <b>{t.author}</b>
-                <span>{t.kind === "question" ? "asked" : t.kind === "comment" ? "commented" : t.kind === "action" ? "" : ""}</span>
+                <span>{t.kind === "question" ? "asked" : t.kind === "comment" ? (t.author === REVIEWER.name ? "commented" : "replied") : ""}</span>
                 <span style={{ marginLeft: "auto" }}>{new Date(t.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
               </div>
               <div className="entry-body">{t.text}</div>
@@ -807,6 +809,7 @@ function ActionBar(props: {
   onThread: (id: string, entry: Omit<ThreadEntry, "id" | "at">) => void;
   onReassess: (id: string) => void;
   onCustomerPhotos: (id: string, photos: CasePhoto[]) => void;
+  onSecondOpinion: (id: string, action: SecondOpinionAction) => void;
 }) {
   const { item, route, d, mode, setMode, channel } = props;
   const [callOpen, setCallOpen] = useState(false);
@@ -891,6 +894,30 @@ function ActionBar(props: {
       )}
     </>
   );
+
+  if (item.secondOpinion && item.status !== "done") {
+    const who = recipient(item.secondOpinion.from);
+    const first = who.name.split(" ")[0];
+    return (
+      <div className="actionbar">
+        <div className="followup">
+          <div>
+            <b>Waiting on {who.name}</b> ({who.role}) for a second opinion. Asked {timeAgo(item.secondOpinion.askedAt)}.
+            {item.secondOpinion.note && <div className="hint">Your note: {item.secondOpinion.note}</div>}
+          </div>
+          <div className="hint">When {first} replies, the claim comes back to your inbox with the reply in the case thread.</div>
+          <div className="followup-actions">
+            <button className="btn btn-sm" title="Demo only: plays the colleague's reply" onClick={() => props.onSecondOpinion(item.id, { kind: "reply" })}>
+              Demo: get {first}&apos;s reply
+            </button>
+            <button className="btn btn-sm btn-ghost" onClick={() => props.onSecondOpinion(item.id, { kind: "take_back" })}>
+              Take it back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (item.status === "done" && item.outcome) {
     const waiting = item.outcome.action === "message_sent";
@@ -1051,13 +1078,9 @@ function ActionBar(props: {
             </button>
             <button
               className="btn btn-sm"
-              title="Keeps the claim on your worklist and adds the request to the case thread"
+              title="Moves the claim to Waiting until they reply, then it comes back to your inbox"
               onClick={() => {
-                props.onThread(item.id, {
-                  kind: "comment",
-                  author: REVIEWER.name,
-                  text: `@${recipient(to).name}: second opinion requested.${note.trim() ? ` ${note.trim()}` : ""} The claim stays on my worklist.`,
-                });
+                props.onSecondOpinion(item.id, { kind: "ask", from: to, note: note.trim() || undefined });
                 setNote("");
                 setMode(null);
               }}

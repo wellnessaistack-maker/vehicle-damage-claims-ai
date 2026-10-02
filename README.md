@@ -30,6 +30,7 @@ The tool supports the first decision a reviewer makes on a claim. Getting that r
 - If the AI call fails, the claim goes to **manual triage**, which is today's normal process.
 - Each claim answers its own question ("Why it's ready to approve", "Why it needs more evidence", "Why it goes to a field adjuster") in one line, such as "Because: car can't be driven (S2) and signs of structural damage (S4)". One click shows each rule in full, what the AI saw, and where each fact came from (the policy, the claim form, the AI, the photo checks), with the policy and photo checks underneath.
 - The reviewer can change the amount or the route. Changes go back through the rules, and a route change needs a reason.
+- The reviewer can ask a colleague for a second opinion. The claim waits under **Waiting** until they reply, then comes back to the inbox with the reply in the case thread (the demo plays the reply on request). Handing it off ends it on the reviewer's side.
 - Each claim has a case thread: the first review, every action, the reviewer's comments, and questions to an assistant that explains the photos but can't change the route. Whoever picks the claim up next sees the whole history.
 - Each decision is logged with the recommended route and the reviewer's route, so you can see how often they agree ([more](#tracking-overrides)).
 

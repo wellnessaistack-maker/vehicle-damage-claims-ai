@@ -34,19 +34,30 @@ export function Worklist(props: {
   openCount: number;
   reviewLog: ReviewLogEntry[];
   /** The tab a claim was just moved to, flashed briefly instead of a pop-up. */
-  lastMove: { tab: "waiting" | "completed"; text: string; n: number } | null;
+  lastMove: { tab: "inbox" | "waiting" | "completed"; text: string; n: number } | null;
 }) {
   const { cases, settings, selectedId, onSelect } = props;
   // Inbox holds what still needs this reviewer. A claim leaves it only when a final action is taken:
-  // approved, routed or handed off. A photo request waits on the customer, then comes back.
+  // approved, routed or handed off. A photo request waits on the customer, and a second opinion
+  // waits on a colleague; both come back to the inbox.
   const [view, setView] = useState<"inbox" | "waiting" | "completed">("inbox");
   const done = cases.filter((c) => c.status === "done");
-  const waiting = done.filter((c) => c.outcome?.action === "message_sent");
+  const waitingCustomer = done.filter((c) => c.outcome?.action === "message_sent");
+  const waitingColleague = cases.filter((c) => c.status !== "done" && c.secondOpinion);
+  const waiting = [...waitingColleague, ...waitingCustomer];
   const completed = done.filter((c) => c.outcome?.action !== "message_sent");
 
   // Follow the selected claim, e.g. a customer's reply brings it back to the inbox.
   const selected = cases.find((c) => c.id === selectedId);
-  const selectedView = !selected ? null : selected.status !== "done" ? "inbox" : selected.outcome?.action === "message_sent" ? "waiting" : "completed";
+  const selectedView = !selected
+    ? null
+    : selected.secondOpinion && selected.status !== "done"
+      ? "waiting"
+      : selected.status !== "done"
+        ? "inbox"
+        : selected.outcome?.action === "message_sent"
+          ? "waiting"
+          : "completed";
   useEffect(() => {
     if (selectedView) setView(selectedView);
   }, [selectedId, selectedView]);
@@ -62,7 +73,9 @@ export function Worklist(props: {
         ? "Assessing photos..."
         : c.assessment && !c.assessment.ok
           ? c.assessment.failure.message
-          : c.outcome
+          : c.secondOpinion
+            ? `Waiting on ${recipient(c.secondOpinion.from).name} for a second opinion`
+            : c.outcome
             ? c.outcome.summary
             : top
               ? top.title
@@ -73,7 +86,7 @@ export function Worklist(props: {
       <button key={c.id} className={`wl-item ${c.id === selectedId ? "active" : ""}`} onClick={() => onSelect(c.id)}>
         <div className="wl-item-top">
           <span>{c.claim.claimId}</span>
-          <span>{c.status === "done" && c.outcome ? doneLabel(c.outcome) : timeAgo(c.addedAt)}</span>
+          <span>{c.status === "done" && c.outcome ? doneLabel(c.outcome) : c.secondOpinion ? `Asked ${timeAgo(c.secondOpinion.askedAt)}` : timeAgo(c.addedAt)}</span>
         </div>
         <div className="wl-item-sub">
           {c.claim.policyholder === "Not on file" ? (c.folder ? `Folder: ${c.folder.split("/").pop()}` : "Uploaded photos") : c.claim.policyholder}
@@ -88,6 +101,7 @@ export function Worklist(props: {
               {c.outcome.agreement === "changed_route" ? "Route changed" : c.outcome.agreement === "changed_team" ? "Team changed" : "Amount changed"}
             </span>
           )}
+          {c.reply && c.status !== "done" && !c.secondOpinion && <span className="chip chip-info wl-override">{recipient(c.reply.from).name.split(" ")[0]} replied</span>}
           {reason}
         </div>
       </button>
@@ -115,7 +129,7 @@ export function Worklist(props: {
               ["completed", "Completed", completed.length],
             ] as const
           ).map(([key, label, n]) => (
-            <button key={key} role="tab" title={key === "waiting" ? "Waiting on the customer's photos" : undefined} aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>
+            <button key={key} role="tab" title={key === "waiting" ? "Waiting on a customer's photos or a colleague's second opinion" : undefined} aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>
               {label}{" "}
               <span key={props.lastMove?.tab === key ? `${key}-${props.lastMove.n}` : key} className={props.lastMove?.tab === key ? "n bump" : "n"}>
                 {n}
@@ -152,7 +166,7 @@ export function Worklist(props: {
         )}
         {view === "inbox" &&
           LANES.map((lane) => {
-            const inLane = cases.filter((c) => c.status === "ready" && routeOf(c, settings) === lane);
+            const inLane = cases.filter((c) => c.status === "ready" && !c.secondOpinion && routeOf(c, settings) === lane);
             if (inLane.length === 0) return null;
             return (
               <div key={lane} className={`route-${lane}`}>
@@ -166,11 +180,29 @@ export function Worklist(props: {
         {view === "waiting" &&
           (waiting.length ? (
             <>
-              <div className="wl-hint">Photos requested. When the customer replies, the claim is re-assessed and comes back to your inbox.</div>
-              {waiting.map((c) => item(c, c.outcome?.route ?? null))}
+              {waitingColleague.length > 0 && (
+                <>
+                  <div className="wl-group-head">
+                    On a colleague <span className="n">{waitingColleague.length}</span>
+                  </div>
+                  <div className="wl-hint">Second opinion requested. When they reply, the claim comes back to your inbox.</div>
+                  {waitingColleague.map((c) => item(c, null))}
+                </>
+              )}
+              {waitingCustomer.length > 0 && (
+                <>
+                  {waitingColleague.length > 0 && (
+                    <div className="wl-group-head">
+                      On a customer <span className="n">{waitingCustomer.length}</span>
+                    </div>
+                  )}
+                  <div className="wl-hint">Photos requested. When the customer replies, the claim is re-assessed and comes back to your inbox.</div>
+                  {waitingCustomer.map((c) => item(c, c.outcome?.route ?? null))}
+                </>
+              )}
             </>
           ) : (
-            <div className="wl-empty">No claims waiting on a customer.</div>
+            <div className="wl-empty">Nothing waiting on a customer or a colleague.</div>
           ))}
         {view === "completed" && props.reviewLog.length > 0 && <AgreementSummary log={props.reviewLog} />}
         {view === "completed" &&
