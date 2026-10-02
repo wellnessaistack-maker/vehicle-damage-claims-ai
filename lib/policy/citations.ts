@@ -93,7 +93,7 @@ function cite(key: SourceKey, { x, claim, photos, cost }: Ctx): Citation {
       return { source: "Past claims", text: hit ? `${hit.name} matches a photo on claim ${hit.nearDuplicateOf}` : "No match against past-claim photos" };
     }
     case "estimate":
-      return { source: "Estimate", text: cost ? `Range ${usd(cost.lowUsd)} to ${usd(cost.highUsd)}${cost.ceilingUsd > cost.highUsd ? `, up to ${usd(cost.ceilingUsd)} with possible hidden damage` : ""} (${cost.drivers.some((d) => d.label === "Reviewer's adjusted range") ? "reviewer's adjusted range" : cost.pricing.source === "rate_card" ? `rate card at ${usd(cost.pricing.labourRateUsd)}/h` : "AI item prices"})` : "No estimate" };
+      return { source: "Estimate", text: cost ? `${cost.lowUsd === cost.highUsd ? usd(cost.highUsd) : `Range ${usd(cost.lowUsd)} to ${usd(cost.highUsd)}`}${cost.ceilingUsd > cost.highUsd ? `, up to ${usd(cost.ceilingUsd)} with possible hidden damage` : ""} (${cost.drivers.some((d) => d.label === "Reviewer's amount") ? "reviewer's amount" : cost.pricing.source === "rate_card" ? `rate card at ${usd(cost.pricing.labourRateUsd)}/h` : "AI item prices"})` : "No estimate" };
   }
 }
 

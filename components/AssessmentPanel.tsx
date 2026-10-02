@@ -708,7 +708,7 @@ function ActionBar(props: {
   if (d?.siuReferral) adjusterTargets.push("siu");
   const names = (ids: string[]) => ids.map((id) => recipient(id).name.replace(/^(Estimating|Total|Field|Manual)/, (m) => m.toLowerCase())).join(" and ");
 
-  // The reviewer's range goes back through the same rules, so a correction can change the route.
+  // The reviewer's amount goes back through the same rules, so a correction can change the route.
   const amountN = Math.round(Number(amount));
   const loN = amountN;
   const hiN = amountN;
