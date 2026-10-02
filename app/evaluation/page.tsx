@@ -121,9 +121,6 @@ export default function EvaluationPage() {
             <div className="ev-d">Runs in the background, so a reviewer rarely waits.</div>
           </div>
         </div>
-        <div className="ev-gapline">
-          <b>Not measured yet:</b> whether the repair estimate matches what you&apos;d actually pay. That needs your paid claims.
-        </div>
 
         <div className="ev-two">
           <section className="card">

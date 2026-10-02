@@ -18,7 +18,7 @@ A customer takes a photo of their damaged car. The AI reads the make, model, col
 
 ## How it works for a claims team
 
-The tool supports the first decision a reviewer makes on a claim. Getting that right means simple claims move faster, customers are asked for the right photos the first time, and complex claims reach a person earlier.
+The tool supports the first decision a reviewer makes on a claim. Getting that right means simple claims move faster, customers are asked for the right photos the first time, and serious claims reach an adjuster earlier.
 
 | Route | What happens |
 |---|---|
@@ -221,68 +221,82 @@ Measured on the 26 labelled cases, end to end:
 
 ## Evaluation
 
-### Summary
+**The short answer.** On 26 test claims, it sent 10 of the 11 serious claims to an adjuster and none of the 15 simple ones. When it was unsure, it asked for another photo rather than guess. That's a good start, not proof: proof needs the carrier's own claims. The [evaluation page](https://vehicle-damage-claims-ai.vercel.app/evaluation) shows the same results, with every test claim and its photo.
 
-**How would we know it's working?**
+| | |
+|---|---|
+| Serious claims that went to an adjuster | 10 of 11 (with so few, the real rate could be as low as 62%) |
+| Simple claims sent to an adjuster they didn't need | 0 of 15 |
+| Same route as our expert | 22 of 26 |
+| Time and cost | About 10 seconds and 4 cents a claim |
 
-Not every mistake costs the same here, so we don't focus on overall accuracy. We focus on three things:
+### What we tested it on
 
-1. **Did it catch the complex claims?** If an expert would send a claim to an adjuster, we should too. A missed one, like a likely total loss handled as a simple repair, is costly to fix later.
-2. **Did it send simple claims to a person anyway?** Some caution is expected, but the more simple claims go to a person, the less time the tool saves.
-3. **Did it get the basics right?** The right make, model and colour, or left blank when it can't tell. Damage described in the right place, without missing or adding any.
+- **Are they real claims?** No. The photos are real photos of damaged cars, but the claim details (the customer, the policy, the car's value) are made up for testing. None come from an insurer.
+- **Where are the photos from?** 8 originals: four real crashes from Wikimedia Commons (a flood, a front-end crush, a van under a wall, a car into a tree; licences still to confirm), a press photo of a race-car crash, a dented Honda Civic and Toyota Camry, and one photo with no car in it.
+- **Why 26?** The other 18 are built from those 8 to test one thing each. 13 are harder versions of a photo (too dark, blurry, compressed, sideways, glare, mirrored, close-ups): does it ask for a better photo instead of guessing? 5 reuse the Civic photo with a tricky claim detail (an injury, damage on the wrong side, a low-value car, two different cars, already asked twice): do the rules catch it?
+- **Who decided the right answer?** I did, as drafts. An estimator should review them before anyone relies on these numbers.
+- **The gap.** Only 6 cases should be approved from photos, because the set was built to cover the rules. More ordinary, simple claims are the next thing to add. [`eval/README.md`](eval/README.md) lists them.
 
-We'd also track how consistent, fast and cheap it is. Once it's live, we keep measuring the same things by tracking when reviewers disagree with it. The carrier decides what counts as good enough.
+### How would we know it's working?
 
-**Where does it fail?**
+Mistakes don't cost the same here, so we don't lead with overall accuracy. We read two numbers together:
 
-We tested it on 26 claims. It caught 10 of the 11 complex ones. The one it missed is a cheap car whose label assumed a higher repair price than the rate card gives, so it needs an estimator to settle (see below). Its other mistakes were more cautious than needed rather than less. 11 is a small sample: the real catch rate could be as low as 62%, so we'd need more cases to be confident.
+1. **Serious claims that went to an adjuster.** If an expert would send a claim to an adjuster, we should too. Missing one, like a likely total loss handled as a simple repair, is costly to fix later.
+2. **Simple claims sent to an adjuster they didn't need.** Sending everything to an adjuster would make the first number perfect, but then the tool wouldn't save the team any work.
 
-The mistakes we care most about:
+We also check the basics: the right make, model and colour, or left blank when it can't tell (it didn't guess on 17 of 17), and how consistent, fast and cheap it is. Once it's live, reviewers' corrections (the **Completed** tab) keep measuring the same things, and each one can be downloaded as a new test case. The carrier decides what counts as good enough.
 
-- A complex claim going straight to estimating when it needed an adjuster. The locked rules are there to stop this.
-- A price on the wrong side of the $2,500 limit.
+### Where does it fail?
+
+The 4 claims it didn't get exactly right, most serious first:
+
+1. **The same Civic, but the policy says the car is only worth $2,500.** It approved it; the expert said adjuster. The repair comes to about $1,130, which is 45% of the car's value and under the 60% total-loss line. The label assumed a higher repair price. An estimator should decide whether it's a total loss; if the carrier's line is lower, it's a one-number change.
+2. **A clean photo, uploaded sideways.** It asked for another photo; the expert would have approved. Sideways, the AI couldn't tell which car it was. Straightening photos before the AI sees them would fix it. Today it costs the customer one extra photo, and it never lets a serious claim through.
+3. **Front-corner damage priced close to the $2,500 limit.** Over four runs it was approved three times and sent to an adjuster once. Claims whose price could run well past the limit now always go to an adjuster, so it gives the same answer every time.
+4. **A blurry, forwarded copy of a photo.** It asked for a better photo; the expert might have approved from it. Asking is reasonable, and reviewers' decisions would tell us if it asks too often.
+
+The mistakes we'd watch most closely on live claims:
+
+- A serious claim approved from photos when it needed an adjuster. The locked rules are there to stop this.
+- A price on the wrong side of the $2,500 approval limit.
 - Edited photos. We catch reused photos, but not edited ones yet.
 
-Poor or sideways photos are less of a concern, since the usual result is asking the customer for another photo.
+### What would we need from the carrier?
 
-**What would we need from the carrier?**
-
-- A few hundred past claims: the photos, where each claim went, what was finally paid, and any supplements.
-- Two estimating experts to label them separately. How often they agree with each other is the bar to beat.
-- Today's numbers: how often claims are escalated late, how often shops file supplements, and how long reviewers spend on each claim.
-- Their own rules: limits, labour rates and vehicle values.
-- Security and compliance input on where photos can be processed and how long they're kept.
+- **A few hundred past claims:** the photos, where each claim went, what was finally paid, and any supplements.
+- **Two of their estimators** labelling them separately. How often they agree with each other is the bar to beat.
+- **Today's numbers:** how often claims are escalated late, how often shops file supplements, and how long a review takes.
+- **A test set nobody tunes on,** so every prompt, model or rule change is checked against it before it goes live.
+- **Their own rules:** limits, labour rates and vehicle values, plus security and compliance input on where photos can be processed and how long they're kept.
 
 Scale can do the expert labelling.
 
-**Is the repair estimate good enough?**
+### Is the repair estimate good enough?
 
-We can't tell yet. That needs their paid claims, and the app says so on every estimate. Once we have them, we'd check how often the final paid amount falls inside our range, and how wide the range is. A very wide range will usually contain the paid amount, but it isn't much help, so we keep the range to what the photos show and list the possible extras separately. The range width is a setting we'd calibrate on their paid claims.
+We can't tell yet. That needs their paid claims, and the app says so on every estimate. Once we have them, we'd check how often the final paid amount falls inside our range, and how wide the range is. A very wide range will usually contain the paid amount but isn't much help, so we keep the range to what the photos show and list the possible extras separately. The range width is a setting we'd calibrate on their paid claims.
 
-What matters most is which side of the $2,500 approval limit the estimate lands on. If it's close, the claim is flagged for a price check. If it's well over, it goes to an adjuster. If the approved estimate turns out too low, the body shop files a supplement, the same as today, and it's reviewed.
+What matters most is which side of the $2,500 approval limit the estimate lands on. If it's close, the claim is flagged for a price check. If it could run well over, it goes to an adjuster. If an approved estimate turns out too low, the body shop files a supplement, the same as today, and it's reviewed.
 
-### Results
-
-26 labelled cases, 11 of which should go to an adjuster. The labels are our drafts and need an estimating expert's review.
+### Results in detail
 
 | | Opus 5.5, prompt v1 | Opus 5.5, prompt v2 | Sonnet 5.5, prompt v2 |
 |---|---|---|---|
-| Complex claims caught | 10 of 11 | 10 of 11 | 10 of 11 |
-| Matched the expert's route, exact (acceptable) | 21 (22) of 26 | 22 (24) of 26 | 22 (24) of 26 |
-| Sent to a person when not needed | 1 of 15 | 0 of 15 | 0 of 15 |
+| Serious claims that went to an adjuster | 10 of 11 | 10 of 11 | 10 of 11 |
+| Same route as our expert (or one the label also accepts) | 21 (22) of 26 | 22 (24) of 26 | 22 (24) of 26 |
+| Simple claims sent to an adjuster they didn't need | 1 of 15 | 0 of 15 | 0 of 15 |
 | Didn't guess when it couldn't tell | 17 of 17 | 17 of 17 | 16 of 17 |
 | Same route on all 4 runs | not measured | 25 of 26 (with AI pricing) | not measured |
 
-- **Prompt v1 to v2.** After the first run we changed four instructions based on the cases it got wrong. For example, a crumpled bumper no longer counts as "structural" damage. Since v2 was tuned on these same cases, its improvement probably looks better here than it would on new ones. With real data we'd keep a separate test set nobody tunes against.
-- **The rate card and the missed case.** All three columns are scored with today's rules and rate card, from the saved AI answers. Moving to the rate card changed one route: the Civic on a policy valuing the car at $2,500. The rate card prices the repair at about $1,130, which is 45% of the car's value and under the 60% total-loss line. With the AI's own price it crossed the line, which is what the draft label assumed. An estimator should decide which is right. If the carrier's threshold is lower, it's a setting.
+- **Prompt v1 to v2.** After the first run we changed four instructions based on the cases it got wrong. For example, a crumpled bumper no longer counts as "structural" damage. Since v2 was written after seeing these same cases, its improvement probably looks better here than it would on new ones.
 - **Opus or Sonnet.** They routed the same here, and Sonnet is faster and half the price. 26 cases aren't enough to tell them apart; the carrier's own claims should decide.
-- **The set's main gap.** Few cases should go straight to estimating, so needless escalation is hard to measure for now. [`eval/README.md`](eval/README.md) lists what to add.
+- All three columns are scored with today's rules and rate card, from the saved AI answers, so re-scoring costs nothing.
 
 ### Failure modes
 
 | Failure | How likely | What the prototype does |
 |---|---|---|
-| Complex claim sent straight to estimating | Low, but high impact | Locked safety rules, the more serious route takes priority, measured in the evaluation |
+| Serious claim approved from photos | Low, but high impact | Locked safety rules, the more serious route takes priority, measured in the evaluation |
 | Wrong vehicle named with confidence | Medium | Make and model left blank without a badge or distinctive shape; policy mismatch flagged |
 | Damage missed or made up | Medium | "No damage visible" asks for photos; the reviewer approves each estimate |
 | Estimate on the wrong side of a limit | Likely near the limit | Ranges close to the limit are flagged, very wide ones go to an adjuster |
@@ -305,7 +319,7 @@ A person approves each claim today. That's the right place to start. We'd reduce
 
 **How we'd know a slice is ready,** agreed with the claims and risk owners up front:
 
-- Complex claims caught, judged by the low end of the likely range. Showing a miss rate under 1% takes around 300 complex claims without a miss.
+- Serious claims that go to an adjuster, judged by the low end of the likely range. Showing a miss rate under 1% takes around 300 serious claims without a miss.
 - Route agreement at least as good as two experts get with each other.
 - Estimate ranges that contain the final paid cost at an agreed rate, and no rise in supplements.
 - Reviewer overrides low and trending down.
