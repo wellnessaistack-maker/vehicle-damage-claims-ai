@@ -110,6 +110,25 @@ export interface CaseItem {
 /** Still on the reviewer's desk: not decided and not waiting on a colleague. */
 export const isOpen = (c: CaseItem) => c.status !== "done" && !c.secondOpinion;
 
+/**
+ * The order a reviewer works the inbox: ready to approve first, then photo requests, then
+ * adjuster hand-offs, then manual triage, each in the order the claims arrived. Finishing a
+ * claim moves to the next one in this order, and the worklist shows it bottom-up.
+ */
+export const WORK_ORDER: Route[] = ["photo_estimate", "more_evidence", "adjuster", "manual_triage"];
+
+export function workOrder(cases: CaseItem[], settings: Settings): CaseItem[] {
+  const rank = (c: CaseItem) => {
+    const r = routeOf(c, settings);
+    return r ? WORK_ORDER.indexOf(r) : WORK_ORDER.length;
+  };
+  return cases
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => isOpen(c))
+    .sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i)
+    .map(({ c }) => c);
+}
+
 export type SecondOpinionAction = { kind: "ask"; from: string; note?: string } | { kind: "reply" } | { kind: "take_back" };
 
 export const REVIEWER = { name: "Jordan Reyes", role: "Desk appraiser", initials: "JR" };

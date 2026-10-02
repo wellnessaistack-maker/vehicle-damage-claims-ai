@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import { recipient, safeDecision, shortName, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
+import { recipient, safeDecision, shortName, WORK_ORDER, workOrder, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
 import { downloadFile, logCsv, summarize, type ReviewLogEntry } from "@/lib/client/review-log.ts";
 import { ROUTE_LABELS, usd, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
-const LANES: Route[] = ["adjuster", "more_evidence", "photo_estimate", "manual_triage"];
+// The inbox reads bottom-up: the first claim to work sits at the bottom, and each one finished moves up.
+const LANES: Route[] = [...WORK_ORDER].reverse();
 
 const OUTCOME_LABELS: Record<string, string> = {
   approved: "Approved",
@@ -27,7 +28,7 @@ export function Worklist(props: {
   cases: CaseItem[];
   settings: Settings;
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
   onAdd: () => void;
   onLoadDemo: () => void;
   loadingDemo: boolean;
@@ -62,6 +63,15 @@ export function Worklist(props: {
     if (selectedView) setView(selectedView);
   }, [selectedId, selectedView]);
   const pending = cases.filter((c) => c.status === "queued" || c.status === "processing");
+  const ordered = workOrder(cases, settings);
+
+  // Switching tabs opens a claim in that tab, so the panel never shows a claim from another one.
+  const openTab = (key: "inbox" | "waiting" | "completed") => {
+    if (key === view) return;
+    setView(key);
+    const first = key === "inbox" ? (ordered.find((c) => c.status === "ready") ?? ordered[0]) : key === "waiting" ? waiting[0] : completed[0];
+    onSelect(first?.id ?? null);
+  };
   const total = cases.length;
   const pct = total ? Math.round((done.length / total) * 100) : 0;
 
@@ -129,7 +139,7 @@ export function Worklist(props: {
               ["completed", "Completed", completed.length],
             ] as const
           ).map(([key, label, n]) => (
-            <button key={key} role="tab" title={key === "waiting" ? "Waiting on a customer's photos or a colleague's second opinion" : undefined} aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>
+            <button key={key} role="tab" title={key === "waiting" ? "Waiting on a customer's photos or a colleague's second opinion" : undefined} aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => openTab(key)}>
               {label}{" "}
               <span key={props.lastMove?.tab === key ? `${key}-${props.lastMove.n}` : key} className={props.lastMove?.tab === key ? "n bump" : "n"}>
                 {n}
@@ -166,7 +176,7 @@ export function Worklist(props: {
         )}
         {view === "inbox" &&
           LANES.map((lane) => {
-            const inLane = cases.filter((c) => c.status === "ready" && !c.secondOpinion && routeOf(c, settings) === lane);
+            const inLane = ordered.filter((c) => c.status === "ready" && routeOf(c, settings) === lane).reverse();
             if (inLane.length === 0) return null;
             return (
               <div key={lane} className={`route-${lane}`}>
