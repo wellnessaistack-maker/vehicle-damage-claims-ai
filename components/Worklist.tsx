@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { recipient, safeDecision, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
+import { recipient, safeDecision, shortName, routeOf, timeAgo, vehicleLine, type CaseItem, type CaseOutcome } from "@/lib/client/cases.ts";
 import { downloadFile, logCsv, summarize, type ReviewLogEntry } from "@/lib/client/review-log.ts";
 import { ROUTE_LABELS, usd, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
@@ -74,7 +74,7 @@ export function Worklist(props: {
         : c.assessment && !c.assessment.ok
           ? c.assessment.failure.message
           : c.secondOpinion
-            ? `Waiting on ${recipient(c.secondOpinion.from).name} for a second opinion`
+            ? `Waiting on ${recipient(c.secondOpinion.from).person ? recipient(c.secondOpinion.from).name : shortName(c.secondOpinion.from)} for a second opinion`
             : c.outcome
             ? c.outcome.summary
             : top
@@ -101,7 +101,7 @@ export function Worklist(props: {
               {c.outcome.agreement === "changed_route" ? "Route changed" : c.outcome.agreement === "changed_team" ? "Team changed" : "Amount changed"}
             </span>
           )}
-          {c.reply && c.status !== "done" && !c.secondOpinion && <span className="chip chip-info wl-override">{recipient(c.reply.from).name.split(" ")[0]} replied</span>}
+          {c.reply && c.status !== "done" && !c.secondOpinion && <span className="chip chip-info wl-override">{shortName(c.reply.from, true)} replied</span>}
           {reason}
         </div>
       </button>

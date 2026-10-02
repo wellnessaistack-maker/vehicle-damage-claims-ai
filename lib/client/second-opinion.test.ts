@@ -26,3 +26,9 @@ test("the demo second opinion on a Formula One car says it isn't covered, withou
 test("another non-road vehicle gets the same coverage answer in general terms", () => {
   assert.match(demoSecondOpinion(withVehicle("race_or_non_road", "A go-kart on a track."), null), /we don't cover race cars/);
 });
+
+test("the total loss unit answers as itself", () => {
+  const reply = demoSecondOpinion(withVehicle("race_or_non_road", "Formula 1 race cars in a multi-car crash."), null, "total_loss");
+  assert.match(reply, /To my knowledge, we don't cover Formula One cars, so there's nothing for us to value here/);
+  assert.doesNotMatch(reply, /field adjuster/);
+});

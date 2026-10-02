@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { currentDecision, DIRECTORY, holderLine, recipient, recommendedTeams, REVIEWER, ROUTE_OWNER, timeAgo, type CaseItem, type CaseOutcome, type SecondOpinionAction, type ThreadEntry } from "@/lib/client/cases.ts";
+import { currentDecision, DIRECTORY, holderLine, recipient, recommendedTeams, REVIEWER, ROUTE_OWNER, shortName, timeAgo, type CaseItem, type CaseOutcome, type SecondOpinionAction, type ThreadEntry } from "@/lib/client/cases.ts";
 import { CALL_OUTCOMES, channels, customerUpdate, defaultChannel, firstName, followUpDate, preview as messagePreview, reminder, sentVia, shortDate, type Channel } from "@/lib/client/customer.ts";
 import { loadDemoPhoto, shrink, kindOf, type CasePhoto } from "@/lib/client/intake.ts";
 import { decide, type Decision, type EstimateOutput } from "@/lib/policy/engine.ts";
@@ -897,12 +897,12 @@ function ActionBar(props: {
 
   if (item.secondOpinion && item.status !== "done") {
     const who = recipient(item.secondOpinion.from);
-    const first = who.name.split(" ")[0];
+    const first = shortName(item.secondOpinion.from);
     return (
       <div className="actionbar">
         <div className="followup">
           <div>
-            <b>Waiting on {who.name}</b> ({who.role}) for a second opinion. Asked {timeAgo(item.secondOpinion.askedAt)}.
+            <b>Waiting on {who.person ? who.name : first}</b> ({who.role}) for a second opinion. Asked {timeAgo(item.secondOpinion.askedAt)}.
             {item.secondOpinion.note && <div className="hint">Your note: {item.secondOpinion.note}</div>}
           </div>
           <div className="hint">When {first} replies, the claim comes back to your inbox with the reply in the case thread.</div>

@@ -25,6 +25,8 @@ export interface Recipient {
   role: string;
   /** What the recipient is for, shown when choosing. */
   forWhat: string;
+  /** A named colleague rather than a team or queue. */
+  person?: boolean;
 }
 
 export const DIRECTORY: Recipient[] = [
@@ -34,11 +36,19 @@ export const DIRECTORY: Recipient[] = [
   { id: "total_loss", name: "Total loss unit", role: "Total loss specialists", forWhat: "Valuation and settlement when repair may cost more than the car is worth" },
   { id: "siu", name: "Special Investigations Unit", role: "SIU", forWhat: "Possible fraud, such as reused photos" },
   { id: "manual", name: "Manual triage queue", role: "Claims handlers", forWhat: "Today's process, for anything the tool couldn't assess" },
-  { id: "dana", name: "Dana Kim", role: "Senior appraiser", forWhat: "Second opinion on a price or a borderline route" },
-  { id: "marcus", name: "Marcus Hill", role: "Claims supervisor", forWhat: "Escalations, complaints and exceptions to the protocol" },
+  { id: "dana", name: "Dana Kim", role: "Senior appraiser", forWhat: "Second opinion on a price or a borderline route", person: true },
+  { id: "marcus", name: "Marcus Hill", role: "Claims supervisor", forWhat: "Escalations, complaints and exceptions to the protocol", person: true },
 ];
 
 export const recipient = (id: string) => DIRECTORY.find((r) => r.id === id)!;
+
+/** How a recipient reads mid-sentence: "Dana" for a person, "the total loss unit" for a team. */
+export function shortName(id: string, capital = false): string {
+  const r = recipient(id);
+  if (r.person) return r.name.split(" ")[0];
+  const team = r.name.startsWith("Special") ? r.name : r.name.charAt(0).toLowerCase() + r.name.slice(1);
+  return capital ? r.name : `the ${team}`;
+}
 
 /**
  * Who the recommendation would send the claim to. On the adjuster route that depends on why:

@@ -13,6 +13,7 @@ import {
   now,
   recipient,
   recommendedTeams,
+  shortName,
   REVIEWER,
   routeOf,
   uid,
@@ -261,7 +262,7 @@ export function Workspace() {
           secondOpinion: { from: a.from, note: a.note, askedAt: now() },
           thread: [...x.thread, entry({ kind: "comment", author: REVIEWER.name, text: `@${who}: second opinion requested.${a.note ? ` ${a.note}` : ""}` })],
         }));
-        move("waiting", `${c.claim.claimId} is waiting on ${who}.`);
+        move("waiting", `${c.claim.claimId} is waiting on ${shortName(a.from)}.`);
         advanceFrom(id);
         return;
       }
@@ -269,11 +270,11 @@ export function Workspace() {
       const from = c.secondOpinion.from;
       const who = recipient(from).name;
       if (a.kind === "reply") {
-        const text = demoSecondOpinion(c, currentDecision(c, settings));
+        const text = demoSecondOpinion(c, currentDecision(c, settings), from);
         update(id, (x) => ({ ...x, secondOpinion: undefined, reply: { from, at: now() }, thread: [...x.thread, entry({ kind: "comment", author: who, text })] }));
-        move("inbox", `${who} replied. ${c.claim.claimId} is back in your inbox.`);
+        move("inbox", `${shortName(from, true)} replied. ${c.claim.claimId} is back in your inbox.`);
       } else {
-        update(id, (x) => ({ ...x, secondOpinion: undefined, thread: [...x.thread, entry({ kind: "action", author: REVIEWER.name, text: `Took the claim back from ${who} before a reply.` })] }));
+        update(id, (x) => ({ ...x, secondOpinion: undefined, thread: [...x.thread, entry({ kind: "action", author: REVIEWER.name, text: `Took the claim back from ${shortName(from)} before a reply.` })] }));
         move("inbox", `${c.claim.claimId} is back in your inbox.`);
       }
       setSelectedId(id);
