@@ -113,7 +113,7 @@ export const isOpen = (c: CaseItem) => c.status !== "done" && !c.secondOpinion;
 /**
  * The order a reviewer works the inbox: ready to approve first, then photo requests, then
  * adjuster hand-offs, then manual triage, each in the order the claims arrived. Finishing a
- * claim moves to the next one in this order, and the worklist shows it bottom-up.
+ * claim moves to the next one in this order, and the worklist shows it top to bottom.
  */
 export const WORK_ORDER: Route[] = ["photo_estimate", "more_evidence", "adjuster", "manual_triage"];
 

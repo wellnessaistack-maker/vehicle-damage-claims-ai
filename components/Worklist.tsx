@@ -6,8 +6,8 @@ import { recipient, safeDecision, shortName, WORK_ORDER, workOrder, routeOf, tim
 import { downloadFile, logCsv, summarize, type ReviewLogEntry } from "@/lib/client/review-log.ts";
 import { ROUTE_LABELS, usd, type Route, type Settings } from "@/lib/policy/protocol.ts";
 
-// The inbox reads bottom-up: the first claim to work sits at the bottom, and each one finished moves up.
-const LANES: Route[] = [...WORK_ORDER].reverse();
+// The inbox reads top to bottom in work order: each group, and each claim in it, in the order it's worked.
+const LANES: Route[] = WORK_ORDER;
 
 const OUTCOME_LABELS: Record<string, string> = {
   approved: "Approved",
@@ -176,7 +176,7 @@ export function Worklist(props: {
         )}
         {view === "inbox" &&
           LANES.map((lane) => {
-            const inLane = ordered.filter((c) => c.status === "ready" && routeOf(c, settings) === lane).reverse();
+            const inLane = ordered.filter((c) => c.status === "ready" && routeOf(c, settings) === lane);
             if (inLane.length === 0) return null;
             return (
               <div key={lane} className={`route-${lane}`}>
