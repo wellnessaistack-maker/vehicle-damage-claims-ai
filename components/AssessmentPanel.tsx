@@ -782,7 +782,7 @@ function Thread(props: {
                 Cancel
               </button>
               <button className="btn btn-sm btn-primary" onClick={() => void submit()} disabled={!!busy || !text.trim()}>
-                {mode === "ask" ? "Ask" : "Add comment"}
+                {mode === "ask" ? "Ask AI" : "Add comment"}
               </button>
             </div>
           </div>
@@ -889,7 +889,7 @@ function ActionBar(props: {
       </button>
       {route !== "manual_triage" && (
         <button className="btn btn-sm" onClick={() => setMode(mode === "ask" ? null : "ask")}>
-          Ask
+          Ask AI
         </button>
       )}
     </>

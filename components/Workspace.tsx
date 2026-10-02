@@ -17,6 +17,7 @@ import {
   REVIEWER,
   routeOf,
   uid,
+  workOrder,
   type CaseItem,
   type CaseOutcome,
   type SecondOpinionAction,
@@ -212,10 +213,10 @@ export function Workspace() {
 
   const advanceFrom = useCallback(
     (id: string) => {
-      const order = cases.filter((c) => isOpen(c) && c.id !== id);
+      const order = workOrder(cases, settings).filter((c) => c.id !== id);
       setSelectedId(order[0]?.id ?? id);
     },
-    [cases],
+    [cases, settings],
   );
 
   const addThread = useCallback(
