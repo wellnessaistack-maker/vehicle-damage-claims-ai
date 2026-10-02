@@ -400,7 +400,9 @@ function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMateria
         <span className="sub">Rate card, labour markets, state total-loss rules</span>
       </div>
       <div className="card-body">
-        <div>The AI says which part is damaged, how badly, and whether it needs repairing, replacing or repainting. The rate card prices that job in hours, parts and paint.</div>
+        <div>
+          The AI tells us what&apos;s damaged and how badly. The rate card turns that into a price: how long the job takes, what an hour of work costs where the customer lives, and the cost of any new parts.
+        </div>
         {example && (
           <div className="ratecard-example">
             <div className="drivers-head">Example: a moderate dent in a rear door, mid-range car, at the base rate</div>
@@ -417,22 +419,22 @@ function RateCard({ baseRate, paintMaterials }: { baseRate: number; paintMateria
           <summary>How it&apos;s worked out</summary>
           <ul className="ratecard-steps">
             <li>
-              <b>Hours</b> come from the table below, per part and job. Repair hours are for moderate damage: half for minor, 1.6x for severe. Each painted panel adds 1 h to remove trim and mask.
+              <b>How long the job takes.</b> Each part has a set number of hours to repair, replace or repaint it (see the table below). A minor dent takes half as long as a moderate one, and a severe one takes 1.6 times as long. Painting a panel adds an hour to take off the trim and tape it up.
             </li>
             <li>
-              <b>Labour</b> is priced at the base rate in the settings, scaled for the market the claim&apos;s ZIP code falls in. Paint hours add a materials allowance.
+              <b>What an hour costs.</b> The base labour rate, adjusted for where the customer lives: higher in San Francisco, lower in Mississippi. Painting hours also cover the paint itself.
             </li>
             <li>
-              <b>Parts</b> use the table&apos;s price for a mid-range car: 0.8x for cars worth under $10,000, 1.5x for cars worth over $40,000 or a luxury make.
+              <b>Parts.</b> The table gives a price for a mid-range car. Parts for a car worth under $10,000 cost 80% of that; for a luxury car, or one worth over $40,000, they cost 150%.
             </li>
             <li>
-              <b>Electric and hybrid cars</b> add {HIGH_VOLTAGE_HOURS} h to make the high-voltage system safe.
+              <b>Electric and hybrid cars</b> get an extra {HIGH_VOLTAGE_HOURS} hours to make the high-voltage system safe before work starts.
             </li>
             <li>
-              <b>Repair or replace:</b> if repairing would cost more than replacing, the part is priced as a replacement.
+              <b>Repair or replace.</b> If fixing a part would cost more than a new one, we price the new one, just as an estimator would.
             </li>
             <li>
-              <b>All figures are placeholders.</b> In production the hours come from an estimating platform&apos;s labour times, and the rates and parts prices from the carrier, checked against their paid claims.
+              <b>These numbers are placeholders.</b> A carrier would use labour times from an estimating platform and its own rates and parts prices, and check them against what it actually paid.
             </li>
           </ul>
         </details>
