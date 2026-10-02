@@ -498,6 +498,15 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .proto-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .proto-flow .arrow { color: var(--text-3); }
 .proto-node { border: 1px solid var(--line-strong); border-radius: 6px; padding: 4px 9px; background: var(--panel-2); font-size: 12.5px; font-weight: 600; }
+.proto-node small { display: block; font-size: 11px; font-weight: 400; color: var(--text-3); margin-top: 1px; }
+.proto-flow { align-items: stretch; }
+.proto-flow .arrow { align-self: center; }
+.proto-node { flex: 1 1 0; min-width: 120px; }
+.proto-route-items { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-2); }
+.proto-route-items li { padding-left: 10px; position: relative; line-height: 1.35; }
+.proto-route-items li::before { content: "·"; position: absolute; left: 2px; color: var(--r); font-weight: 700; }
+.proto-route-items li.hit { color: var(--text); font-weight: 600; }
+.proto-route-items .rid { font-family: var(--mono); font-size: 10.5px; font-weight: 500; margin-left: 5px; color: var(--r); }
 .proto-node-rules { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .proto-routes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .proto-route { border: 1px solid var(--r-line); background: var(--r-soft); border-radius: 8px; padding: 8px 10px; opacity: 0.8; }
@@ -505,8 +514,6 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .proto-route-head { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--r); font-size: 12.5px; }
 .proto-route-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--r); display: inline-block; }
 .proto-here { margin-left: auto; white-space: nowrap; flex-shrink: 0; font-size: 10.5px; font-weight: 600; color: #fff; background: var(--r); border-radius: 999px; padding: 1px 7px; }
-.proto-route-groups { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; font-size: 12px; color: var(--text-2); }
-.proto-route-groups .hit { color: var(--text); font-weight: 700; text-decoration: underline; text-decoration-color: var(--r); text-underline-offset: 3px; }
 .proto-groups { display: flex; flex-direction: column; gap: 0; padding-top: 4px; }
 .proto-group-row { display: grid; grid-template-columns: 1fr 130px 120px; gap: 12px; align-items: start; font-size: 13px; }
 .proto-group-headrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-3); font-weight: 600; padding: 4px 0 6px 18px; }
