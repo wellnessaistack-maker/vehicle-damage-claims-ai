@@ -17,10 +17,16 @@ export function channels(claim: ClaimContext): Channel[] {
   return [...(c?.phone ? (["text"] as const) : []), ...(c?.email ? (["email"] as const) : [])];
 }
 
-export function defaultChannel(claim: ClaimContext): Channel | null {
+/**
+ * Photo requests go by text, because the customer answers them from their phone with the
+ * camera in hand. Everything else (updates, questions) goes by email, so there's a written
+ * record. Falls back to whichever is on file. The reviewer can always switch.
+ */
+export type Purpose = "photos" | "update";
+export function defaultChannel(claim: ClaimContext, purpose: Purpose = "update"): Channel | null {
   const available = channels(claim);
-  const preferred = claim.contact?.preferred;
-  return preferred && available.includes(preferred) ? preferred : (available[0] ?? null);
+  const wanted: Channel = purpose === "photos" ? "text" : "email";
+  return available.includes(wanted) ? wanted : (available[0] ?? null);
 }
 
 /** "Texted Maria at (555) 010-0142" or "Emailed maria.lopez@example.com". */

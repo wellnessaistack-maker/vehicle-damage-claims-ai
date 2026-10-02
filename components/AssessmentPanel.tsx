@@ -31,9 +31,11 @@ export function AssessmentPanel(props: {
     // Redraft only when the route or the photo request changes, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d?.customerMessage, d?.route]);
-  const [chosenChannel, setChannel] = useState<Channel | null>(item ? defaultChannel(item.claim) : null);
+  // Null until the reviewer picks one; until then the default depends on what the message is for.
+  const [chosenChannel, setChannel] = useState<Channel | null>(null);
+  const purpose = d?.route === "more_evidence" || item?.outcome?.action === "message_sent" ? "photos" : "update";
   // Follow the claim's current contact details, e.g. a phone number added after the claim arrived.
-  const channel = item && chosenChannel && channels(item.claim).includes(chosenChannel) ? chosenChannel : item ? defaultChannel(item.claim) : null;
+  const channel = item && chosenChannel && channels(item.claim).includes(chosenChannel) ? chosenChannel : item ? defaultChannel(item.claim, purpose) : null;
   const [sendUpdate, setSendUpdate] = useState(true);
 
   if (!item) {

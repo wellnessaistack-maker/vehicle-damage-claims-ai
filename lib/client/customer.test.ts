@@ -19,11 +19,12 @@ test("the photo estimate update says what happens next", () => {
   assert.equal(customerUpdate(decision("more_evidence"), DEMO_CLAIMS.B), null, "the photo request comes from the rules instead");
 });
 
-test("channel follows the customer's preference and what's on file", () => {
+test("photo requests default to text and everything else to email, using what's on file", () => {
   assert.deepEqual(channels(DEMO_CLAIMS.A), ["text", "email"]);
-  assert.equal(defaultChannel(DEMO_CLAIMS.A), "text");
-  assert.equal(defaultChannel(DEMO_CLAIMS.C), "email");
-  assert.equal(defaultChannel({ ...DEMO_CLAIMS.A, contact: { phone: null, email: "a@example.com", preferred: "text" } }), "email");
+  assert.equal(defaultChannel(DEMO_CLAIMS.A), "email");
+  assert.equal(defaultChannel(DEMO_CLAIMS.A, "photos"), "text");
+  assert.equal(defaultChannel({ ...DEMO_CLAIMS.A, contact: { phone: null, email: "a@example.com", preferred: "text" } }, "photos"), "email");
+  assert.equal(defaultChannel({ ...DEMO_CLAIMS.A, contact: { phone: "(555) 010-0100", email: null, preferred: "email" } }), "text");
   assert.equal(defaultChannel({ ...DEMO_CLAIMS.A, contact: undefined }), null);
   assert.equal(sentVia(DEMO_CLAIMS.B, "text"), "Texted Daniel at (555) 010-0187");
 });
