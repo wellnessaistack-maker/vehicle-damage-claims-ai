@@ -109,8 +109,7 @@ export function AssessmentPanel(props: {
         ) : (
           <>
             <RequiredOutputs d={d!} />
-            {d!.reasons.length > 0 && <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />}
-            <Checks d={d!} />
+            <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />
           </>
         )}
 
@@ -428,13 +427,13 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
       <div className="card-head">
         <h3>Why this route</h3>
         <button className="btn btn-sm btn-ghost" onClick={onOpenProtocol} title="Open the routing protocol">
-          {d.reasons.length} rule{d.reasons.length === 1 ? "" : "s"} fired
+          {d.reasons.length ? `${d.reasons.length} rule${d.reasons.length === 1 ? "" : "s"} fired` : "No rules fired"}
         </button>
       </div>
       <div className="card-body">
         {d.reasons.length === 0 ? (
           <div className="reason-text">
-            No concerns found, so the reviewer can approve this estimate. The photos show the vehicle and the whole damaged area, nothing suggests hidden or serious damage, and the estimate is under the limit.
+            No rules fired: the photos show the whole car and damage, nothing looks serious, and the estimate is within the approval limit. Everything below was checked.
           </div>
         ) : (
           GROUPS.map((g) => {
@@ -475,31 +474,52 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
             );
           })
         )}
+        <Checks d={d} />
       </div>
     </div>
   );
 }
 
-/** Policy checks and photo evidence in one card: exceptions up front, the full tables one click away. */
+/** Which rule a failed check sets off, so a red chip points at the reason above it. */
+const CHECK_RULES: Record<string, string[]> = {
+  "Vehicle in the photos": ["E1"],
+  "Car identified from a badge or body shape": ["E2"],
+  "Whole damaged area in frame": ["E3"],
+  "Bright enough": ["E4"],
+  "Sharp enough": ["E4"],
+  "High enough resolution": ["E4"],
+  "No glare or obstruction over the damage": ["E4"],
+  "Colour photo": ["E4"],
+  "Only one car in the photo": ["E6"],
+  "Not seen on a past claim": ["I1"],
+  "Insured vehicle": ["R2"],
+  "Colour": ["R2"],
+  "Point of impact": ["R3"],
+};
+
+/** What was checked, inside the route card: exceptions up front, the full tables one click away. */
 function Checks({ d }: { d: Decision }) {
+  const fired = new Set(d.reasons.map((r) => r.id));
+  const ruleTag = (label: string) => {
+    const ids = (CHECK_RULES[label] ?? []).filter((id) => fired.has(id));
+    return ids.length ? <span className="rid">{ids.join(", ")}</span> : null;
+  };
   const icon = { match: "✓", mismatch: "✕", not_compared: "?", info: "i" } as const;
   const compared = d.policyChecks.filter((p) => p.status !== "info");
   const mismatch = compared.some((p) => p.status === "mismatch");
   const failed = d.evidenceChecklist.filter((c) => !c.ok);
   const passed = d.evidenceChecklist.length - failed.length;
   return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Checks</h3>
-        <span className="sub">Policy on file vs. the photos, and whether the photos are good enough. Nothing here decides coverage.</span>
-      </div>
-      <div className="card-body checks">
+    <div className="checks checks-in-route">
+      <div className="drivers-head">What we checked</div>
+      <div className="checks">
         <div className="check-row">
           <span className="check-label">Policy and claim</span>
           <span className="check-chips">
             {compared.map((p) => (
               <span key={p.label} className={`pchip pchip-${p.status}`} title={`On file: ${p.onFile}. From the photos: ${p.observed}`}>
                 {icon[p.status]} {p.label}
+                {p.status === "mismatch" && ruleTag(p.label)}
               </span>
             ))}
             <span className="pchip pchip-info" title="This tool compares facts to route the claim. It never decides what the policy covers or pays.">
@@ -516,6 +536,7 @@ function Checks({ d }: { d: Decision }) {
             {failed.map((c) => (
               <span key={c.label} className="pchip pchip-mismatch" title={c.detail}>
                 ✕ {c.label}
+                {ruleTag(c.label)}
               </span>
             ))}
           </span>
