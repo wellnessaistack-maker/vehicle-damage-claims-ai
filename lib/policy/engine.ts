@@ -127,7 +127,7 @@ export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[
       fired: !!hit,
       reason: hit?.reason,
       evidence: hit?.evidence || undefined,
-      citations: hit ? citationsFor(rule, { x, claim, photos, settings, cost }) : undefined,
+      citations: hit ? citationsFor(rule, { x, claim, photos, settings, cost }, effect) : undefined,
     });
     if (!hit) continue;
     firedSoFar.push(rule.id);

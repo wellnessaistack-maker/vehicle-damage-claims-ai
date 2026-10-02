@@ -478,7 +478,7 @@ test("every reason cites where its facts came from and which rule applied", () =
   assert.match(text, /Policy record: Vehicle value: \$2,000/);
   assert.match(text, /Estimate: Range/);
   assert.match(text, /Protocol: Setting "Total-loss line \(where the state sets none\)": 60% of vehicle value/);
-  assert.match(text, /Protocol: Routing protocol v0\.1, rule C2 \(configurable\)/);
+  assert.match(text, /Protocol: Rule C2, set by the carrier \(routing protocol v0\.1\)\. When: .+ Then: send it to an adjuster\./);
 });
 
 test("policy checks compare the policy with the photos even when nothing fires", () => {
