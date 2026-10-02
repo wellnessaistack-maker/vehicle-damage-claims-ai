@@ -40,6 +40,7 @@ export const DEMO_QUEUE: { key: string; folder: string; photos: string[] }[] = [
   { key: "C", folder: "C-escalation", photos: ["/demo/C-escalation/demo_C_f1.jpg"] },
   { key: "D", folder: "D-road-car-escalation", photos: ["/demo/D-road-car-escalation/demo_D_nissan.jpg"] },
   { key: "E", folder: "E-reused-photo", photos: ["/demo/E-reused-photo/demo_E_reused.jpg"] },
+  { key: "F", folder: "F-new-york", photos: ["/demo/F-new-york/demo_F_rav4.jpg"] },
 ];
 
 export type Role = "reviewer" | "owner";

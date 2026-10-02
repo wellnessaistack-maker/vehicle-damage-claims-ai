@@ -73,6 +73,21 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     priorEvidenceRequests: 0,
     contact: { phone: "(555) 010-0151", email: "tom.becker@example.com", preferred: "email" },
   },
+  // A second simple claim, in Brooklyn, so the New York labour rate prices it.
+  F: {
+    claimId: "CLM-2026-10486",
+    policyholder: "Sam Rivera",
+    policyVehicle: { year: 2019, make: "Toyota", model: "RAV4", colour: "Blue", powertrain: "combustion" },
+    zip: "11217",
+    vehicleValueUsd: 22000,
+    lossDate: "2026-09-29",
+    lossDescription: "Someone opened their car door into mine while I was parked. Dent and scrape on the front passenger door.",
+    reportedImpactArea: "right",
+    injuryReported: false,
+    vehicleDrivable: true,
+    priorEvidenceRequests: 0,
+    contact: { phone: "(555) 010-0177", email: "sam.rivera@example.com", preferred: "email" },
+  },
 };
 
 /** Demo folders are named after their case, e.g. "A-straightforward". */
