@@ -85,7 +85,7 @@ export function Worklist(props: {
           {route && c.status === "done" && <span className={`route-${route}`}><span className="dot" style={{ display: "inline-block", marginRight: 6 }} /></span>}
           {c.status === "done" && c.outcome?.agreement && c.outcome.agreement !== "kept" && (
             <span className="chip chip-warn wl-override" title={`Recommended: ${ROUTE_LABELS[c.outcome.recommendedRoute ?? "manual_triage"]}`}>
-              {c.outcome.agreement === "changed_route" ? "Route changed" : "Amount changed"}
+              {c.outcome.agreement === "changed_route" ? "Route changed" : c.outcome.agreement === "changed_team" ? "Team changed" : "Amount changed"}
             </span>
           )}
           {reason}
@@ -199,10 +199,12 @@ function AgreementSummary({ log }: { log: ReviewLogEntry[] }) {
       <div className="wl-agree-bar" aria-hidden>
         <span className="k" style={{ flex: s.kept }} />
         <span className="a" style={{ flex: s.adjusted }} />
+        <span className="t" style={{ flex: s.team }} />
         <span className="c" style={{ flex: s.changed }} />
       </div>
       <div className="hint">
-        {s.changed} route{s.changed === 1 ? "" : "s"} changed · {s.adjusted} amount{s.adjusted === 1 ? "" : "s"} changed. Includes photo requests. Each change is logged with the reason.
+        {s.changed} route{s.changed === 1 ? "" : "s"} changed · {s.adjusted} amount{s.adjusted === 1 ? "" : "s"} changed
+        {s.team > 0 ? ` · ${s.team} sent to a different team` : ""}. Includes photo requests. Each change is logged with the reason.
       </div>
       <button className="btn btn-sm" onClick={() => downloadFile("review-log.csv", logCsv(log), "text/csv")}>
         Download review log (CSV)

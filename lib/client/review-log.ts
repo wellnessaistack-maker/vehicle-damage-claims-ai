@@ -6,7 +6,7 @@
 
 import { decide, type Decision } from "../policy/engine.ts";
 import { ROUTE_LABELS, type Route, type Settings } from "../policy/protocol.ts";
-import { REVIEWER, type Agreement, type CaseItem, type CaseOutcome } from "./cases.ts";
+import { recipient, recommendedTeams, REVIEWER, type Agreement, type CaseItem, type CaseOutcome } from "./cases.ts";
 
 export type { Agreement };
 
@@ -14,6 +14,7 @@ export const AGREEMENT_LABELS: Record<Agreement, string> = {
   kept: "Kept the recommendation",
   adjusted_range: "Changed the amount",
   changed_route: "Changed the route",
+  changed_team: "Sent to a different team",
 };
 
 export interface ReviewLogEntry {
@@ -24,6 +25,9 @@ export interface ReviewLogEntry {
   reviewer: string;
   recommendedRoute: Route;
   finalRoute: Route;
+  /** Who the recommendation would send it to, and who the reviewer sent it to. */
+  recommendedTo: string[];
+  sentTo: string[];
   agreement: Agreement;
   action: CaseOutcome["action"];
   aiRange: { lowUsd: number; highUsd: number } | null;
@@ -47,16 +51,20 @@ export function recommendation(c: CaseItem, settings: Settings): Decision | null
 /**
  * A route change is always a disagreement. A new amount counts as "adjusted" when the route
  * holds, and as a route change when the new range moves the claim to a different route.
- * Handing off with the recommended route is agreement.
+ * Handing off on the recommended route is agreement only when it goes to the team the
+ * recommendation names: a total loss sent to a field adjuster, or a simple claim sent to a
+ * supervisor, is a different decision.
  */
-export function agreementOf(recommended: Route, o: Pick<CaseOutcome, "action" | "route" | "adjustedRange">): Agreement {
+export function agreementOf(recommended: Route, o: Pick<CaseOutcome, "action" | "route" | "adjustedRange" | "sentTo">, recommendedTo?: string[]): Agreement {
   if (o.action === "route_changed" || o.route !== recommended) return "changed_route";
+  if (o.action === "handed_off" && recommendedTo && o.sentTo?.some((t) => !recommendedTo.includes(t))) return "changed_team";
   if (o.adjustedRange) return "adjusted_range";
   return "kept";
 }
 
 export function logEntry(c: CaseItem, o: CaseOutcome, rec: Decision | null): ReviewLogEntry {
   const recommendedRoute = rec?.route ?? "manual_triage";
+  const recommendedTo = recommendedTeams(rec);
   const e = rec?.requiredOutputs.estimate;
   const v = rec?.requiredOutputs.vehicle;
   return {
@@ -67,7 +75,9 @@ export function logEntry(c: CaseItem, o: CaseOutcome, rec: Decision | null): Rev
     reviewer: REVIEWER.name,
     recommendedRoute,
     finalRoute: o.route,
-    agreement: agreementOf(recommendedRoute, o),
+    recommendedTo,
+    sentTo: o.sentTo ?? [],
+    agreement: agreementOf(recommendedRoute, o, recommendedTo),
     action: o.action,
     aiRange: e && e.lowUsd !== null && e.highUsd !== null ? { lowUsd: e.lowUsd, highUsd: e.highUsd } : null,
     adjustedRange: o.adjustedRange,
@@ -83,11 +93,12 @@ export interface AgreementSummary {
   kept: number;
   adjusted: number;
   changed: number;
+  team: number;
 }
 
 export function summarize(log: ReviewLogEntry[]): AgreementSummary {
   const n = (a: Agreement) => log.filter((e) => e.agreement === a).length;
-  return { total: log.length, kept: n("kept"), adjusted: n("adjusted_range"), changed: n("changed_route") };
+  return { total: log.length, kept: n("kept"), adjusted: n("adjusted_range"), changed: n("changed_route"), team: n("changed_team") };
 }
 
 const cell = (v: string | number | null | undefined) => {
@@ -97,7 +108,7 @@ const cell = (v: string | number | null | undefined) => {
 
 /** Every decision, one row each: the file a data lead would load to track the override rate. */
 export function logCsv(log: ReviewLogEntry[]): string {
-  const head = ["claim_id", "decided_at", "reviewer", "recommended_route", "final_route", "agreement", "action", "ai_low_usd", "ai_high_usd", "reviewer_low_usd", "reviewer_high_usd", "reason", "rules_fired"];
+  const head = ["claim_id", "decided_at", "reviewer", "recommended_route", "final_route", "agreement", "action", "ai_low_usd", "ai_high_usd", "reviewer_low_usd", "reviewer_high_usd", "reason", "rules_fired", "recommended_to", "sent_to"];
   const rows = log.map((e) =>
     [
       e.claimId,
@@ -113,6 +124,8 @@ export function logCsv(log: ReviewLogEntry[]): string {
       e.adjustedRange?.highUsd,
       e.reason,
       e.rulesFired.join(" "),
+      e.recommendedTo.join(" "),
+      e.sentTo.join(" "),
     ]
       .map(cell)
       .join(","),
@@ -142,7 +155,12 @@ export function testCaseRow(e: ReviewLogEntry, settings: Settings): string {
     e.vehicle.model ?? "CANT_TELL",
     e.vehicle.colour ?? "CANT_TELL",
     e.adjustedRange ? bandFor(e.adjustedRange.highUsd, settings) : "unsure",
-    (e.reason ?? `Reviewer chose ${ROUTE_LABELS[e.finalRoute]} over ${ROUTE_LABELS[e.recommendedRoute]}`).replace(/[,\n]/g, ";"),
+    (
+      e.reason ??
+      (e.agreement === "changed_team"
+        ? `Reviewer sent it to ${e.sentTo.map((t) => recipient(t).name).join(" and ")} instead of ${e.recommendedTo.map((t) => recipient(t).name).join(" and ")}`
+        : `Reviewer chose ${ROUTE_LABELS[e.finalRoute]} over ${ROUTE_LABELS[e.recommendedRoute]}`)
+    ).replace(/[,\n]/g, ";"),
     "Reviewer correction",
     "draft (reviewer)",
   ];

@@ -18,6 +18,15 @@ test("a new range is an adjustment, unless it moves the claim to another route",
   assert.equal(agreementOf("photo_estimate", { action: "assigned_adjuster", route: "adjuster", adjustedRange: { lowUsd: 3000, highUsd: 4200 } }), "changed_route");
 });
 
+test("handing off counts as agreement only when it goes to the recommended team", () => {
+  const o = { action: "handed_off" as const, route: "adjuster" as const };
+  assert.equal(agreementOf("adjuster", { ...o, sentTo: ["field"] }, ["field"]), "kept");
+  assert.equal(agreementOf("adjuster", { ...o, sentTo: ["total_loss"] }, ["field"]), "changed_team");
+  assert.equal(agreementOf("adjuster", { ...o, sentTo: ["field"] }, ["total_loss"]), "changed_team");
+  assert.equal(agreementOf("adjuster", { ...o, sentTo: ["siu"] }, ["field", "siu"]), "kept");
+  assert.equal(agreementOf("photo_estimate", { action: "handed_off", route: "photo_estimate", sentTo: ["marcus"] }, ["repair"]), "changed_team");
+});
+
 test("changing the route is always a disagreement", () => {
   assert.equal(agreementOf("more_evidence", { action: "route_changed", route: "adjuster" }), "changed_route");
 });
@@ -38,7 +47,7 @@ test("the log totals agreement and exports one CSV row per decision", () => {
   ];
   // With no decision the recommendation is manual triage, so both differ here; set one to agree.
   log[0] = { ...log[0], recommendedRoute: "photo_estimate", agreement: "kept" };
-  assert.deepEqual(summarize(log), { total: 2, kept: 1, adjusted: 0, changed: 1 });
+  assert.deepEqual(summarize(log), { total: 2, kept: 1, adjusted: 0, changed: 1, team: 0 });
   const csv = logCsv(log).trim().split("\n");
   assert.equal(csv.length, 3);
   assert.match(csv[0], /^claim_id,decided_at,reviewer,recommended_route,final_route,agreement/);

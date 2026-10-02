@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { currentDecision, DIRECTORY, holderLine, recipient, REVIEWER, ROUTE_OWNER, type CaseItem, type CaseOutcome, type ThreadEntry } from "@/lib/client/cases.ts";
+import { currentDecision, DIRECTORY, holderLine, recipient, recommendedTeams, REVIEWER, ROUTE_OWNER, type CaseItem, type CaseOutcome, type ThreadEntry } from "@/lib/client/cases.ts";
 import { CALL_OUTCOMES, channels, customerUpdate, defaultChannel, firstName, followUpDate, preview as messagePreview, reminder, sentVia, shortDate, type Channel } from "@/lib/client/customer.ts";
 import { loadDemoPhoto, shrink, kindOf, type CasePhoto } from "@/lib/client/intake.ts";
 import { decide, type Decision, type EstimateOutput } from "@/lib/policy/engine.ts";
@@ -850,6 +850,7 @@ function ActionBar(props: {
   const totalLoss = !!d?.reasons.some((r) => r.id === "C2");
   const adjusterTargets = totalLoss ? ["total_loss"] : ["field"];
   if (d?.siuReferral) adjusterTargets.push("siu");
+  const recommendedTo = recommendedTeams(d);
   const names = (ids: string[]) => ids.map((id) => recipient(id).name.replace(/^(Estimating|Total|Field|Manual)/, (m) => m.toLowerCase())).join(" and ");
 
   // The reviewer's amount goes back through the same rules, so a correction can change the route.
@@ -1030,13 +1031,16 @@ function ActionBar(props: {
               <select value={to} onChange={(ev) => setTo(ev.target.value)}>
                 {DIRECTORY.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.name} ({r.role})
+                    {r.name} ({r.role}){recommendedTo.includes(r.id) ? ", recommended" : ""}
                   </option>
                 ))}
               </select>
             </label>
           </div>
-          <div className="hint">{recipient(to).forWhat}.</div>
+          <div className="hint">
+            {recipient(to).forWhat}.
+            {!recommendedTo.includes(to) && <> The recommended team is the {names(recommendedTo)}, so handing off here is logged as a different decision.</>}
+          </div>
           <label>
             Note for {recipient(to).name}
             <textarea rows={2} value={note} onChange={(ev) => setNote(ev.target.value)} placeholder="What do you need from them?" />
@@ -1066,7 +1070,9 @@ function ActionBar(props: {
                 done({
                   action: "handed_off",
                   route,
-                  summary: `Handed off to ${recipient(to).name} (${recipient(to).role}) with the recommended route of ${ROUTE_LABELS[route]}.`,
+                  summary: recommendedTo.includes(to)
+                    ? `Handed off to ${recipient(to).name} (${recipient(to).role}), as recommended.`
+                    : `Handed off to ${recipient(to).name} (${recipient(to).role}) instead of the ${names(recommendedTo)}, the recommended team.`,
                   reason: note.trim() || undefined,
                   sentTo: [to],
                 })

@@ -40,6 +40,19 @@ export const DIRECTORY: Recipient[] = [
 
 export const recipient = (id: string) => DIRECTORY.find((r) => r.id === id)!;
 
+/**
+ * Who the recommendation would send the claim to. On the adjuster route that depends on why:
+ * the total loss unit when the repair may cost more than the car is worth, a field adjuster
+ * otherwise, and SIU as well when fraud signs fired.
+ */
+export function recommendedTeams(d: Decision | null): string[] {
+  if (!d) return ["manual"];
+  if (d.route !== "adjuster") return [ROUTE_OWNER[d.route]];
+  const teams = [d.reasons.some((r) => r.id === "C2") ? "total_loss" : "field"];
+  if (d.siuReferral) teams.push("siu");
+  return teams;
+}
+
 /** Where a claim goes next on each route when the reviewer accepts it. */
 export const ROUTE_OWNER: Record<Route, string> = {
   photo_estimate: "repair",
@@ -49,7 +62,7 @@ export const ROUTE_OWNER: Record<Route, string> = {
 };
 
 /** How the reviewer's decision compares with the recommendation. See review-log.ts. */
-export type Agreement = "kept" | "adjusted_range" | "changed_route";
+export type Agreement = "kept" | "adjusted_range" | "changed_route" | "changed_team";
 
 export interface CaseOutcome {
   action: OutcomeAction;

@@ -10,6 +10,7 @@ import {
   firstReviewNote,
   newClaimId,
   now,
+  recommendedTeams,
   REVIEWER,
   routeOf,
   uid,
@@ -226,7 +227,7 @@ export function Workspace() {
       // Record what was recommended next to what the reviewer chose, so agreement can be measured.
       const rec = c ? recommendation(c, settings) : null;
       const recommendedRoute = rec?.route ?? "manual_triage";
-      const outcome: Omit<CaseOutcome, "at"> = { ...reviewed, recommendedRoute, agreement: agreementOf(recommendedRoute, reviewed) };
+      const outcome: Omit<CaseOutcome, "at"> = { ...reviewed, recommendedRoute, agreement: agreementOf(recommendedRoute, reviewed, recommendedTeams(rec)) };
       const at = now();
       if (c) setReviewLog((log) => [...log, logEntry(c, { ...outcome, at }, rec)]);
       const tab = outcome.action === "message_sent" ? "waiting" : "completed";

@@ -330,7 +330,7 @@ A person approves each claim today. That's the right place to start. We'd reduce
 
 ### Tracking overrides
 
-How often reviewers disagree with the recommendation is a direct way to measure accuracy on live claims. Each decision records the recommended route, the reviewer's route, the estimate and any amount the reviewer changed it to, the reason, and the rules that fired. In the prototype, **Completed** shows "Kept the recommendation on X of Y decisions", with route changes and amount changes counted separately, and the log downloads as a CSV. Each claim's **Decision record** shows everything behind it, and any correction can be downloaded as a labelled test case for the evaluation set. In production it would feed an override dashboard, and each correction would become a bug fix or a new test case.
+How often reviewers disagree with the recommendation is a direct way to measure accuracy on live claims. Each decision records the recommended route and team, the reviewer's route and who they sent it to, the estimate and any amount the reviewer changed it to, the reason, and the rules that fired. In the prototype, **Completed** shows "Kept the recommendation on X of Y decisions", with route changes, amount changes and hand-offs to a different team counted separately (sending a total loss to a field adjuster on the right route still counts as a different decision), and the log downloads as a CSV. Each claim's **Decision record** shows everything behind it, and any correction can be downloaded as a labelled test case for the evaluation set. In production it would feed an override dashboard, and each correction would become a bug fix or a new test case.
 
 ## Key assumptions and trade-offs
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { currentDecision, holderLine, type CaseItem } from "@/lib/client/cases.ts";
+import { currentDecision, holderLine, recipient, type CaseItem } from "@/lib/client/cases.ts";
 import { AGREEMENT_LABELS, downloadFile, testCaseRow, type ReviewLogEntry } from "@/lib/client/review-log.ts";
 import { DEFAULT_SETTINGS, ROUTE_LABELS, SETTING_DEFS, usd as usd0, type Settings } from "@/lib/policy/protocol.ts";
 
@@ -64,6 +64,14 @@ export function DecisionRecordDrawer({ item, settings, log, onClose }: { item: C
                     {ROUTE_LABELS[last.finalRoute]}{" "}
                     <span className={`chip ${last.agreement === "kept" ? "chip-ok" : "chip-warn"}`}>{AGREEMENT_LABELS[last.agreement]}</span>
                   </dd>
+                  {last.agreement === "changed_team" && (
+                    <>
+                      <dt>Sent to</dt>
+                      <dd>
+                        {last.sentTo.map((t) => recipient(t).name).join(" and ")}; the recommendation was {last.recommendedTo.map((t) => recipient(t).name).join(" and ")}
+                      </dd>
+                    </>
+                  )}
                   {last.adjustedRange && last.aiRange && (
                     <>
                       <dt>Estimate</dt>

@@ -476,6 +476,7 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .wl-agree-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--line); }
 .wl-agree-bar .k { background: var(--ok); }
 .wl-agree-bar .a { background: var(--evidence); }
+.wl-agree-bar .t { background: #c2410c; }
 .wl-agree-bar .c { background: var(--adjuster); }
 .wl-agree .btn { align-self: flex-start; }
 .drivers .driver-note { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
