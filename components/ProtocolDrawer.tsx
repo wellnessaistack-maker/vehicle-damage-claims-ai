@@ -35,11 +35,37 @@ const GROUPS: { id: RuleGroup; title: string; catches: string; sendsTo: string }
   { id: "review", title: "Review flags", catches: "Sensor area, car or damage doesn't match the claim", sendsTo: "Same route, flagged" },
 ];
 
-/** Which rule groups lead to each route, highest priority first. */
-const ROUTE_FLOW: { route: Route; groups: RuleGroup[] }[] = [
-  { route: "adjuster", groups: ["safety", "scope", "integrity", "cost"] },
-  { route: "more_evidence", groups: ["evidence"] },
-  { route: "photo_estimate", groups: [] },
+/** What sends a claim to each route, in plain words, with the rules behind each line. Highest priority first. */
+const ROUTE_FLOW: { route: Route; items: { text: (s: Settings) => string; rules: string[] }[] }[] = [
+  {
+    route: "adjuster",
+    items: [
+      { text: () => "Injury reported, or the car can't be driven", rules: ["S1", "S2"] },
+      { text: () => "Structural damage, airbags, fire or flood, EV battery", rules: ["S3", "S4", "S5", "S6"] },
+      { text: () => "Not a road car: race car, motorcycle, commercial", rules: ["P1", "P2"] },
+      { text: () => "Photo reused from a past claim, or of a screen (also to SIU)", rules: ["I1", "I2", "I3"] },
+      { text: (s) => `Estimate over the ${usd(s.fastPathLimitUsd)} approval limit, or past the total-loss line`, rules: ["C1", "C2", "C4"] },
+      { text: (s) => `Photos already requested ${s.maxEvidenceRequests} times`, rules: ["E7"] },
+    ],
+  },
+  {
+    route: "more_evidence",
+    items: [
+      { text: () => "Can't identify the car", rules: ["E2"] },
+      { text: () => "Damage not fully in frame", rules: ["E3"] },
+      { text: () => "Photo too dark, blurry or small", rules: ["E4"] },
+      { text: () => "No car, or no damage, visible", rules: ["E1", "E5"] },
+      { text: () => "More than one car in the photo", rules: ["E6"] },
+    ],
+  },
+  {
+    route: "photo_estimate",
+    items: [
+      { text: () => "Nothing in the other two columns applies", rules: [] },
+      { text: (s) => `Estimate within the ${usd(s.fastPathLimitUsd)} approval limit`, rules: [] },
+      { text: () => "A sensor area or a mismatch adds a check, but keeps the route", rules: ["R1", "R2", "R3", "R4", "C3"] },
+    ],
+  },
 ];
 
 /** The settings worth showing first; the rest sit under "More settings". */
@@ -159,13 +185,21 @@ export function ProtocolDrawer(props: {
           <div className="card">
             <div className="card-body proto-how">
               <div className="proto-flow" aria-label="How a claim is routed">
-                <span className="proto-node">Claim and photos</span>
+                <span className="proto-node">
+                  Claim and photos<small>Policy, claim form, photo checks in code</small>
+                </span>
                 <span className="arrow">→</span>
-                <span className="proto-node">AI describes them</span>
+                <span className="proto-node">
+                  AI describes them<small>Car, damaged parts, risk signs, what&apos;s in frame</small>
+                </span>
                 <span className="arrow">→</span>
-                <span className="proto-node proto-node-rules">Rules pick a route</span>
+                <span className="proto-node proto-node-rules">
+                  Rules pick a route<small>The lists below</small>
+                </span>
                 <span className="arrow">→</span>
-                <span className="proto-node">Reviewer decides</span>
+                <span className="proto-node">
+                  Reviewer decides<small>Approves, or overrides with a reason</small>
+                </span>
               </div>
               <div className="proto-routes">
                 {ROUTE_FLOW.map((r) => {
@@ -176,28 +210,22 @@ export function ProtocolDrawer(props: {
                         <span className="dot" /> {ROUTE_LABELS[r.route]}
                         {here && selected && <span className="proto-here">This claim</span>}
                       </div>
-                      <div className="proto-route-groups">
-                        {r.groups.length === 0 ? (
-                          <span className={here ? "hit" : ""}>No rules fired</span>
-                        ) : (
-                          r.groups.map((gid) => {
-                            const g = GROUPS.find((x) => x.id === gid)!;
-                            const hit = RULES.some((rule) => rule.group === gid && fired.has(rule.id));
-                            return (
-                              <span key={gid} className={hit ? "hit" : ""}>
-                                {g.title}
-                              </span>
-                            );
-                          })
-                        )}
-                      </div>
+                      <ul className="proto-route-items">
+                        {r.items.map((it, i) => {
+                          const hit = it.rules.filter((id) => fired.has(id));
+                          return (
+                            <li key={i} className={hit.length ? "hit" : ""}>
+                              {it.text(settings)}
+                              {hit.length > 0 && <span className="rid">{hit.join(", ")}</span>}
+                            </li>
+                          );
+                        })}
+                      </ul>
                     </div>
                   );
                 })}
               </div>
-              <div className="hint">
-                When rules point to different routes, the one further left takes priority: if one rule says adjuster and another says ask for photos, it goes to the adjuster. Review flags keep the route but ask a person to check. If the AI fails, the claim goes to manual triage.
-              </div>
+              <div className="hint">If one rule says adjuster and another says ask for photos, it goes to the adjuster. If the AI fails, the claim goes to manual triage.</div>
             </div>
           </div>
 
@@ -320,10 +348,10 @@ function ProtocolTest({ comparison }: { comparison: Comparison }) {
           </tr>
         </thead>
         <tbody>
-          {row("Complex-case escalation recall", `${before.escalation.caught} of ${before.escalation.of}`, `${after.escalation.caught} of ${after.escalation.of}`)}
-          {row("Routing agreement (exact)", `${before.agreement.exact} of ${before.agreement.of}`, `${after.agreement.exact} of ${after.agreement.of}`)}
-          {row("Routing agreement (acceptable)", `${before.agreement.acceptable} of ${before.agreement.of}`, `${after.agreement.acceptable} of ${after.agreement.of}`)}
-          {row("Escalated when not needed", `${before.overEscalated.count} of ${before.overEscalated.of}`, `${after.overEscalated.count} of ${after.overEscalated.of}`)}
+          {row("Complex claims sent to an adjuster", `${before.escalation.caught} of ${before.escalation.of}`, `${after.escalation.caught} of ${after.escalation.of}`)}
+          {row("Same route as the expert label", `${before.agreement.exact} of ${before.agreement.of}`, `${after.agreement.exact} of ${after.agreement.of}`)}
+          {row("An acceptable route per the label", `${before.agreement.acceptable} of ${before.agreement.of}`, `${after.agreement.acceptable} of ${after.agreement.of}`)}
+          {row("Simple claims sent to an adjuster unnecessarily", `${before.overEscalated.count} of ${before.overEscalated.of}`, `${after.overEscalated.count} of ${after.overEscalated.of}`)}
         </tbody>
       </table>
       <div style={{ marginTop: 8 }}>
