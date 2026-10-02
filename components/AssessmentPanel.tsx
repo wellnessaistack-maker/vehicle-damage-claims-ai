@@ -421,6 +421,36 @@ const GROUPS: { effect: "adjuster" | "more_evidence" | "review"; label: string }
   { effect: "review", label: "Flags it for a person to check" },
 ];
 
+/** "Can't identify the car (E2) and damage isn't fully in frame (E3)" */
+function listRules(rs: Decision["reasons"]) {
+  const parts = rs.map((r) => `${r.title.charAt(0).toLowerCase()}${r.title.slice(1)} (${r.id})`);
+  return parts.length < 2 ? parts.join("") : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+/** Why, in one or two sentences, before the detail. */
+function WhySummary({ d }: { d: Decision }) {
+  const by = (e: string) => d.reasons.filter((r) => r.effect === e);
+  const adjuster = by("adjuster");
+  const evidence = by("more_evidence");
+  const review = by("review");
+  const main = d.route === "adjuster" ? adjuster : d.route === "more_evidence" ? evidence : [];
+  return (
+    <div className="why-summary">
+      {main.length > 0 && (
+        <div>
+          <b>Because:</b> {listRules(main)}.
+        </div>
+      )}
+      {d.route === "adjuster" && evidence.length > 0 && <div>Photo rules fired too ({evidence.map((r) => r.id).join(", ")}), but an adjuster comes before asking for photos.</div>}
+      {review.length > 0 && (
+        <div>
+          {main.length === 0 && "No rule changes the route. "}Flagged for a person to check: {listRules(review)}.
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** The card's question, in the route's own words: "Why it's ready to approve", and so on. */
 function whyHeading(d: Decision) {
   if (d.route === "photo_estimate") return "Why it's ready to approve";
@@ -447,43 +477,53 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
             No rules fired: the photos show the whole car and damage, nothing looks serious, and the estimate is within the approval limit. Everything below was checked.
           </div>
         ) : (
-          GROUPS.map((g) => {
-            const rs = d.reasons.filter((r) => r.effect === g.effect);
-            if (!rs.length) return null;
-            return (
-              <div key={g.effect} className={`reason-group effect-${g.effect}`}>
-                <div className="reason-group-head">
-                  <span className="dot" /> {g.label} <span className="n">{rs.length}</span>
-                </div>
-                <ul className="reasons compact">
-                  {rs.map((r) => (
-                    <li key={r.id} className={`reason effect-${r.effect}`}>
-                      <div>
-                        <span className="reason-title">{r.title}</span>
-                        <span className="rid">{r.id}</span>
-                        <span className="reason-text"> {r.reason}</span>
-                        {(r.evidence || r.citations) && (
-                          <details className="cites">
-                            <summary>What it saw and checked</summary>
-                            {r.evidence && <div className="reason-evidence">Seen: {r.evidence}</div>}
-                            {r.citations && (
-                              <ul>
-                                {r.citations.map((c, k) => (
-                                  <li key={k}>
-                                    <span className={`src src-${c.source.split(" ")[0].toLowerCase()}`}>{c.source}</span> {c.text}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </details>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })
+          <>
+            <WhySummary d={d} />
+            <details className="fold">
+              <summary>
+                Each rule, with what it saw and where that came from ({d.reasons.length})
+              </summary>
+              {GROUPS.map((g) => {
+                const rs = d.reasons.filter((r) => r.effect === g.effect);
+                if (!rs.length) return null;
+                return (
+                  <div key={g.effect} className={`reason-group effect-${g.effect}`}>
+                    <div className="reason-group-head">
+                      <span className="dot" /> {g.label} <span className="n">{rs.length}</span>
+                    </div>
+                    <ul className="reasons compact">
+                      {rs.map((r) => {
+                        const rule = r.citations?.find((c) => c.source === "Protocol" && c.text.startsWith("Rule "));
+                        const sources = r.citations?.filter((c) => c !== rule) ?? [];
+                        return (
+                          <li key={r.id} className={`reason effect-${r.effect}`}>
+                            <div>
+                              <span className="reason-title">{r.title}</span>
+                              <span className="rid">{r.id}</span>
+                              <span className="reason-text"> {r.reason}</span>
+                              <div className="cites">
+                                {rule && <div className="reason-rule">{rule.text}</div>}
+                                {r.evidence && <div className="reason-evidence">Seen: {r.evidence}</div>}
+                                {sources.length > 0 && (
+                                  <ul>
+                                    {sources.map((c, k) => (
+                                      <li key={k}>
+                                        <span className={`src src-${c.source.split(" ")[0].toLowerCase()}`}>{c.source}</span> {c.text}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })}
+            </details>
+          </>
         )}
         <Checks d={d} />
       </div>

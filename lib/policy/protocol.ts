@@ -489,7 +489,7 @@ export const RULES: Rule[] = [
       return dup
         ? {
             reason: `A photo closely matches one already submitted on claim ${dup.nearDuplicateOf}.`,
-            evidence: dup.name,
+            evidence: `Photo ${photos.indexOf(dup) + 1}`,
             referToSiu: true,
           }
         : null;
@@ -613,11 +613,11 @@ export const RULES: Rule[] = [
       const washed = allFail((p) => p.clippedHighlights > t.maxClippedHighlights);
       const issues = x.evidence.photo_issues;
       if (dark.length || issues.includes("too_dark")) {
-        problems.push(dark.length ? `too dark (${dark.map((p) => p.name).join(", ")})` : "too dark");
+        problems.push(dark.length ? `too dark (${dark.map((p) => `photo ${photos.indexOf(p) + 1}`).join(", ")})` : "too dark");
         retakes.push({ view: "The same photos in daylight or a well-lit spot", why: "the photo is too dark to see the damage clearly" });
       }
       if (soft.length || issues.includes("blur")) {
-        problems.push(soft.length ? `blurry or very soft (${soft.map((p) => p.name).join(", ")})` : "blurry");
+        problems.push(soft.length ? `blurry or very soft (${soft.map((p) => `photo ${photos.indexOf(p) + 1}`).join(", ")})` : "blurry");
         retakes.push({ view: "The same photos, holding the phone steady", why: "the photo is blurry" });
       }
       if (small.length || issues.includes("low_resolution")) {

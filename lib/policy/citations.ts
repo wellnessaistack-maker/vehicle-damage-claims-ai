@@ -11,7 +11,7 @@ import type { ClaimContext, PhotoMetrics } from "../claims/types.ts";
 import type { Extraction } from "../extraction/schema.ts";
 import type { CostRange } from "./cost.ts";
 import { totalLossLine } from "./states.ts";
-import { PROTOCOL_VERSION, SETTING_DEFS, sameColour, sameMake, usd, zonesFor, type Rule, type Settings, type SourceKey } from "./protocol.ts";
+import { PROTOCOL_VERSION, SETTING_DEFS, sameColour, sameMake, usd, zonesFor, type Effect, type Rule, type Settings, type SourceKey } from "./protocol.ts";
 
 export type SourceKind = "Policy record" | "Claim form" | "Photo (AI)" | "Photo check (code)" | "Past claims" | "Estimate" | "Protocol";
 
@@ -36,13 +36,24 @@ interface Ctx {
   cost: CostRange | null;
 }
 
-export function citationsFor(rule: Rule, ctx: Ctx): Citation[] {
-  const out: Citation[] = rule.uses.map((k) => cite(k, ctx));
+const THEN: Record<Effect, string> = {
+  adjuster: "send it to an adjuster",
+  more_evidence: "ask the customer for more photos",
+  review: "keep the route, and flag it for a person to check",
+};
+
+/** The rule itself, in words: "Rule S2, locked. When: ... Then: send it to an adjuster." */
+export function ruleStatement(rule: Rule, effect: Effect = rule.effect): string {
+  const who = rule.tier === "locked" ? "locked" : "set by the carrier";
+  return `Rule ${rule.id}, ${who} (routing protocol v${PROTOCOL_VERSION}). When: ${rule.when} Then: ${THEN[effect]}.`;
+}
+
+export function citationsFor(rule: Rule, ctx: Ctx, effect: Effect = rule.effect): Citation[] {
+  const out: Citation[] = [{ source: "Protocol", text: ruleStatement(rule, effect) }, ...rule.uses.map((k) => cite(k, ctx))];
   for (const key of rule.settings ?? []) {
     const def = SETTING_DEFS.find((d) => d.key === key)!;
     out.push({ source: "Protocol", text: `Setting "${def.label}": ${formatSetting(key, ctx.settings)}` });
   }
-  out.push({ source: "Protocol", text: `Routing protocol v${PROTOCOL_VERSION}, rule ${rule.id} (${rule.tier === "locked" ? "locked" : "configurable"})` });
   return out;
 }
 
@@ -86,11 +97,11 @@ function cite(key: SourceKey, { x, claim, photos, cost }: Ctx): Citation {
     case "photo.checks":
       return {
         source: "Photo check (code)",
-        text: photos.map((p) => `${p.name}: brightness ${Math.round(p.brightness)}, sharpness ${Math.round(p.sharpness)}, ${p.width} x ${p.height}`).join("; ") || "No photos",
+        text: photos.map((p, i) => `Photo ${i + 1}: brightness ${Math.round(p.brightness)}, sharpness ${Math.round(p.sharpness)}, ${p.width} x ${p.height}`).join("; ") || "No photos",
       };
     case "photo.pastClaims": {
       const hit = photos.find((p) => p.nearDuplicateOf);
-      return { source: "Past claims", text: hit ? `${hit.name} matches a photo on claim ${hit.nearDuplicateOf}` : "No match against past-claim photos" };
+      return { source: "Past claims", text: hit ? `Photo ${photos.indexOf(hit) + 1} matches a photo on claim ${hit.nearDuplicateOf}` : "No match against past-claim photos" };
     }
     case "estimate":
       return { source: "Estimate", text: cost ? `${cost.lowUsd === cost.highUsd ? usd(cost.highUsd) : `Range ${usd(cost.lowUsd)} to ${usd(cost.highUsd)}`}${cost.ceilingUsd > cost.highUsd ? `, up to ${usd(cost.ceilingUsd)} with possible hidden damage` : ""} (${cost.drivers.some((d) => d.label === "Reviewer's amount") ? "reviewer's amount" : cost.pricing.source === "rate_card" ? `rate card at ${usd(cost.pricing.labourRateUsd)}/h` : "AI item prices"})` : "No estimate" };

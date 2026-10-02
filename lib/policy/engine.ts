@@ -127,7 +127,7 @@ export function decide(x: Extraction, claim: ClaimContext, photos: PhotoMetrics[
       fired: !!hit,
       reason: hit?.reason,
       evidence: hit?.evidence || undefined,
-      citations: hit ? citationsFor(rule, { x, claim, photos, settings, cost }) : undefined,
+      citations: hit ? citationsFor(rule, { x, claim, photos, settings, cost }, effect) : undefined,
     });
     if (!hit) continue;
     firedSoFar.push(rule.id);
@@ -313,7 +313,7 @@ export function customerMessage(claim: ClaimContext, retakes: RetakeRequest[]): 
 function checklist(x: Extraction, photos: PhotoMetrics[], s: Settings, firedIds: string[]): ChecklistItem[] {
   const t = PHOTO_QUALITY_THRESHOLDS[s.photoQuality];
   const issues = x.evidence.photo_issues;
-  const names = (ps: PhotoMetrics[]) => ps.map((p) => p.name).join(", ");
+  const names = (ps: PhotoMetrics[]) => ps.map((p) => `Photo ${photos.indexOf(p) + 1}`).join(", ");
   // Same rule as the protocol: with several photos, one good photo is enough.
   const allFail = (bad: (p: PhotoMetrics) => boolean) => (photos.length > 0 && photos.every(bad) ? photos : []);
   const dark = allFail((p) => p.brightness < t.minBrightness);
