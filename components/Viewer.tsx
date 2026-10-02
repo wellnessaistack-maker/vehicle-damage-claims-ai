@@ -132,16 +132,16 @@ export function Viewer(props: {
               </span>
             ))}
           </div>
-          {photo && (
+          {photo && item.photos.length > 1 && (
             <span className="photo-name">
-              Photo {Math.min(idx, item.photos.length - 1) + 1} of {item.photos.length} · {photo.name}
+              Photo {Math.min(idx, item.photos.length - 1) + 1} of {item.photos.length}
             </span>
           )}
         </div>
         {item.photos.length > 1 && (
           <div className="thumbs">
             {item.photos.map((p, i) => (
-              <button key={i} className={`thumb ${i === idx ? "active" : ""}`} onClick={() => setIdx(i)} title={p.name}>
+              <button key={i} className={`thumb ${i === idx ? "active" : ""}`} onClick={() => setIdx(i)} title={`Photo ${i + 1}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.dataUrl || p.url} alt={p.name} />
               </button>
