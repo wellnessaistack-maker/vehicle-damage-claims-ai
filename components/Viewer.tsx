@@ -199,7 +199,7 @@ function ClaimEditor({ claim, onSave }: { claim: ClaimContext; onSave: (c: Claim
           <input value={pv.model ?? ""} onChange={(e) => setPv({ model: e.target.value || null })} />
         </label>
         <label>
-          Colour
+          Color
           <input value={pv.colour ?? ""} onChange={(e) => setPv({ colour: e.target.value || null })} />
         </label>
       </div>

@@ -62,7 +62,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
   E: {
     claimId: "CLM-2026-10484",
     policyholder: "Tom Becker",
-    policyVehicle: { year: 2019, make: "Toyota", model: "Camry", colour: "Grey", powertrain: "combustion" },
+    policyVehicle: { year: 2019, make: "Toyota", model: "Camry", colour: "Gray", powertrain: "combustion" },
     zip: "85004",
     vehicleValueUsd: 17000,
     lossDate: "2026-09-28",
@@ -73,7 +73,7 @@ export const DEMO_CLAIMS: Record<string, ClaimContext> = {
     priorEvidenceRequests: 0,
     contact: { phone: "(555) 010-0151", email: "tom.becker@example.com", preferred: "email" },
   },
-  // A second simple claim, in Brooklyn, so the New York labour rate prices it.
+  // A second simple claim, in Brooklyn, so the New York labor rate prices it.
   F: {
     claimId: "CLM-2026-10486",
     policyholder: "Sam Rivera",

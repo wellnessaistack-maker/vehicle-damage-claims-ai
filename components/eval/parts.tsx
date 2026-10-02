@@ -161,7 +161,7 @@ export function ModelComparison({ runs, title, sub }: { runs: { run: EvalRun; su
     ["An acceptable route per the label", (s) => `${s.agreement.acceptable} of ${s.agreement.of}`],
     ["Simple claims sent to an adjuster", (s) => `${s.overEscalated.count} of ${s.overEscalated.of}`],
     ["Didn't guess when unsure", (s) => `${s.abstention.correct} of ${s.abstention.of}`],
-    ["Make / model / colour", (s) => `${s.vehicle.make.right}/${s.vehicle.make.of}, ${s.vehicle.model.right}/${s.vehicle.model.of}, ${s.vehicle.colour.right}/${s.vehicle.colour.of}`],
+    ["Make / model / color", (s) => `${s.vehicle.make.right}/${s.vehicle.make.of}, ${s.vehicle.model.right}/${s.vehicle.model.of}, ${s.vehicle.colour.right}/${s.vehicle.colour.of}`],
     ["Typical time per claim", (s) => (s.latency ? `${(s.latency.p50 / 1000).toFixed(1)} s` : "n/a")],
     ["Cost per case", (s) => `$${s.cost.mean.toFixed(3)}`],
     ["AI failures", (s) => String(s.failures)],
@@ -267,7 +267,7 @@ export function CaseTable({ scored }: { scored: ScoredCase[] }) {
               <th>Expected</th>
               <th>Recommended route</th>
               <th>Why</th>
-              <th>Make · model · colour</th>
+              <th>Make · model · color</th>
               <th>Estimate</th>
             </tr>
           </thead>

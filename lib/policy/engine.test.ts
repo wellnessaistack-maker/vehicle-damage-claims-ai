@@ -181,13 +181,13 @@ test("each priced line shows what the AI saw, the math, and repair against repla
   assert.match(e.workings!.join(" "), /Repairs add up to .* less and plus 15%/);
 });
 
-test("the carrier's labour rate changes the estimate", () => {
+test("the carrier's labor rate changes the estimate", () => {
   const base = run(civicA()).requiredOutputs.estimate;
   const dearer = run(civicA(), claim(), [goodPhoto()], clampSettings({ labourRateUsd: 95 })).requiredOutputs.estimate;
   assert.ok(dearer.highUsd! > base.highUsd!);
 });
 
-test("the claim's ZIP code sets the labour market", () => {
+test("the claim's ZIP code sets the labor market", () => {
   const columbus = run(civicA(), claim({ zip: "43215" })).requiredOutputs.estimate;
   const sf = run(civicA(), claim({ zip: "94110" })).requiredOutputs.estimate;
   const iowa = run(civicA(), claim({ zip: "50309" })).requiredOutputs.estimate;
@@ -226,7 +226,7 @@ test("a part the rate card doesn't cover keeps the AI's own price, labelled", ()
   x.damage.items[0] = { ...x.damage.items[0], area: "other" };
   const d = run(x).requiredOutputs.estimate.drivers[0];
   assert.equal(d.source, "ai_estimate");
-  assert.match(d.note!, /Not on the rate card/);
+  assert.match(d.note!, /Not in the estimating guide/);
 });
 
 test("vehicles that aren't road cars keep the AI's own price", () => {
@@ -254,7 +254,7 @@ test("B: close-up doesn't guess the car, gives only a provisional estimate and a
   assert.ok(d.customerMessage);
   assert.doesNotMatch(d.customerMessage!, /\$/, "the provisional figure is never sent to the customer");
   assert.match(d.customerMessage!, /Hi Daniel/);
-  assert.match(d.customerMessage!, /3 metres back/);
+  assert.match(d.customerMessage!, /10 feet back/);
   assert.match(d.customerMessage!, /rear left side/);
 });
 
@@ -281,7 +281,7 @@ test("C: race car goes to an adjuster, with no estimate of our own", () => {
   const e = d.requiredOutputs.estimate;
   assert.equal(e.status, "withheld");
   assert.equal(e.lowUsd, null);
-  assert.match(e.note, /rate card doesn't cover it/);
+  assert.match(e.note, /estimating guide doesn't cover it/);
   assert.ok(e.aiItemsUsd!.highUsd > 0, "the AI's rough guess is kept for reference");
   assert.equal(d.humanReview.required, true);
   assert.equal(d.customerMessage, null, "don't ask for more photos when it's clearly serious");
@@ -485,7 +485,7 @@ test("policy checks compare the policy with the photos even when nothing fires",
   const d = run(civicA());
   const byLabel = Object.fromEntries(d.policyChecks.map((p) => [p.label, p]));
   assert.equal(byLabel["Insured vehicle"].status, "match");
-  assert.equal(byLabel["Colour"].status, "match");
+  assert.equal(byLabel["Color"].status, "match");
   assert.equal(byLabel["Point of impact"].status, "match");
   assert.match(byLabel["Coverage and deductible"].onFile, /Not checked/);
   const wrong = run(civicA(), claim({ reportedImpactArea: "front" }));

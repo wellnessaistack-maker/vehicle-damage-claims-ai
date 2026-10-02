@@ -17,7 +17,7 @@
 import type { Area, DamageItem, Extraction } from "../extraction/schema.ts";
 import { usd, type Settings } from "./protocol.ts";
 import type { ClaimContext } from "../claims/types.ts";
-import { HIGH_VOLTAGE_HOURS, marketFor, partsTierFor, priceItem, type PartsTier, type PriceOption } from "./ratecard.ts";
+import { areaLabel, HIGH_VOLTAGE_HOURS, marketFor, partsTierFor, priceItem, type PartsTier, type PriceOption } from "./ratecard.ts";
 
 export interface CostDriver {
   label: string;
@@ -35,6 +35,8 @@ export interface CostDriver {
   options?: PriceOption[];
   /** Why the chosen option, when it isn't simply the AI's call. */
   decision?: string;
+  /** A damaged part the AI described from the photos, as opposed to a rule or claim adjustment. */
+  fromPhotos?: boolean;
 }
 
 export interface CostRange {
@@ -53,11 +55,19 @@ export interface CostRange {
     tier: PartsTier;
     /** Why that parts tier: "BMW parts", "car worth under $10,000". */
     tierWhy: string;
-    /** The labour rate actually used: the base rate scaled by the market. */
+    /** The labor rate actually used: the base rate scaled by the market. */
     labourRateUsd: number;
     baseLabourRateUsd: number;
     market: { name: string; factor: number; zip: string | null };
     bandPct: number;
+    paintMaterialsUsd: number;
+    /** The car on the policy, as it sets the parts tier: "2019 Toyota RAV4". */
+    claimVehicle: string | null;
+    vehicleValueUsd: number | null;
+    /** Where the make used for the parts tier came from. */
+    makeFrom: "claim" | "photos" | null;
+    /** Where an electric or hybrid powertrain came from, if the car is one. */
+    electrifiedFrom: "claim" | "photos" | null;
   };
   /** The AI's own total for the same items, before extras. A cross-check on the rate card. */
   aiItemsUsd: { lowUsd: number; highUsd: number };
@@ -76,10 +86,13 @@ export type PricingClaim = Partial<Pick<ClaimContext, "zip" | "vehicleValueUsd" 
 export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim = {}): CostRange | null {
   if (!x.vehicle.vehicle_present || x.damage.items.length === 0) return null;
 
-  // Where: the claim's ZIP picks a labour market. What: the make and value set the parts tier.
+  // Where: the claim's ZIP picks a labor market. What: the make and value set the parts tier.
   const market = marketFor(claim.zip);
   const labourRateUsd = Math.round(s.labourRateUsd * market.factor);
   const { tier, why: tierWhy } = partsTierFor(claim.vehicleValueUsd, claim.policyVehicle?.make ?? x.vehicle.make);
+  const makeFrom = claim.policyVehicle?.make ? "claim" : x.vehicle.make ? "photos" : null;
+  const pv = claim.policyVehicle;
+  const claimVehicle = pv ? [pv.year, pv.make, pv.model].filter(Boolean).join(" ") || null : null;
   const rates = { labourRateUsd, paintMaterialsUsd: s.paintMaterialsUsd, tier };
   // The rate card covers ordinary road cars. Anything else keeps the AI's own price.
   const onCard = s.pricing === "rate_card" && ROAD_CARS.includes(x.vehicle.vehicle_class);
@@ -105,6 +118,7 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
         math: card.math,
         options: card.options.length > 1 ? card.options : undefined,
         decision: card.decision,
+        fromPhotos: true,
       });
       if (card.possibleExtraUsd > 0) {
         possible.push({
@@ -123,17 +137,18 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
         lowUsd: low,
         highUsd: high,
         source: "ai_estimate",
-        note: s.pricing !== "rate_card" ? undefined : onCard ? "Not on the rate card, so the AI's own price" : "Rate card covers road cars only, so the AI's own price",
+        note: s.pricing !== "rate_card" ? undefined : onCard ? "Not in the estimating guide, so the AI's own price" : "The estimating guide covers road cars only, so the AI's own price",
         kind: "visible",
         evidence: item.visible_evidence,
         math: `The AI's own estimate: ${usd(low)} to ${usd(high)}`,
+        fromPhotos: true,
       });
     }
   }
 
   // Electric and hybrid cars need the high-voltage system made safe before body work.
-  const electrified =
-    claim.policyVehicle?.powertrain === "electric" || claim.policyVehicle?.powertrain === "hybrid" || x.vehicle.powertrain_hint === "likely_ev_or_hybrid";
+  const electrifiedOnClaim = claim.policyVehicle?.powertrain === "electric" || claim.policyVehicle?.powertrain === "hybrid";
+  const electrified = electrifiedOnClaim || x.vehicle.powertrain_hint === "likely_ev_or_hybrid";
   if (onCard && electrified) {
     const hv = HIGH_VOLTAGE_HOURS * labourRateUsd;
     visible.push({
@@ -210,8 +225,8 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
   const ceilR = roundUp(highR + extra);
   const rateLine =
     market.factor === 1
-      ? `Labour: ${usd(labourRateUsd)}/h (${market.name.toLowerCase() === "national average" ? "national average" : `${market.name} market`}). Parts: ${tier} (${tierWhy}).`
-      : `Labour: ${usd(s.labourRateUsd)} base x ${market.factor} for the ${market.name} market = ${usd(labourRateUsd)}/h. Parts: ${tier} (${tierWhy}).`;
+      ? `Labor: ${usd(labourRateUsd)}/h (${market.name.toLowerCase() === "national average" ? "national average" : `${market.name} market`}). Parts: ${tier} (${tierWhy}).`
+      : `Labor: ${usd(s.labourRateUsd)} base x ${market.factor} for the ${market.name} market = ${usd(labourRateUsd)}/h. Parts: ${tier} (${tierWhy}).`;
   const workings = allCard
     ? [
         rateLine,
@@ -236,16 +251,21 @@ export function buildCostRange(x: Extraction, s: Settings, claim: PricingClaim =
       baseLabourRateUsd: s.labourRateUsd,
       market: { name: market.name, factor: market.factor, zip: claim.zip?.trim() || null },
       bandPct: s.estimateBandPct,
+      paintMaterialsUsd: s.paintMaterialsUsd,
+      claimVehicle,
+      vehicleValueUsd: claim.vehicleValueUsd ?? null,
+      makeFrom,
+      electrifiedFrom: electrifiedOnClaim ? "claim" : electrified ? "photos" : null,
     },
     aiItemsUsd: { lowUsd: Math.round(aiLow), highUsd: Math.round(aiHigh) },
   };
 }
 
-const partName = (item: DamageItem) => `${item.side === "left" || item.side === "right" ? `${item.side} ` : ""}${item.area.replace(/_/g, " ")}`;
+const partName = (item: DamageItem) => `${item.side === "left" || item.side === "right" ? `${item.side} ` : ""}${areaLabel(item.area)}`;
 
 export function describeItem(item: DamageItem): string {
   const side = item.side === "unknown" || item.side === "centre" ? "" : `${item.side} `;
-  const area = item.area.replace(/_/g, " ");
+  const area = areaLabel(item.area);
   const type = item.damage_type.replace(/_/g, " ");
   const repair = item.likely_repair.replace(/_/g, " ");
   return `${capitalise(side + area)}: ${item.severity} ${type}, ${repair}`;

@@ -68,7 +68,7 @@ export function DecisionRecordDrawer({ item, settings, log, onClose }: { item: C
                     <>
                       <dt>Estimate</dt>
                       <dd>
-                        Rate card {usd0(last.aiRange.lowUsd)} to {usd0(last.aiRange.highUsd)}; reviewer{" "}
+                        Estimating guide {usd0(last.aiRange.lowUsd)} to {usd0(last.aiRange.highUsd)}; reviewer{" "}
                         {last.adjustedRange.lowUsd === last.adjustedRange.highUsd
                           ? usd0(last.adjustedRange.highUsd)
                           : `${usd0(last.adjustedRange.lowUsd)} to ${usd0(last.adjustedRange.highUsd)}`}
@@ -174,7 +174,7 @@ export function DecisionRecordDrawer({ item, settings, log, onClose }: { item: C
                     <th>Size</th>
                     <th>Brightness</th>
                     <th>Sharpness</th>
-                    <th>Colour</th>
+                    <th>Color</th>
                     <th>Past claim match</th>
                   </tr>
                 </thead>
@@ -187,7 +187,7 @@ export function DecisionRecordDrawer({ item, settings, log, onClose }: { item: C
                       </td>
                       <td>{p.brightness}</td>
                       <td>{Math.round(p.sharpness)}</td>
-                      <td>{p.greyscale ? "Black and white" : "Colour"}</td>
+                      <td>{p.greyscale ? "Black and white" : "Color"}</td>
                       <td>{p.nearDuplicateOf ?? "None"}</td>
                     </tr>
                   ))}

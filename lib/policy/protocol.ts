@@ -96,9 +96,9 @@ export const SETTING_DEFS: SettingDef[] = [
     key: "pricing",
     kind: "choice",
     label: "How damage is priced",
-    help: "Rate card: the AI describes each repair and the carrier's labour times and rates price it. AI only: the AI's own rough price for each item.",
+    help: "Estimating guide: the AI describes each repair and the carrier's labor times and rates price it. AI only: the AI's own rough price for each item.",
     options: [
-      { value: "rate_card", label: "Carrier rate card" },
+      { value: "rate_card", label: "Carrier estimating guide" },
       { value: "ai", label: "AI only" },
     ],
   },
@@ -115,8 +115,8 @@ export const SETTING_DEFS: SettingDef[] = [
   {
     key: "labourRateUsd",
     kind: "number",
-    label: "Base labour rate (per hour)",
-    help: "The carrier's base body and paint labour rate. Each claim's ZIP code scales it for the local market (see the rate card below).",
+    label: "Base labor rate (per hour)",
+    help: "The carrier's base body and paint labor rate. Each claim's ZIP code scales it for the local market (see the estimating guide below).",
     min: 30,
     max: 150,
     step: 1,
@@ -126,7 +126,7 @@ export const SETTING_DEFS: SettingDef[] = [
     key: "paintMaterialsUsd",
     kind: "number",
     label: "Paint materials (per paint hour)",
-    help: "Paint and materials allowance for each hour of refinish labour.",
+    help: "Paint and materials allowance for each hour of refinish labor.",
     min: 10,
     max: 100,
     step: 1,
@@ -585,7 +585,7 @@ export const RULES: Rule[] = [
           : "The photos are close-ups, so we can't see the full extent of the damage.",
         retakes: [
           {
-            view: `A photo from about 3 metres back showing the whole ${sideLabel(x.damage.items)} of the car`,
+            view: `A photo from about 10 feet back showing the whole ${sideLabel(x.damage.items)} of the car`,
             why: "so we can see the full size of the damage",
           },
         ],
@@ -799,7 +799,7 @@ export const RULES: Rule[] = [
     tier: "locked",
     effect: "review",
     title: "Car doesn't match the policy",
-    when: "The make or colour in the photos is clearly different from the vehicle on the policy.",
+    when: "The make or color in the photos is clearly different from the vehicle on the policy.",
     check: ({ x, claim }) => {
       const pv = claim.policyVehicle;
       const mismatches: string[] = [];
@@ -807,7 +807,7 @@ export const RULES: Rule[] = [
         mismatches.push(`make looks like ${x.vehicle.make}, policy says ${pv.make}`);
       }
       if (x.vehicle.colour && pv.colour && !sameColour(x.vehicle.colour, pv.colour)) {
-        mismatches.push(`colour looks ${x.vehicle.colour.toLowerCase()}, policy says ${pv.colour.toLowerCase()}`);
+        mismatches.push(`color looks ${x.vehicle.colour.toLowerCase()}, policy says ${pv.colour.toLowerCase()}`);
       }
       return mismatches.length
         ? { reason: `The car in the photos doesn't match the policy: ${mismatches.join("; ")}.` }

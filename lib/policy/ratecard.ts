@@ -2,24 +2,24 @@
 //
 // The AI is consistent about WHAT is damaged (which part, how badly, repair or
 // replace) but much less consistent about what that costs. So the price comes
-// from here instead: a labour time per part and repair type, priced at the
-// carrier's own labour and materials rates, with a parts adjustment for the
-// vehicle's value. Like a real labour guide, each job has one time, not a range;
+// from here instead: a labor time per part and repair type, priced at the
+// carrier's own labor and materials rates, with a parts adjustment for the
+// vehicle's value. Like a real labor guide, each job has one time, not a range;
 // the uncertainty is handled separately (cost.ts).
 //
 // Every hour and dollar in this table is an ILLUSTRATIVE placeholder. In
-// production the hours come from an estimating platform's labour times (CCC,
+// production the hours come from an estimating platform's labor times (CCC,
 // Mitchell or Audatex) and the rates and parts pricing from the carrier, then
 // the whole card is calibrated against the carrier's paid claims.
 
 import type { Area, DamageItem } from "../extraction/schema.ts";
 
 export interface PartCard {
-  /** Body labour to repair the part, for moderate damage. */
+  /** Body labor to repair the part, for moderate damage. */
   repairHours?: number;
-  /** Body labour to remove and replace the part. */
+  /** Body labor to remove and replace the part. */
   replaceHours?: number;
-  /** Refinish labour, including blending into the panels next to it. */
+  /** Refinish labor, including blending into the panels next to it. */
   paintHours?: number;
   /** The replacement part, for a typical mid-range car. */
   partUsd?: number;
@@ -49,7 +49,16 @@ export const RATE_CARD: Partial<Record<Area, PartCard>> = {
   interior: { repairHours: 2, replaceHours: 2, partUsd: 500 },
 };
 
-/** Repair labour scales with how bad the damage is. Replacement labour doesn't. */
+/** The AI's part names use a few British terms; show them as a US shop would. */
+const US_AREA_NAMES: Partial<Record<Area, string>> = {
+  boot_or_tailgate: "trunk or tailgate",
+  wheel_or_tyre: "wheel or tire",
+  windscreen: "windshield",
+  side_sill: "rocker panel",
+};
+export const areaLabel = (area: Area) => US_AREA_NAMES[area] ?? area.replace(/_/g, " ");
+
+/** Repair labor scales with how bad the damage is. Replacement labor doesn't. */
 const SEVERITY_FACTOR: Record<DamageItem["severity"], number> = { minor: 0.5, moderate: 1, severe: 1.6 };
 /** Removing and refitting trim, handles and mouldings, and masking, for each panel that gets painted. */
 const SETUP_HOURS = 1;
@@ -79,8 +88,8 @@ export function partsTierFor(vehicleValueUsd: number | null | undefined, make: s
 }
 
 /**
- * Labour rates vary a lot by market. A claim's ZIP picks a market, and the market scales the
- * carrier's base labour rate. Placeholder markets and multipliers: in production these come
+ * Labor rates vary a lot by market. A claim's ZIP picks a market, and the market scales the
+ * carrier's base labor rate. Placeholder markets and multipliers: in production these come
  * from the carrier's own market rates and its agreements with partner shops.
  */
 export interface Market {
@@ -215,7 +224,7 @@ interface Job {
   parts: string;
 }
 
-/** Labour, paint and a part, with the working shown. */
+/** Labor, paint and a part, with the working shown. */
 function job(body: number, paint: number, part: number, rate: number, paintRate: number, partWord = "part"): Job {
   const terms: string[] = [];
   const bits: string[] = [];
