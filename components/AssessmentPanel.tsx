@@ -421,11 +421,22 @@ const GROUPS: { effect: "adjuster" | "more_evidence" | "review"; label: string }
   { effect: "review", label: "Flags it for a person to check" },
 ];
 
+/** The card's question, in the route's own words: "Why it's ready to approve", and so on. */
+function whyHeading(d: Decision) {
+  if (d.route === "photo_estimate") return "Why it's ready to approve";
+  if (d.route === "more_evidence") return "Why it needs more evidence";
+  if (d.route === "adjuster") {
+    const to = d.reasons.some((r) => r.id === "C2") ? "the total loss unit" : "a field adjuster";
+    return `Why it goes to ${to}${d.siuReferral ? " and SIU" : ""}`;
+  }
+  return "Why this route";
+}
+
 function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => void }) {
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Why this route</h3>
+        <h3>{whyHeading(d)}</h3>
         <button className="btn btn-sm btn-ghost" onClick={onOpenProtocol} title="Open the routing protocol">
           {d.reasons.length ? `${d.reasons.length} rule${d.reasons.length === 1 ? "" : "s"} fired` : "No rules fired"}
         </button>
