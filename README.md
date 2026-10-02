@@ -334,6 +334,7 @@ How often reviewers disagree with the recommendation is a direct way to measure 
 ## Key assumptions and trade-offs
 
 - **It doesn't store anything.** The worklist lives in your browser tab and photos are only held in memory. That keeps the privacy answer simple, but there's no history.
+- **One demo photo is AI-generated.** The Brooklyn RAV4 (demo claim F) is a generated image; every other demo and test photo is a real photo.
 - **The claim details and dollar limits are made up.** The $2,500 approval limit, the labour markets, the state total-loss rules and the cost adjustments are placeholders for the carrier's numbers. The approval limit stands in for a reviewer's authority limit; carriers set these by role, and photo estimating is usually kept to small, drivable, no-injury claims, so $2,500 sits in a realistic range.
 - **The photo checks are rough.** They were tuned on a handful of images, and the reused-photo check catches a mirrored copy but not a rotated one.
 - **Some inputs are turned away.** JPEG, PNG and WebP only, up to eight photos a claim. HEIC and video get a message saying what to send instead.
