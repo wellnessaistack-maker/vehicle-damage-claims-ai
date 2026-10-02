@@ -482,7 +482,7 @@ function Checks({ d }: { d: Decision }) {
               </span>
             ))}
             <span className="pchip pchip-info" title="This tool compares facts to route the claim. It never decides what the policy covers or pays.">
-              i Coverage checked in the claims system
+              Coverage checked in the claims system
             </span>
           </span>
         </div>
@@ -717,6 +717,8 @@ function ActionBar(props: {
   const contactable = channels(item.claim).length > 0;
   const [adhoc, setAdhoc] = useState(`Hi ${firstName(item.claim) ?? "there"},\n\n`);
   const [hideRequest, setHideRequest] = useState(false);
+  // A hidden message is per claim: opening another claim shows its message again.
+  useEffect(() => setHideRequest(false), [item.id]);
   const picker = contactable ? <ChannelPicker claim={item.claim} channel={channel} setChannel={props.setChannel} /> : null;
   const totalLoss = !!d?.reasons.some((r) => r.id === "C2");
   const adjusterTargets = totalLoss ? ["total_loss"] : ["field"];
@@ -1071,10 +1073,15 @@ function ActionBar(props: {
       )}
       {!formOpen && route === "more_evidence" && (
         hideRequest ? (
-          <div className="actionbar-row">
-            <button className="btn btn-warn" onClick={() => setHideRequest(false)}>
-              Ask {name} for photos
-            </button>
+          <div className="contact-composer contact-collapsed">
+            <div className="contact-head">
+              <b>Recommended: ask {name} for {d?.retakes.length ?? 1} photo{(d?.retakes.length ?? 1) === 1 ? "" : "s"}</b>
+              <span className="hint">Message hidden</span>
+              <span style={{ flex: 1 }} />
+              <button className="btn btn-sm btn-warn" onClick={() => setHideRequest(false)}>
+                Show message
+              </button>
+            </div>
           </div>
         ) : (
           <div className="contact-composer">
