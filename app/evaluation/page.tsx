@@ -37,12 +37,6 @@ const NOTES: Record<string, { what: string; why: string; next: string }> = {
   },
 };
 
-const FIXED_IN_V2 = [
-  { what: "A customer's wider retake was judged on the original close-up", fix: "Prompt now judges evidence on the best photo in the set" },
-  { what: "A crumpled bumper cover was called structural damage", fix: "Prompt now defines structural as deformed frame, pillars or floor" },
-  { what: "A door dent got a hidden-damage allowance that pushed it over the limit", fix: "The allowance now applies only to moderate front or rear damage, or anything severe" },
-];
-
 export default function EvaluationPage() {
   const [live, setLive] = useState<EvalRun | null>(null);
   const run = live ?? MAIN;
@@ -112,7 +106,7 @@ export default function EvaluationPage() {
             <div className="ev-v">
               {s.agreement.exact} of {s.agreement.of}
             </div>
-            <div className="ev-l2">got the same route as our expert</div>
+            <div className="ev-l2">recommended the same route as our expert</div>
             <div className="ev-d">The other {s.agreement.of - s.agreement.exact} are explained below.</div>
           </div>
           <div className="ev-tile">
@@ -193,7 +187,7 @@ export default function EvaluationPage() {
                       <span className={`chip ${m.acceptable ? "chip-warn" : "chip-bad"}`}>{m.missedEscalation ? "Approved, but should have gone to an adjuster" : flipped ? "Different answer on repeat runs" : m.acceptable ? "Reasonable, not the expert's first choice" : "Asked for a photo it didn't need"}</span>
                     </div>
                     <div className="ev-miss-routes">
-                      Expert said: <b>{ROUTE_LABELS[m.result.labels.expectedRoute]}</b> · It said: <b>{flipped ? varied(m.result.repeatRoutes!) : ROUTE_LABELS[m.route as Route]}</b>
+                      Expert said: <b>{ROUTE_LABELS[m.result.labels.expectedRoute]}</b> · Recommended: <b>{flipped ? varied(m.result.repeatRoutes!) : ROUTE_LABELS[m.route as Route]}</b>
                     </div>
                     {n && (
                       <dl className="ev-miss-body">
@@ -233,21 +227,6 @@ export default function EvaluationPage() {
                 <b>Model and prompt</b> {modelInfo(run.model).label}, {run.promptVersion}
               </span>
             </div>
-            <section className="card">
-              <div className="card-body">
-                <div className="ev-fixed" style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}>
-              <div className="section-label">Already fixed, from the first run (prompt v1)</div>
-              <ul>
-                {FIXED_IN_V2.map((f) => (
-                  <li key={f.what}>
-                    <s>{f.what}.</s> {f.fix}.
-                  </li>
-                ))}
-              </ul>
-              <div className="hint">Prompt v2 was written after seeing these, so its gain on the same cases is flattering. With your data we&apos;d keep a locked test set nobody tunes against.</div>
-            </div>
-              </div>
-            </section>
         {/* Models and routes, side by side */}
         <div className="ev-two">
           <ModelComparison runs={saved} title="Models and prompts side by side" sub="Same 26 cases, same rules" />

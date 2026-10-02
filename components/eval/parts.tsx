@@ -202,8 +202,8 @@ export function Confusion({ s }: { s: Summary }) {
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Our route compared with the expert&apos;s</h3>
-        <span className="sub">Each row is what the expert said; each column is what we did. Bold is where we agreed.</span>
+        <h3>Recommended route compared with the expert&apos;s</h3>
+        <span className="sub">Each row is what the expert said; each column is what the AI and rules recommended. Bold is where they agree.</span>
       </div>
       <div className="card-body">
         <table className="t">
@@ -265,7 +265,7 @@ export function CaseTable({ scored }: { scored: ScoredCase[] }) {
               <th>Photo</th>
               <th>Case</th>
               <th>Expected</th>
-              <th>Our route</th>
+              <th>Recommended route</th>
               <th>Why</th>
               <th>Make · model · colour</th>
               <th>Estimate</th>

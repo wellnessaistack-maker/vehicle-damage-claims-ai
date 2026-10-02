@@ -569,3 +569,4 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .ev-miss > div { min-width: 0; }
 .ev-tech .card-body, .ev-two .card-body { overflow-x: auto; }
 .ev-two > * { min-width: 0; }
+@media (max-width: 640px) { .card-head { flex-wrap: wrap; } .card-head .sub { white-space: normal; text-align: left; } .card-head h3 { white-space: normal; min-width: 0; } }
