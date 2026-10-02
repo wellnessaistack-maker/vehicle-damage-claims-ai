@@ -25,14 +25,31 @@ import {
 
 import type { Role } from "./Workspace.tsx";
 
-const GROUPS: { id: RuleGroup; title: string; blurb: string }[] = [
-  { id: "safety", title: "Safety", blurb: "Always a person. Locked." },
-  { id: "scope", title: "Scope", blurb: "Vehicles the photo path doesn't cover. Locked." },
-  { id: "integrity", title: "Photo integrity", blurb: "Possible reuse or tampering. Locked, and referred to SIU." },
-  { id: "evidence", title: "Evidence", blurb: "Ask the customer for better photos. We don't guess." },
-  { id: "cost", title: "Cost", blurb: "Where the estimate range sits against the limits." },
-  { id: "review", title: "Review flags", blurb: "The claim keeps its route, but a person checks." },
+/** The rule groups in plain words: what each catches and where it sends the claim. */
+const GROUPS: { id: RuleGroup; title: string; catches: string; sendsTo: string }[] = [
+  { id: "safety", title: "Safety", catches: "Injury, can't be driven, airbags, structural damage, fire or flood, EV battery", sendsTo: "Adjuster" },
+  { id: "scope", title: "Scope", catches: "Race cars, motorcycles, commercial vehicles", sendsTo: "Adjuster" },
+  { id: "integrity", title: "Photo integrity", catches: "A photo from a past claim, different cars, a photo of a screen", sendsTo: "Adjuster and SIU" },
+  { id: "evidence", title: "Evidence", catches: "Can't see the car or the whole damage, poor photos", sendsTo: "Ask for photos" },
+  { id: "cost", title: "Cost", catches: "Over the approval limit, past the total-loss line", sendsTo: "Adjuster" },
+  { id: "review", title: "Review flags", catches: "Sensor area, car or damage doesn't match the claim", sendsTo: "Same route, flagged" },
 ];
+
+/** Which rule groups lead to each route, most cautious first. */
+const ROUTE_FLOW: { route: Route; groups: RuleGroup[] }[] = [
+  { route: "adjuster", groups: ["safety", "scope", "integrity", "cost"] },
+  { route: "more_evidence", groups: ["evidence"] },
+  { route: "photo_estimate", groups: [] },
+];
+
+/** The settings worth showing first; the rest sit under "More settings". */
+const KEY_SETTINGS: (keyof Settings)[] = ["fastPathLimitUsd", "totalLossRatio", "maxEvidenceRequests"];
+
+/** Locked, carrier settings, or a mix, from the rules themselves. */
+function changeable(group: RuleGroup) {
+  const tiers = new Set(RULES.filter((r) => r.group === group).map((r) => r.tier));
+  return tiers.size > 1 ? "Mostly locked" : tiers.has("locked") ? "Locked" : "Carrier settings";
+}
 
 const SOURCE_LABELS: Record<SourceKey, string> = {
   "policy.vehicle": "policy record (insured vehicle)",
@@ -95,13 +112,43 @@ export function ProtocolDrawer(props: {
     return String(v);
   };
 
+  const settingRow = (def: (typeof SETTING_DEFS)[number]) => (
+    <div className="setting" key={def.key}>
+      <div>
+        <div className={settings[def.key] !== DEFAULT_SETTINGS[def.key] ? "changed" : ""}>{def.label}</div>
+        <div className="help">
+          {def.help} Published: {fmt(def.key, DEFAULT_SETTINGS[def.key])}.
+        </div>
+      </div>
+      {def.kind === "choice" ? (
+        <select disabled={!canEdit} value={String(settings[def.key])} onChange={(e) => set(def.key, e.target.value)}>
+          {def.options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type="number"
+          disabled={!canEdit}
+          min={def.unit === "ratio" ? def.min * 100 : def.min}
+          max={def.unit === "ratio" ? def.max * 100 : def.max}
+          step={def.unit === "ratio" ? def.step * 100 : def.step}
+          value={def.unit === "ratio" ? Math.round((settings[def.key] as number) * 100) : (settings[def.key] as number)}
+          onChange={(e) => set(def.key, def.unit === "ratio" ? Number(e.target.value) / 100 : Number(e.target.value))}
+        />
+      )}
+    </div>
+  );
+
   return (
     <div className="overlay" onClick={props.onClose}>
       <div className="drawer" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-head">
           <div>
             <h2>Routing protocol v{PROTOCOL_VERSION}</h2>
-            <div className="sub">Illustrative, draft for historical validation. The app and this document are generated from the same file, so they can&apos;t drift apart.</div>
+            <div className="sub">The rules that pick each claim&apos;s route. The app runs this exact file, so what you read here is what it does.</div>
           </div>
           <span style={{ flex: 1 }} />
           <button className="btn btn-sm btn-ghost" onClick={props.onClose}>
@@ -110,99 +157,130 @@ export function ProtocolDrawer(props: {
         </div>
         <div className="drawer-body">
           <div className="card">
-            <div className="card-body">
-              <b>How the route is chosen.</b> The AI only describes the photos. These rules decide. When more than one rule applies, the most cautious route wins:{" "}
-              <span className="route-adjuster route-pill">{ROUTE_LABELS.adjuster}</span>, then <span className="route-more_evidence route-pill">{ROUTE_LABELS.more_evidence}</span>, then{" "}
-              <span className="route-photo_estimate route-pill">{ROUTE_LABELS.photo_estimate}</span>. If the AI fails, the claim goes to manual triage.
-              {selected && <div className="note">Rules that fired for {selected.claim.claimId} are highlighted.</div>}
+            <div className="card-body proto-how">
+              <div className="proto-flow" aria-label="How a claim is routed">
+                <span className="proto-node">Claim and photos</span>
+                <span className="arrow">→</span>
+                <span className="proto-node">AI describes them</span>
+                <span className="arrow">→</span>
+                <span className="proto-node proto-node-rules">Rules pick a route</span>
+                <span className="arrow">→</span>
+                <span className="proto-node">Reviewer decides</span>
+              </div>
+              <div className="proto-routes">
+                {ROUTE_FLOW.map((r) => {
+                  const here = decision?.route === r.route;
+                  return (
+                    <div key={r.route} className={`proto-route route-${r.route} ${here ? "here" : ""}`}>
+                      <div className="proto-route-head">
+                        <span className="dot" /> {ROUTE_LABELS[r.route]}
+                        {here && selected && <span className="proto-here">This claim</span>}
+                      </div>
+                      <div className="proto-route-groups">
+                        {r.groups.length === 0 ? (
+                          <span className={here ? "hit" : ""}>No rules fired</span>
+                        ) : (
+                          r.groups.map((gid) => {
+                            const g = GROUPS.find((x) => x.id === gid)!;
+                            const hit = RULES.some((rule) => rule.group === gid && fired.has(rule.id));
+                            return (
+                              <span key={gid} className={hit ? "hit" : ""}>
+                                {g.title}
+                              </span>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="hint">
+                If rules point to different routes, the most cautious wins, left to right. Review flags keep the route but ask a person to check. If the AI fails, the claim goes to manual triage.
+              </div>
             </div>
           </div>
 
           <div className="card">
             <div className="card-head">
-              <h3>Configurable settings</h3>
+              <h3>The rules</h3>
+              <span className="sub">
+                {RULES.length} rules in {GROUPS.length} groups{selected ? `. Groups that fired for ${selected.claim.claimId} are highlighted.` : ""}
+              </span>
+            </div>
+            <div className="card-body proto-groups">
+              <div className="proto-group-row proto-group-headrow">
+                <span>Group</span>
+                <span>Sends it to</span>
+                <span>Can the carrier change it?</span>
+              </div>
+              {GROUPS.map((g) => {
+                const rules = RULES.filter((r) => r.group === g.id);
+                const firedHere = rules.filter((r) => fired.has(r.id)).map((r) => r.id);
+                return (
+                  <details key={g.id} className={`proto-group ${firedHere.length ? "fired" : ""}`}>
+                    <summary className="proto-group-row">
+                      <span>
+                        <b>{g.title}</b>
+                        <span className="proto-catches">{g.catches}</span>
+                        {firedHere.length > 0 && <span className="chip chip-warn proto-fired">Fired here: {firedHere.join(", ")}</span>}
+                      </span>
+                      <span>{g.sendsTo}</span>
+                      <span>{changeable(g.id)}</span>
+                    </summary>
+                    <div className="rules-list">
+                      {rules.map((r) => {
+                        const hit = fired.get(r.id);
+                        return (
+                          <div key={r.id} className={`rule ${hit ? "fired" : ""}`}>
+                            <div className="rule-top">
+                              <span className="mono">{r.id}</span>
+                              <b>{r.title}</b>
+                              <span style={{ flex: 1 }} />
+                              {r.tier !== "locked" && <span className="chip chip-info">Setting</span>}
+                            </div>
+                            <div className="rule-when">{r.when}</div>
+                            <div className="hint">
+                              Checks: {r.uses.map((u) => SOURCE_LABELS[u]).join(", ")}
+                              {r.settings && <> · Settings: {r.settings.map((k) => SETTING_DEFS.find((d) => d.key === k)?.label).join(", ")}</>}
+                            </div>
+                            {hit && <div className="reason-text" style={{ marginTop: 4 }}>Fired: {hit.reason}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-head">
+              <h3>Settings</h3>
               <span className="sub">{changes.length ? <span className="changed">Draft: {changes.length} change{changes.length === 1 ? "" : "s"}, not published</span> : "Published values"}</span>
             </div>
             <div className="card-body">
               {!canEdit && <div className="hint" style={{ marginBottom: 8 }}>Read only. Switch the role to Protocol owner to edit (mock role, no real login).</div>}
-              {SETTING_DEFS.map((def) => (
-                <div className="setting" key={def.key}>
-                  <div>
-                    <div className={settings[def.key] !== DEFAULT_SETTINGS[def.key] ? "changed" : ""}>{def.label}</div>
-                    <div className="help">
-                      {def.help} Published: {fmt(def.key, DEFAULT_SETTINGS[def.key])}.
-                    </div>
-                  </div>
-                  {def.kind === "choice" ? (
-                    <select disabled={!canEdit} value={String(settings[def.key])} onChange={(e) => set(def.key, e.target.value)}>
-                      {def.options.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="number"
-                      disabled={!canEdit}
-                      min={def.unit === "ratio" ? def.min * 100 : def.min}
-                      max={def.unit === "ratio" ? def.max * 100 : def.max}
-                      step={def.unit === "ratio" ? def.step * 100 : def.step}
-                      value={def.unit === "ratio" ? Math.round((settings[def.key] as number) * 100) : (settings[def.key] as number)}
-                      onChange={(e) => set(def.key, def.unit === "ratio" ? Number(e.target.value) / 100 : Number(e.target.value))}
-                    />
-                  )}
-                </div>
-              ))}
+              {SETTING_DEFS.filter((def) => KEY_SETTINGS.includes(def.key)).map(settingRow)}
+              <details className="fold">
+                <summary>More settings ({SETTING_DEFS.length - KEY_SETTINGS.length}): pricing, photo checks, cost allowances</summary>
+                {SETTING_DEFS.filter((def) => !KEY_SETTINGS.includes(def.key)).map(settingRow)}
+              </details>
               <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                <button className="btn btn-sm" disabled={!canEdit || changes.length === 0} onClick={() => props.onChange(DEFAULT_SETTINGS)}>
-                  Reset to published
-                </button>
                 <button className="btn btn-sm btn-primary" onClick={() => setTest((t) => !t)}>
                   {test ? "Hide test" : "Test against labelled cases"}
                 </button>
+                <button className="btn btn-sm" disabled={!canEdit || changes.length === 0} onClick={() => props.onChange(DEFAULT_SETTINGS)}>
+                  Reset to published
+                </button>
               </div>
-              <div className="note">
-                Changes apply to your worklist straight away, as a draft. In production a change would need a second person&apos;s approval, a test run against the labelled cases, and an audit log entry before going live.
-              </div>
+              <div className="note">Changes re-route your worklist straight away, as a draft. In production a change would need a second person&apos;s approval, a test against the labelled cases, and an audit log entry.</div>
               {test && <ProtocolTest comparison={comparison} />}
             </div>
           </div>
 
           <RateCard baseRate={settings.labourRateUsd} />
-
-          {GROUPS.map((g) => (
-            <div className="rules-group" key={g.id}>
-              <h4>
-                {g.title} <span style={{ textTransform: "none", letterSpacing: 0, fontWeight: 400 }}>· {g.blurb}</span>
-              </h4>
-              <div className="rules-list">
-                {RULES.filter((r) => r.group === g.id).map((r) => {
-                  const hit = fired.get(r.id);
-                  const effect = hit?.effect ?? r.effect;
-                  return (
-                    <div key={r.id} className={`rule ${hit ? "fired" : ""}`}>
-                      <div className="rule-top">
-                        <span className="mono">{r.id}</span>
-                        <b>{r.title}</b>
-                        <span style={{ flex: 1 }} />
-                        <span className={`chip ${r.tier === "locked" ? "" : "chip-info"}`}>{r.tier === "locked" ? "Locked" : "Configurable"}</span>
-                        <span className={`chip ${effect === "adjuster" ? "chip-bad" : effect === "more_evidence" ? "chip-warn" : ""}`}>
-                          {effect === "adjuster" ? "Adjuster" : effect === "more_evidence" ? "More evidence" : "Review flag"}
-                        </span>
-                      </div>
-                      <div className="rule-when">{r.when}</div>
-                      <div className="hint">
-                        Checks: {r.uses.map((u) => SOURCE_LABELS[u]).join(", ")}
-                        {r.settings && <> · Settings: {r.settings.map((k) => SETTING_DEFS.find((d) => d.key === k)?.label).join(", ")}</>}
-                      </div>
-                      {hit && <div className="reason-text" style={{ marginTop: 4 }}>Fired: {hit.reason}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
@@ -285,15 +363,21 @@ function RateCard({ baseRate }: { baseRate: number }) {
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Rate card</h3>
-        <span className="sub">How a described repair becomes a price</span>
+        <h3>How prices are set</h3>
+        <span className="sub">Rate card, labour markets, state total-loss rules</span>
       </div>
       <div className="card-body">
-        <div className="help">
-          The AI says which part is damaged, how badly, and whether it would be repaired, replaced or refinished. This card turns that into hours and parts, priced at the labour and paint rates above. Repair hours are for moderate damage (half for minor, 1.6x for severe), and each painted panel adds 1 h to remove trim and mask.
+        <div>
+          The AI says which part is damaged and how badly. The rate card turns that into hours at the local labour rate, plus paint and parts. Every figure is a placeholder for the carrier&apos;s own.
+        </div>
+        <details className="fold">
+          <summary>How it&apos;s worked out</summary>
+          <div className="help" style={{ marginBottom: 6 }}>
+          The AI says which part is damaged, how badly, and whether it would be repaired, replaced or refinished. This card turns that into hours and parts, priced at the labour and paint rates in the settings. Repair hours are for moderate damage (half for minor, 1.6x for severe), and each painted panel adds 1 h to remove trim and mask.
           Parts cost 0.8x on cars worth under $10,000, and 1.5x on cars worth over $40,000 or a luxury make. Electric and hybrid cars add {HIGH_VOLTAGE_HOURS} h to make the high-voltage system safe. The base labour rate is scaled by the market the claim&apos;s ZIP code falls in. Every figure is an illustrative placeholder: in production the hours come from an
           estimating platform&apos;s labour times and the rates and parts pricing from the carrier, checked against their paid claims.
         </div>
+        </details>
         <details className="fold">
           <summary>Hours and parts by panel ({Object.keys(RATE_CARD).length})</summary>
           <table className="ratecard-table">
@@ -326,7 +410,7 @@ function RateCard({ baseRate }: { baseRate: number }) {
             <a href={TOTAL_LOSS_SOURCE} target="_blank" rel="noreferrer">
               carinsurance.com
             </a>
-            ), to be checked against each state&apos;s law. States not listed use the carrier&apos;s total-loss setting above. The formula uses a placeholder salvage value of{" "}
+            ), to be checked against each state&apos;s law. States not listed use the carrier&apos;s total-loss setting. The formula uses a placeholder salvage value of{" "}
             {Math.round(SALVAGE_SHARE * 100)}% of the car&apos;s value; in production it comes from salvage auction data.
           </div>
           <table className="ratecard-table">
