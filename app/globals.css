@@ -570,3 +570,26 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .ev-tech .card-body, .ev-two .card-body { overflow-x: auto; }
 .ev-two > * { min-width: 0; }
 @media (max-width: 640px) { .card-head { flex-wrap: wrap; } .card-head .sub { white-space: normal; text-align: left; } .card-head h3 { white-space: normal; min-width: 0; } }
+
+/* Where each input to the price came from: the AI's reading of the photos, the claim, the carrier's rate card. */
+:root {
+  --src-ai: #6d28d9;
+  --src-ai-soft: #f5f3ff;
+  --src-ai-line: #ddd6fe;
+  --src-claim: #0f766e;
+  --src-claim-soft: #f0fdfa;
+  --src-claim-line: #99f6e4;
+}
+.price-src { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-top: 8px; }
+.price-src-col { border: 1px solid var(--manual-line); border-top-width: 3px; border-radius: var(--radius); background: var(--manual-soft); padding: 7px 10px 8px; min-width: 0; }
+.price-src-col.ai { border-color: var(--src-ai-line); border-top-color: var(--src-ai); background: var(--src-ai-soft); }
+.price-src-col.claim { border-color: var(--src-claim-line); border-top-color: var(--src-claim); background: var(--src-claim-soft); }
+.price-src-col.card { border-top-color: var(--manual); }
+.price-src-tag { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--manual); }
+.price-src-col.ai .price-src-tag { color: var(--src-ai); }
+.price-src-col.claim .price-src-tag { color: var(--src-claim); }
+.price-src-tag span { display: block; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-3); }
+.price-src + .hint { margin-top: 6px; }
+.price-src ul { margin: 4px 0 0; padding-left: 16px; font-size: 12.5px; color: var(--text); }
+.price-src li { margin: 2px 0; overflow-wrap: anywhere; }
+.src-ai-text { color: var(--src-ai); font-weight: 600; }

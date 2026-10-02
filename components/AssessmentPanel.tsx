@@ -231,6 +231,76 @@ function RequiredOutputs({ d }: { d: Decision }) {
   );
 }
 
+/** What went into the price, split by where it came from: the AI's reading of the photos, the claim, and the carrier's rate card. */
+function PriceSources({ e }: { e: EstimateOutput }) {
+  const p = e.pricing!;
+  const cross =
+    p.source === "rate_card" && e.aiItemsUsd && e.aiItemsUsd.highUsd > 0 ? (
+      <div className="hint">
+        The AI&apos;s own price for the same damage, as a cross-check only: {usd(e.aiItemsUsd.lowUsd)} to {usd(e.aiItemsUsd.highUsd)}.
+      </div>
+    ) : null;
+  if (p.source !== "rate_card") return <div className="est-pricing">Priced from the AI&apos;s own figures: the rate card covers ordinary road cars only.</div>;
+
+  const parts = e.drivers.filter((d) => d.fromPhotos && d.kind !== "possible");
+  const shown = parts.slice(0, 4);
+  const market = p.market.zip ? `ZIP ${p.market.zip}: ${p.market.name}` : "No ZIP on file: national average";
+  const car = p.claimVehicle
+    ? `${p.claimVehicle}${p.vehicleValueUsd ? `, worth ${usd(p.vehicleValueUsd)}` : ", value not on file"}`
+    : p.vehicleValueUsd
+      ? `Car worth ${usd(p.vehicleValueUsd)}`
+      : "Car and value not on file";
+  const hv = e.drivers.some((d) => d.label === "High-voltage safety procedure");
+  return (
+    <>
+      <div className="price-src" aria-label="What went into this price">
+        <div className="price-src-col ai">
+          <div className="price-src-tag">
+            From the photos <span>The AI&apos;s reading</span>
+          </div>
+          <ul>
+            {shown.map((d) => (
+              <li key={d.label}>{d.label}</li>
+            ))}
+            {parts.length > shown.length && <li>and {parts.length - shown.length} more</li>}
+            {p.makeFrom === "photos" && <li>Make read from the photo, which sets the parts level</li>}
+            {hv && p.electrifiedFrom === "photos" && <li>Looks electric or hybrid: adds high-voltage safety work</li>}
+          </ul>
+        </div>
+        <div className="price-src-col claim">
+          <div className="price-src-tag">
+            From the claim <span>Policy and claim form</span>
+          </div>
+          <ul>
+            <li>
+              {market} sets the labour rate
+            </li>
+            <li>
+              {car}: {p.tier} parts ({p.tierWhy})
+            </li>
+            {hv && p.electrifiedFrom === "claim" && <li>Electric or hybrid on the policy: adds high-voltage safety work</li>}
+          </ul>
+        </div>
+        <div className="price-src-col card">
+          <div className="price-src-tag">
+            From the rate card <span>Carrier settings</span>
+          </div>
+          <ul>
+            <li>Hours for each part and repair type</li>
+            <li>
+              {usd(p.baseLabourRateUsd)}/h labour
+              {p.market.factor !== 1 ? `, x ${p.market.factor} here = ${usd(p.labourRateUsd)}/h` : ""}
+            </li>
+            <li>+{usd(p.paintMaterialsUsd)}/h for paint and materials</li>
+            <li>Range of {p.bandPct}% either side</li>
+          </ul>
+        </div>
+      </div>
+      {cross}
+    </>
+  );
+}
+
 function Estimate({ e }: { e: EstimateOutput }) {
   if (e.status === "withheld") {
     const guess = e.aiItemsUsd && e.aiItemsUsd.highUsd > 0 ? e.aiItemsUsd : null;
@@ -331,22 +401,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
           {ceil > hi && <> Could reach {usd(ceil)} if the possible extras below are found.</>}
         </div>
       )}
-      {e.pricing && (
-        <div className="est-pricing">
-          {e.pricing.source === "rate_card" ? (
-            <>
-              Priced from the carrier rate card: <b>{usd(e.pricing.labourRateUsd)}/h labour</b> ({e.pricing.market.name}
-              {e.pricing.market.zip ? `, ZIP ${e.pricing.market.zip}` : ""}
-              {e.pricing.market.factor !== 1 ? `: ${usd(e.pricing.baseLabourRateUsd)} base x ${e.pricing.market.factor}` : ""}) and <b>{e.pricing.tier} parts</b> ({e.pricing.tierWhy}).
-            </>
-          ) : (
-            <>Priced from the AI&apos;s own figures.</>
-          )}
-          {e.pricing.source === "rate_card" && e.aiItemsUsd && e.aiItemsUsd.highUsd > 0 && (
-            <span className="hint"> The AI&apos;s own price for the same damage: {usd(e.aiItemsUsd.lowUsd)} to {usd(e.aiItemsUsd.highUsd)}, before adjustments.</span>
-          )}
-        </div>
-      )}
+      {e.pricing && <PriceSources e={e} />}
       <div className="hint">
         {e.status === "provisional" ? e.note : e.status === "reference_only" ? "For the adjuster's reference only." : "If the shop finds more damage, it sends a supplement."} {e.accuracyNote}
       </div>
@@ -367,7 +422,11 @@ function Estimate({ e }: { e: EstimateOutput }) {
                 </span>
                 <span className="drv-amt">{one(dr)}</span>
               </div>
-              {dr.evidence && <div className="driver-note">Seen in the photo: &ldquo;{dr.evidence}&rdquo;</div>}
+              {dr.evidence && (
+                <div className="driver-note">
+                  <span className="src-ai-text">Seen in the photo:</span> &ldquo;{dr.evidence}&rdquo;
+                </div>
+              )}
               {dr.options ? (
                 <div className="driver-options">
                   {dr.options.map((o) => (
