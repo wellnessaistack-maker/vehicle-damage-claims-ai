@@ -141,7 +141,7 @@ export function AssessmentPanel(props: {
 
 /** Hover text for the approval limit mark on the estimate bar. */
 function approvalLimitTip(limitUsd: number) {
-  return `Approval limit: the most a desk appraiser can approve from photos. Under it, the reviewer approves the estimate; over it, the claim goes to an adjuster. Carriers set these limits by role. ${usd(limitUsd)} is a placeholder for this carrier's number.`;
+  return `The most the reviewer can approve without an adjuster. ${usd(limitUsd)} is a placeholder; carriers set their own by role.`;
 }
 
 function Assessing({ started }: { started: string }) {
