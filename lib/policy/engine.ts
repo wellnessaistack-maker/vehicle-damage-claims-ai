@@ -243,6 +243,21 @@ function estimateOutput(
   if (x.damage.no_visible_damage || x.damage.items.length === 0) return withheld("No damage visible, so there's nothing to estimate.");
   if (!cost) return withheld("No damage items to price.");
   if (cost.ceilingUsd === 0) return withheld("The AI couldn't put a price on the damage in these photos.");
+  // The rate card only covers road cars. For anything else we don't put out a figure of our own:
+  // an adjuster values it. The AI's rough guess stays visible under the breakdown, labelled as such.
+  if (s.pricing === "rate_card" && cost.pricing.source === "ai") {
+    return {
+      ...base,
+      ...priced,
+      status: "withheld",
+      lowUsd: null,
+      highUsd: null,
+      drivers: cost.drivers,
+      note: firedIds.includes("P1")
+        ? "Not a road car, so our rate card doesn't cover it. An adjuster will value it."
+        : "This type of vehicle isn't on our rate card, so an adjuster will value it.",
+    };
+  }
   // Still give a figure from what can be seen, clearly marked as provisional.
   const provisional = (note: string): EstimateOutput => ({ ...base, ...priced, status: "provisional", lowUsd: cost.lowUsd, highUsd: cost.highUsd, drivers: cost.drivers, note });
   if (firedIds.includes("P1")) return provisional("Not a normal road car, so our repair pricing doesn't really apply. A rough guide only; an adjuster will assess it.");

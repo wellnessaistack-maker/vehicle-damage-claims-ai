@@ -271,15 +271,18 @@ test("damage the AI couldn't price shows no estimate rather than $0", () => {
   assert.equal(e.lowUsd, null);
 });
 
-test("C: race car goes to an adjuster, with only a provisional estimate", () => {
+test("C: race car goes to an adjuster, with no estimate of our own", () => {
   const d = run(raceC(), claim(DEMO_CLAIMS.C));
   assert.equal(d.route, "adjuster");
   assert.equal(d.routeLabel, "Adjuster / total loss");
   assert.ok(firedIds(d).includes("P1"));
   assert.ok(firedIds(d).includes("S4"));
   assert.ok(firedIds(d).includes("S2"));
-  assert.equal(d.requiredOutputs.estimate.status, "provisional");
-  assert.ok(d.requiredOutputs.estimate.lowUsd! > 0);
+  const e = d.requiredOutputs.estimate;
+  assert.equal(e.status, "withheld");
+  assert.equal(e.lowUsd, null);
+  assert.match(e.note, /rate card doesn't cover it/);
+  assert.ok(e.aiItemsUsd!.highUsd > 0, "the AI's rough guess is kept for reference");
   assert.equal(d.humanReview.required, true);
   assert.equal(d.customerMessage, null, "don't ask for more photos when it's clearly serious");
 });
