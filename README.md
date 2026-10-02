@@ -1,6 +1,6 @@
 # Vehicle damage claims AI
 
-A customer takes a photo of their damaged car. The AI reads the make, model, colour and damage, and gives a rough repair-cost range. Written rules then recommend the next step, and a reviewer makes the call: approve it for estimating, ask the customer for better photos, or send the claim to an adjuster.
+A customer takes a photo of their damaged car. The AI reads the make, model, colour and damage, and gives a rough repair-cost range. Written rules then recommend the next step, and a reviewer makes the call: approve the estimate, ask the customer for better photos, or send the claim to an adjuster.
 
 - Live prototype: https://vehicle-damage-claims-ai.vercel.app
 - Evaluation: the **Evaluation** page in the app, and [`eval/README.md`](eval/README.md)
@@ -22,11 +22,11 @@ The tool supports the first decision a reviewer makes on a claim. Getting that r
 
 | Route | What happens |
 |---|---|
-| Ready for estimating | The reviewer approves the route and range, and the claim goes to the estimating team as a starting point |
+| Ready to approve | The reviewer, a desk appraiser, approves the repair estimate if it's within their approval limit. Payment and booking a repair follow, and the shop can send a supplement if it finds more damage |
 | Request more evidence | The reviewer texts or emails the customer which photos to retake, with an upload link. The claim waits until they reply |
 | Adjuster / total loss | The claim goes to a field adjuster or the total loss unit, plus the fraud team (SIU) if a photo matches a past claim |
 
-- "Approve" means approving the route and range as a starting point. The tool doesn't approve payments.
+- Approving commits the estimate, as a desk appraiser does today, up to an approval limit (a setting standing in for the reviewer's authority limit). Payment follows the carrier's usual process; nothing is paid automatically.
 - If the AI call fails, the claim goes to **manual triage**, which is today's normal process.
 - Each reason shows where it came from: the policy, the claim form, the AI, the photo checks, or a rule.
 - The reviewer can adjust the range or change the route. Changes go back through the rules, and a route change needs a reason.
@@ -102,7 +102,7 @@ Colour key: green is plain code, orange is the AI, purple is people.
 - **No confidence scores.** Models aren't reliable judges of their own confidence, so the rules use facts instead. For example, if no badge is visible, the make is left blank.
 - **The most cautious route wins.** If any rule says adjuster, the claim goes to an adjuster.
 
-**The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 fast-path limit and the total-loss line (60% of vehicle value). Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published.
+**The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 approval limit and the total-loss line. The total-loss line follows the claim's state, found from its ZIP code: a fixed share of the car's value in some states, a formula (repair plus salvage reaching the car's value) in others, and the carrier's 60% setting where neither applies. **The state rules are from a secondary source and still need checking against each state's law.** Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published.
 
 **The repair estimate.** The AI describes each repair; the carrier's rate card prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, then prices them for this car and this place:
 
@@ -119,6 +119,7 @@ The same photo now prices at $950 to $1,300 (Columbus) on every call.
     - **Third-party data** gives the hours and parts: an estimating platform's labour times (CCC, Mitchell or Audatex), and parts priced for the exact car from its VIN.
     - **The carrier's data** gives the rates: labour rates by market and the deals with its partner shops.
     - **Historical paid claims** calibrate it: compare our estimates with what was finally paid, by region, vehicle and damage type, correct where we're consistently off, and set the range width so an agreed share of final costs land inside it.
+    - **For total loss,** the car's value would come from a valuation provider, salvage values from salvage auction data, and the state rules from the carrier's compliance team. Past total-loss decisions show where the line sits in practice.
 
   The protocol owner can change the base rates in the app, and **Edit details** can change a claim's ZIP to see the price move.
 
@@ -258,7 +259,7 @@ Scale can do the expert labelling.
 
 We can't tell yet. That needs their paid claims, and the app says so on every estimate. Once we have them, we'd check how often the final paid amount falls inside our range, and how wide the range is. A very wide range will usually contain the paid amount, but it isn't much help, so we keep the range to what the photos show and list the possible extras separately. The range width is a setting we'd calibrate on their paid claims.
 
-What matters most is which side of the $2,500 limit the estimate lands on. If it's close, the claim is flagged for a price check. If it's well over, it goes to an adjuster. If our estimate is too low, the body shop files a supplement, the same as today. It's a starting point, not the amount paid.
+What matters most is which side of the $2,500 approval limit the estimate lands on. If it's close, the claim is flagged for a price check. If it's well over, it goes to an adjuster. If the approved estimate turns out too low, the body shop files a supplement, the same as today, and it's reviewed.
 
 ### Results
 
@@ -316,7 +317,7 @@ How often reviewers disagree with the recommendation is a direct way to measure 
 ## Key assumptions and trade-offs
 
 - **It doesn't store anything.** The worklist lives in your browser tab and photos are only held in memory. That keeps the privacy answer simple, but there's no history.
-- **The claim details and dollar limits are made up.** The $2,500 limit, 60% total-loss line and cost adjustments are placeholders for the carrier's numbers.
+- **The claim details and dollar limits are made up.** The $2,500 approval limit, the labour markets, the state total-loss rules and the cost adjustments are placeholders for the carrier's numbers.
 - **The photo checks are rough.** They were tuned on a handful of images, and the reused-photo check catches a mirrored copy but not a rotated one.
 - **Some inputs are turned away.** JPEG, PNG and WebP only, up to eight photos a claim. HEIC and video get a message saying what to send instead.
 - **Links are treated as untrusted.** The server only follows https links to public addresses and only accepts real image files.

@@ -10,6 +10,7 @@
 import type { ClaimContext, PhotoMetrics } from "../claims/types.ts";
 import type { Extraction } from "../extraction/schema.ts";
 import type { CostRange } from "./cost.ts";
+import { totalLossLine } from "./states.ts";
 import { PROTOCOL_VERSION, SETTING_DEFS, sameColour, sameMake, usd, zonesFor, type Rule, type Settings, type SourceKey } from "./protocol.ts";
 
 export type SourceKind = "Policy record" | "Claim form" | "Photo (AI)" | "Photo check (code)" | "Past claims" | "Estimate" | "Protocol";
@@ -127,11 +128,11 @@ export function policyChecks({ x, claim, settings, cost }: Ctx): PolicyCheck[] {
     status: claim.reportedImpactArea === "unknown" || zones.length === 0 ? "not_compared" : zones.includes(claim.reportedImpactArea) ? "match" : "mismatch",
   });
 
-  const line = claim.vehicleValueUsd ? claim.vehicleValueUsd * settings.totalLossRatio : null;
+  const tl = totalLossLine(claim.vehicleValueUsd, claim.zip, settings);
   checks.push({
     label: "Vehicle value",
     onFile: claim.vehicleValueUsd ? `${usd(claim.vehicleValueUsd)} (mock)` : "Not on file",
-    observed: line ? `Total-loss line ${usd(line)} (${Math.round(settings.totalLossRatio * 100)}%)${cost ? `; estimate could reach ${usd(cost.ceilingUsd)}` : ""}` : "No total-loss check possible",
+    observed: tl ? `Total-loss line ${usd(tl.lineUsd)}: ${tl.basis}${cost ? `; estimate could reach ${usd(cost.ceilingUsd)}` : ""}` : "No total-loss check possible",
     status: "info",
   });
 

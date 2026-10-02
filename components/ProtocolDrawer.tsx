@@ -8,6 +8,7 @@ import { PROMPT_VERSION } from "@/lib/extraction/prompt.ts";
 import { currentDecision, type CaseItem } from "@/lib/client/cases.ts";
 import { scoreCase, summarise, type EvalRun } from "@/lib/eval/metrics.ts";
 import { HIGH_VOLTAGE_HOURS, MARKETS, RATE_CARD } from "@/lib/policy/ratecard.ts";
+import { SALVAGE_SHARE, STATE_TOTAL_LOSS, TOTAL_LOSS_SOURCE } from "@/lib/policy/states.ts";
 import {
   clampSettings,
   DEFAULT_SETTINGS,
@@ -313,6 +314,33 @@ function RateCard({ baseRate }: { baseRate: number }) {
                   <td>{h(c?.replaceHours)}</td>
                   <td>{h(c?.paintHours)}</td>
                   <td>{d(c?.partUsd)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+        <details className="fold">
+          <summary>Total-loss rules by state ({Object.keys(STATE_TOTAL_LOSS).length})</summary>
+          <div className="hint" style={{ margin: "6px 0" }}>
+            Found from the claim&apos;s ZIP code. <b>Unverified:</b> taken from a secondary source (
+            <a href={TOTAL_LOSS_SOURCE} target="_blank" rel="noreferrer">
+              carinsurance.com
+            </a>
+            ), to be checked against each state&apos;s law. States not listed use the carrier&apos;s total-loss setting above. The formula uses a placeholder salvage value of{" "}
+            {Math.round(SALVAGE_SHARE * 100)}% of the car&apos;s value; in production it comes from salvage auction data.
+          </div>
+          <table className="ratecard-table">
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Rule</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(STATE_TOTAL_LOSS).map(([st, r]) => (
+                <tr key={st}>
+                  <td>{st}</td>
+                  <td>{r.kind === "percent" ? `Total loss at ${r.percent}% of the car's value` : "Total loss formula: repair + salvage reaches the car's value"}</td>
                 </tr>
               ))}
             </tbody>

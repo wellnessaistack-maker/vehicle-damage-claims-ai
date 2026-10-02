@@ -6,6 +6,7 @@ import type { ClaimContext, ImpactArea } from "@/lib/claims/types.ts";
 import type { CaseItem } from "@/lib/client/cases.ts";
 import { PHOTO_QUALITY_THRESHOLDS, usd, type Settings } from "@/lib/policy/protocol.ts";
 import { marketFor } from "@/lib/policy/ratecard.ts";
+import { stateForZip } from "@/lib/policy/states.ts";
 
 export function Viewer(props: {
   item: CaseItem | null;
@@ -90,7 +91,7 @@ export function Viewer(props: {
           </div>
           <div>
             <dt>Location</dt>
-            <dd>{c.zip ? `${marketFor(c.zip).name}, ${c.zip}` : "Not on file"}</dd>
+            <dd>{c.zip ? `${marketFor(c.zip).name}, ${c.zip}${stateForZip(c.zip) ? ` (${stateForZip(c.zip)})` : ""}` : "Not on file"}</dd>
           </div>
           <div>
             <dt>Loss date</dt>

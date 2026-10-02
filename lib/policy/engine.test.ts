@@ -136,7 +136,7 @@ const firedIds = (d: ReturnType<typeof run>) => d.reasons.map((r) => r.id);
 test("A: clear photo of the Civic goes to the photo estimate path with every required output", () => {
   const d = run(civicA());
   assert.equal(d.route, "photo_estimate");
-  assert.equal(d.routeLabel, "Ready for estimating");
+  assert.equal(d.routeLabel, "Ready to approve");
   assert.equal(d.humanReview.required, false);
   assert.deepEqual(firedIds(d), []);
   const out = d.requiredOutputs;
@@ -413,9 +413,19 @@ test("a range entirely above the fast-path limit goes to an adjuster", () => {
 });
 
 test("the same damage on a cheap old car reaches the total-loss line", () => {
-  const d = run(civicA(), claim({ vehicleValueUsd: 2000 }));
+  const d = run(civicA(), claim({ vehicleValueUsd: 2000, zip: null }));
   assert.equal(d.route, "adjuster");
   assert.ok(firedIds(d).includes("C2"));
+});
+
+test("the total-loss line follows the claim's state: a fixed share, the formula, or the carrier's setting", () => {
+  const line = (zip: string | null) => run(civicA(), claim({ vehicleValueUsd: 10000, zip })).requiredOutputs.estimate;
+  assert.equal(line("75201").totalLossLineUsd, 10000); // Texas, 100%
+  assert.equal(line("10001").totalLossLineUsd, 7500); // New York, 75%
+  assert.equal(line("43215").totalLossLineUsd, 8000); // Ohio, formula with placeholder 20% salvage
+  assert.match(line("43215").totalLossBasis!, /OH uses the total loss formula.*unverified/);
+  assert.equal(line("30307").totalLossLineUsd, 6000); // Georgia: no rule on file, so the 60% setting
+  assert.equal(line(null).totalLossLineUsd, 6000);
 });
 
 test("raising the fast-path limit changes the route without touching the AI output", () => {
@@ -462,12 +472,12 @@ test("possible older damage is flagged", () => {
 // --- Traceability ---------------------------------------------------------------------
 
 test("every reason cites where its facts came from and which rule applied", () => {
-  const d = run(civicA(), claim({ vehicleValueUsd: 2000 }));
+  const d = run(civicA(), claim({ vehicleValueUsd: 2000, zip: null }));
   const c2 = d.reasons.find((r) => r.id === "C2")!;
   const text = c2.citations!.map((c) => `${c.source}: ${c.text}`).join(" | ");
   assert.match(text, /Policy record: Vehicle value: \$2,000/);
   assert.match(text, /Estimate: Range/);
-  assert.match(text, /Protocol: Setting "Total-loss line": 60% of vehicle value/);
+  assert.match(text, /Protocol: Setting "Total-loss line \(where the state sets none\)": 60% of vehicle value/);
   assert.match(text, /Protocol: Routing protocol v0\.1, rule C2 \(configurable\)/);
 });
 

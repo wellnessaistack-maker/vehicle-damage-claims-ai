@@ -6,6 +6,7 @@ import type { ClaimContext, PhotoMetrics } from "../claims/types.ts";
 import type { Extraction } from "../extraction/schema.ts";
 import { citationsFor, policyChecks, type Citation, type PolicyCheck } from "./citations.ts";
 import { buildCostRange, type CostDriver, type CostRange } from "./cost.ts";
+import { totalLossLine } from "./states.ts";
 import {
   PHOTO_QUALITY_THRESHOLDS,
   PROTOCOL_VERSION,
@@ -50,6 +51,8 @@ export interface EstimateOutput {
   note: string;
   fastPathLimitUsd: number;
   totalLossLineUsd: number | null;
+  /** Where the total-loss line comes from: the state rule or the carrier's setting. */
+  totalLossBasis: string | null;
   accuracyNote: string;
   /** How the items were priced, and the AI's own total for the same items as a cross-check. */
   pricing?: CostRange["pricing"];
@@ -233,7 +236,8 @@ function estimateOutput(
 ): EstimateOutput {
   const base = {
     fastPathLimitUsd: s.fastPathLimitUsd,
-    totalLossLineUsd: claim.vehicleValueUsd ? Math.round(claim.vehicleValueUsd * s.totalLossRatio) : null,
+    totalLossLineUsd: totalLossLine(claim.vehicleValueUsd, claim.zip, s) ? Math.round(totalLossLine(claim.vehicleValueUsd, claim.zip, s)!.lineUsd) : null,
+    totalLossBasis: totalLossLine(claim.vehicleValueUsd, claim.zip, s)?.basis ?? null,
     accuracyNote: ACCURACY_NOTE,
   };
   const withheld = (note: string): EstimateOutput => ({ ...base, status: "withheld", lowUsd: null, highUsd: null, drivers: [], note });

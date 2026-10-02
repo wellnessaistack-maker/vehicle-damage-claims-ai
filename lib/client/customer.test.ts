@@ -15,7 +15,10 @@ test("the adjuster update is neutral: no total loss, fraud or SIU", () => {
 });
 
 test("the photo estimate update says what happens next", () => {
-  assert.match(customerUpdate(decision("photo_estimate"), DEMO_CLAIMS.A)!, /estimating team/);
+  const approved = { route: "photo_estimate", requiredOutputs: { estimate: { likelyUsd: 1128, highUsd: 1300 } } } as unknown as Decision;
+  const m = customerUpdate(approved, DEMO_CLAIMS.A)!;
+  assert.match(m, /approved a repair estimate of \$1,128/);
+  assert.match(m, /supplement/);
   assert.equal(customerUpdate(decision("more_evidence"), DEMO_CLAIMS.B), null, "the photo request comes from the rules instead");
 });
 
