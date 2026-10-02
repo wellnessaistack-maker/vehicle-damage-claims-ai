@@ -28,8 +28,9 @@ The tool supports the first decision a reviewer makes on a claim. Getting that r
 
 - Approving commits the estimate, as a desk appraiser does today, up to an approval limit (a setting standing in for the reviewer's authority limit). Payment follows the carrier's usual process; nothing is paid automatically.
 - If the AI call fails, the claim goes to **manual triage**, which is today's normal process.
-- Each reason shows where it came from: the policy, the claim form, the AI, the photo checks, or a rule.
-- The reviewer can adjust the range or change the route. Changes go back through the rules, and a route change needs a reason.
+- Each claim answers its own question ("Why it's ready to approve", "Why it needs more evidence", "Why it goes to a field adjuster") in one line, such as "Because: car can't be driven (S2) and signs of structural damage (S4)". One click shows each rule in full, what the AI saw, and where each fact came from (the policy, the claim form, the AI, the photo checks), with the policy and photo checks underneath.
+- The reviewer can change the amount or the route. Changes go back through the rules, and a route change needs a reason.
+- Each claim has a case thread: the first review, every action, the reviewer's comments, and questions to an assistant that explains the photos but can't change the route. Whoever picks the claim up next sees the whole history.
 - Each decision is logged with the recommended route and the reviewer's route, so you can see how often they agree ([more](#tracking-overrides)).
 
 ## Setup
@@ -102,7 +103,9 @@ Colour key: green is plain code, orange is the AI, purple is people.
 - **No confidence scores.** Models aren't reliable judges of their own confidence, so the rules use facts instead. For example, if no badge is visible, the make is left blank.
 - **When rules disagree, the more serious route takes priority.** If one rule says adjuster and another says ask for photos, the claim goes to an adjuster.
 
-**The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 approval limit and the total-loss line. The total-loss line follows the claim's state, found from its ZIP code: a fixed share of the car's value in some states, a formula (repair plus salvage reaching the car's value) in others, and the carrier's 60% setting where neither applies. **The state rules are from a secondary source and still need checking against each state's law.** Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published.
+**The routing rules.** Some are locked, such as injury, structural damage, deployed airbags, a reused photo, or a vehicle that isn't a normal road car. Others are settings the carrier can change within limits, like the $2,500 approval limit and the total-loss line. The total-loss line follows the claim's state, found from its ZIP code: a fixed share of the car's value in some states, a formula (repair plus salvage reaching the car's value) in others, and the carrier's 60% setting where neither applies. **The state rules are from a secondary source and still need checking against each state's law.** Changing a setting re-routes the worklist straight away, because only the rules re-run. **Test against labelled cases** shows what a change would do before it's published: lowering the approval limit to $750, for example, sends all 11 serious test claims to an adjuster, but 3 simple ones too.
+
+The **Routing protocol** page in the app shows all of this on one page: a diagram from the claim and photos, to what the AI describes, to the rules, to the reviewer, with what sends a claim to each route (the open claim's route and the rules it set off are highlighted). Below it are the six rule groups (what each catches, where it sends the claim, whether it's locked), the three settings that matter most, and how prices are set, with a worked example.
 
 **The repair estimate.** The AI describes each repair; the carrier's rate card prices it. We found the AI was consistent about *what* was damaged but not about what it cost: the same Civic photo got totals from $750–$1,800 to $1,000–$2,600 across calls. So code turns each described repair into labour and paint hours and a part, then prices them for this car and this place:
 
@@ -185,7 +188,7 @@ Colour key: green is plain code, orange is the AI, blue is stored data, purple i
 | Versions shown on each result | Each prompt, model or rule change tested against the labelled set before release |
 | Mock roles | Single sign-on, role-based access, two-person approval for rule changes |
 | Checks against one demo past-claim photo | Duplicate search across all past photos, plus a check for edited images |
-| The AI's general price knowledge | Labour times from an estimating platform and the carrier's paid-claims history |
+| A placeholder rate card | Labour times from an estimating platform, the carrier's own rates, and calibration on its paid claims |
 | A person approves each claim | Gradual automation for narrow, low-risk cases (see [Path to production](#path-to-production)) |
 
 ## Why these tools
@@ -326,12 +329,12 @@ A person approves each claim today. That's the right place to start. We'd reduce
 
 ### Tracking overrides
 
-How often reviewers disagree with the recommendation is a direct way to measure accuracy on live claims. Each decision records the recommended route, the reviewer's route, both estimate ranges, the reason, and the rules that fired. In the prototype, **Completed** shows "Kept the recommendation on X of Y decisions" and the log downloads as a CSV. In production it would feed an override dashboard, and each changed route would become a bug fix or a new test case.
+How often reviewers disagree with the recommendation is a direct way to measure accuracy on live claims. Each decision records the recommended route, the reviewer's route, the estimate and any amount the reviewer changed it to, the reason, and the rules that fired. In the prototype, **Completed** shows "Kept the recommendation on X of Y decisions", with route changes and amount changes counted separately, and the log downloads as a CSV. Each claim's **Decision record** shows everything behind it, and any correction can be downloaded as a labelled test case for the evaluation set. In production it would feed an override dashboard, and each correction would become a bug fix or a new test case.
 
 ## Key assumptions and trade-offs
 
 - **It doesn't store anything.** The worklist lives in your browser tab and photos are only held in memory. That keeps the privacy answer simple, but there's no history.
-- **The claim details and dollar limits are made up.** The $2,500 approval limit, the labour markets, the state total-loss rules and the cost adjustments are placeholders for the carrier's numbers.
+- **The claim details and dollar limits are made up.** The $2,500 approval limit, the labour markets, the state total-loss rules and the cost adjustments are placeholders for the carrier's numbers. The approval limit stands in for a reviewer's authority limit; carriers set these by role, and photo estimating is usually kept to small, drivable, no-injury claims, so $2,500 sits in a realistic range.
 - **The photo checks are rough.** They were tuned on a handful of images, and the reused-photo check catches a mirrored copy but not a rotated one.
 - **Some inputs are turned away.** JPEG, PNG and WebP only, up to eight photos a claim. HEIC and video get a message saying what to send instead.
 - **Links are treated as untrusted.** The server only follows https links to public addresses and only accepts real image files.
