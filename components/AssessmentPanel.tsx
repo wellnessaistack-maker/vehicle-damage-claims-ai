@@ -200,7 +200,7 @@ function RequiredOutputs({ d }: { d: Decision }) {
     <div className="card">
       <div className="card-head">
         <h3>What the AI found</h3>
-        <span className="sub">The three outputs you asked for, pre-filled for the reviewer</span>
+        <span className="sub">From the photos, priced with the carrier&apos;s rate card</span>
       </div>
       <div className="card-body outputs">
         <div className="out-vehicle">
@@ -227,11 +227,35 @@ function RequiredOutputs({ d }: { d: Decision }) {
 
 function Estimate({ e }: { e: EstimateOutput }) {
   if (e.status === "withheld") {
+    const guess = e.aiItemsUsd && e.aiItemsUsd.highUsd > 0 ? e.aiItemsUsd : null;
     return (
-      <div className="est-row">
-        <span className="field-value unknown">No estimate</span>
-        <span className="note">{e.note}</span>
-      </div>
+      <>
+        <div className="est-row">
+          <span className="field-value unknown">No estimate</span>
+          <span className="note">{e.note}</span>
+        </div>
+        {guess && e.drivers.length > 0 && (
+          <details className="fold">
+            <summary>The AI&apos;s rough guess, for reference only</summary>
+            <div className="hint" style={{ margin: "6px 0" }}>
+              From the AI&apos;s general knowledge, not our rate card, and not used for anything: {usd(guess.lowUsd)} to {usd(guess.highUsd)}.
+            </div>
+            <ul className="drivers">
+              {e.drivers
+                .filter((d) => d.kind !== "possible")
+                .map((d) => (
+                  <li key={d.label} className="rich">
+                    <div className="drv-top">
+                      <span>{d.label}</span>
+                      <span className="drv-amt">{usd(d.lowUsd)} to {usd(d.highUsd)}</span>
+                    </div>
+                    {d.evidence && <div className="driver-note">Seen in the photo: &ldquo;{d.evidence}&rdquo;</div>}
+                  </li>
+                ))}
+            </ul>
+          </details>
+        )}
+      </>
     );
   }
   const lo = e.lowUsd!;
