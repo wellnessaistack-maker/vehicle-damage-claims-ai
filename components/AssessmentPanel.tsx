@@ -109,8 +109,7 @@ export function AssessmentPanel(props: {
         ) : (
           <>
             <RequiredOutputs d={d!} />
-            {d!.reasons.length > 0 && <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />}
-            <Checks d={d!} />
+            <Reasons d={d!} onOpenProtocol={props.onOpenProtocol} />
           </>
         )}
 
@@ -276,11 +275,32 @@ function Estimate({ e }: { e: EstimateOutput }) {
   // Keep a hover note inside the card: anchor it to the label's nearer edge.
   const tipSide = (n: number) => (n / max < 0.3 ? "tip-start" : n / max > 0.6 ? "tip-end" : "");
   const showTl = e.totalLossLineUsd !== null && e.totalLossLineUsd <= max;
+  // After a reviewer changes the amount, the estimate is theirs, not the rate card's.
+  const reviewerSet = e.drivers.find((d) => d.label === "Reviewer's amount");
+  if (reviewerSet) {
+    return (
+      <>
+        <div className="est-row">
+          <div className="range">{lo === hi ? usd(hi) : `${usd(lo)} to ${usd(hi)}`}</div>
+          <div className="rangebar est-bar" aria-label="Estimate compared with the approval limit and total-loss line">
+            <div className="rangebar-track" />
+            <div className="rangebar-fill" style={{ left: pos(lo), width: `max(6px, calc(${pos(hi)} - ${pos(lo)}))` }} />
+            <div className="rangebar-mark" style={{ left: pos(e.fastPathLimitUsd) }}>
+              <span className={`has-tip ${tipSide(e.fastPathLimitUsd)}`} tabIndex={0} data-tip={approvalLimitTip(e.fastPathLimitUsd)}>
+                Limit {usd(e.fastPathLimitUsd)}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="est-likely">Set by the reviewer. {reviewerSet.note}.</div>
+      </>
+    );
+  }
   return (
     <>
       <div className="est-row">
         <div className="range" style={{ opacity: e.status === "reference_only" || e.status === "provisional" ? 0.7 : 1 }}>
-          {usd(lo)} to {usd(hi)}
+          {lo === hi ? usd(hi) : `${usd(lo)} to ${usd(hi)}`}
           {e.status === "provisional" && <span className="chip chip-warn est-chip">Provisional</span>}
         </div>
         <div className="rangebar est-bar" aria-label="Estimate range compared with the approval limit and total-loss line">
@@ -328,7 +348,7 @@ function Estimate({ e }: { e: EstimateOutput }) {
         </div>
       )}
       <div className="hint">
-        {e.status === "provisional" ? e.note : e.status === "reference_only" ? "For the adjuster's reference only." : "A range, never a payable amount."} {e.accuracyNote}
+        {e.status === "provisional" ? e.note : e.status === "reference_only" ? "For the adjuster's reference only." : "If the shop finds more damage, it sends a supplement."} {e.accuracyNote}
       </div>
       <details className="fold">
         <summary>
@@ -407,13 +427,13 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
       <div className="card-head">
         <h3>Why this route</h3>
         <button className="btn btn-sm btn-ghost" onClick={onOpenProtocol} title="Open the routing protocol">
-          {d.reasons.length} rule{d.reasons.length === 1 ? "" : "s"} fired
+          {d.reasons.length ? `${d.reasons.length} rule${d.reasons.length === 1 ? "" : "s"} fired` : "No rules fired"}
         </button>
       </div>
       <div className="card-body">
         {d.reasons.length === 0 ? (
           <div className="reason-text">
-            No concerns found, so the reviewer can approve this estimate. The photos show the vehicle and the whole damaged area, nothing suggests hidden or serious damage, and the estimate is under the limit.
+            No rules fired: the photos show the whole car and damage, nothing looks serious, and the estimate is within the approval limit. Everything below was checked.
           </div>
         ) : (
           GROUPS.map((g) => {
@@ -454,31 +474,52 @@ function Reasons({ d, onOpenProtocol }: { d: Decision; onOpenProtocol: () => voi
             );
           })
         )}
+        <Checks d={d} />
       </div>
     </div>
   );
 }
 
-/** Policy checks and photo evidence in one card: exceptions up front, the full tables one click away. */
+/** Which rule a failed check sets off, so a red chip points at the reason above it. */
+const CHECK_RULES: Record<string, string[]> = {
+  "Vehicle in the photos": ["E1"],
+  "Car identified from a badge or body shape": ["E2"],
+  "Whole damaged area in frame": ["E3"],
+  "Bright enough": ["E4"],
+  "Sharp enough": ["E4"],
+  "High enough resolution": ["E4"],
+  "No glare or obstruction over the damage": ["E4"],
+  "Colour photo": ["E4"],
+  "Only one car in the photo": ["E6"],
+  "Not seen on a past claim": ["I1"],
+  "Insured vehicle": ["R2"],
+  "Colour": ["R2"],
+  "Point of impact": ["R3"],
+};
+
+/** What was checked, inside the route card: exceptions up front, the full tables one click away. */
 function Checks({ d }: { d: Decision }) {
+  const fired = new Set(d.reasons.map((r) => r.id));
+  const ruleTag = (label: string) => {
+    const ids = (CHECK_RULES[label] ?? []).filter((id) => fired.has(id));
+    return ids.length ? <span className="rid">{ids.join(", ")}</span> : null;
+  };
   const icon = { match: "✓", mismatch: "✕", not_compared: "?", info: "i" } as const;
   const compared = d.policyChecks.filter((p) => p.status !== "info");
   const mismatch = compared.some((p) => p.status === "mismatch");
   const failed = d.evidenceChecklist.filter((c) => !c.ok);
   const passed = d.evidenceChecklist.length - failed.length;
   return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Checks</h3>
-        <span className="sub">Policy on file vs. the photos, and whether the photos are good enough. Nothing here decides coverage.</span>
-      </div>
-      <div className="card-body checks">
+    <div className="checks checks-in-route">
+      <div className="drivers-head">What we checked</div>
+      <div className="checks">
         <div className="check-row">
           <span className="check-label">Policy and claim</span>
           <span className="check-chips">
             {compared.map((p) => (
               <span key={p.label} className={`pchip pchip-${p.status}`} title={`On file: ${p.onFile}. From the photos: ${p.observed}`}>
                 {icon[p.status]} {p.label}
+                {p.status === "mismatch" && ruleTag(p.label)}
               </span>
             ))}
             <span className="pchip pchip-info" title="This tool compares facts to route the claim. It never decides what the policy covers or pays.">
@@ -495,6 +536,7 @@ function Checks({ d }: { d: Decision }) {
             {failed.map((c) => (
               <span key={c.label} className="pchip pchip-mismatch" title={c.detail}>
                 ✕ {c.label}
+                {ruleTag(c.label)}
               </span>
             ))}
           </span>
