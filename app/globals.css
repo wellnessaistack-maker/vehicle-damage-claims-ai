@@ -492,3 +492,36 @@ td.pc { width: 22px; font-weight: 700; text-align: center; }
 .drivers .driver-options b { font-weight: 600; }
 .drivers .driver-options .chosen { color: var(--text); }
 .workings { font-size: 12px; color: var(--text-2); margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+
+/* Routing protocol: plain summary first, detail one click away. */
+.proto-how { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.proto-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.proto-flow .arrow { color: var(--text-3); }
+.proto-node { border: 1px solid var(--line-strong); border-radius: 6px; padding: 4px 9px; background: var(--panel-2); font-size: 12.5px; font-weight: 600; }
+.proto-node-rules { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.proto-routes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.proto-route { border: 1px solid var(--r-line); background: var(--r-soft); border-radius: 8px; padding: 8px 10px; opacity: 0.8; }
+.proto-route.here { opacity: 1; border: 2px solid var(--r); padding: 7px 9px; }
+.proto-route-head { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--r); font-size: 12.5px; }
+.proto-route-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--r); display: inline-block; }
+.proto-here { margin-left: auto; white-space: nowrap; flex-shrink: 0; font-size: 10.5px; font-weight: 600; color: #fff; background: var(--r); border-radius: 999px; padding: 1px 7px; }
+.proto-route-groups { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; font-size: 12px; color: var(--text-2); }
+.proto-route-groups .hit { color: var(--text); font-weight: 700; text-decoration: underline; text-decoration-color: var(--r); text-underline-offset: 3px; }
+.proto-groups { display: flex; flex-direction: column; gap: 0; padding-top: 4px; }
+.proto-group-row { display: grid; grid-template-columns: 1fr 130px 120px; gap: 12px; align-items: start; font-size: 13px; }
+.proto-group-headrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-3); font-weight: 600; padding: 4px 0 6px 18px; }
+.proto-group { border-top: 1px solid var(--line); }
+.proto-group > summary { cursor: pointer; padding: 9px 0; list-style: none; position: relative; padding-left: 18px; }
+.proto-group > summary::-webkit-details-marker { display: none; }
+.proto-group > summary::before { content: "▸"; position: absolute; left: 2px; top: 9px; color: var(--accent); font-size: 12px; }
+.proto-group[open] > summary::before { content: "▾"; }
+.proto-group.fired > summary { background: var(--evidence-soft); }
+.proto-group > summary b { margin-right: 8px; }
+.proto-catches { color: var(--text-2); }
+.proto-fired { margin-left: 8px; font-size: 11px; }
+.proto-group .rules-list { padding: 4px 0 12px 18px; }
+@media (max-width: 640px) {
+  .proto-routes { grid-template-columns: 1fr; }
+  .proto-group-row { grid-template-columns: 1fr; gap: 2px; }
+  .proto-group-headrow { display: none; }
+}

@@ -146,7 +146,7 @@ export const SETTING_DEFS: SettingDef[] = [
     key: "totalLossRatio",
     kind: "number",
     label: "Total-loss line (where the state sets none)",
-    help: "Share of the vehicle's value at which a repair may not be worth doing. Used only where the claim's state has no rule of its own; see the state rules under the rate card.",
+    help: "Share of the vehicle's value at which a repair may not be worth doing. Used only where the claim's state has no rule of its own; see the state rules under How prices are set.",
     min: 0.5,
     max: 1,
     step: 0.05,
